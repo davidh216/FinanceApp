@@ -11,7 +11,6 @@ import {
   TrendingDown,
 } from 'lucide-react';
 
-
 interface AccountDetailProps {
   accountId?: string;
 }

@@ -1,11 +1,6 @@
 /* eslint-disable testing-library/no-wait-for-multiple-assertions */
 import React from 'react';
-import {
-  render,
-  screen,
-  waitFor,
-  act,
-} from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Dashboard } from '../../dashboard/Dashboard';
