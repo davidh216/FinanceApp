@@ -4,6 +4,7 @@ import { DashboardHeader } from './DashboardHeader';
 import { KPISection } from './KPISection';
 import { AccountOverview } from './AccountOverview';
 import { RecentActivity } from './RecentActivity';
+import { AccountDetail } from '../accounts/AccountDetail';
 import { Button } from '../ui/Button';
 import {
   Building,
@@ -16,11 +17,22 @@ import {
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { state, totalBalance, summary, selectAccount, changeScreen } =
-    useFinancial();
+  const { 
+    state, 
+    totalBalance, 
+    summary, 
+    selectAccount,
+    changeScreen,
+    viewAccountDetail
+  } = useFinancial();
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
+
+  // Add routing logic for account-detail screen
+  if (state.currentScreen === 'account-detail') {
+    return <AccountDetail />;
+  }
 
   // Loading state
   if (isLoading) {
@@ -149,8 +161,7 @@ export const Dashboard: React.FC = () => {
               <AccountOverview
                 accounts={state.accounts}
                 onAccountSelect={(account) => {
-                  selectAccount(account);
-                  changeScreen('accounts');
+                  viewAccountDetail(account);
                 }}
               />
             </div>

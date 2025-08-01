@@ -26,6 +26,12 @@ const financialReducer = (
   action: FinancialAction
 ): FinancialState => {
   switch (action.type) {
+    case 'VIEW_ACCOUNT_DETAIL':
+      return {
+        ...state,
+        selectedAccount: action.payload,
+        currentScreen: 'account-detail'
+      };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'SET_ERROR':
@@ -109,6 +115,7 @@ interface FinancialContextType {
   addTag: (transactionId: string, tag: string) => void;
   removeTag: (transactionId: string, tag: string) => void;
   applyFilters: (filters: FilterOptions) => void;
+  viewAccountDetail: (account: Account) => void;
 }
 
 const FinancialContext = createContext<FinancialContextType | null>(null);
@@ -177,6 +184,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'APPLY_FILTERS', payload: filters });
   };
 
+  const viewAccountDetail = (account: Account) => {
+    dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
+  };
+
   const value: FinancialContextType = {
     state,
     dispatch,
@@ -188,6 +199,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     addTag,
     removeTag,
     applyFilters,
+    viewAccountDetail,
   };
 
   return (
