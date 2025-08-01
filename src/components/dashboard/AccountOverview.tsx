@@ -5,10 +5,6 @@ import { Button } from '../ui/Button';
 import { useFinancial } from '../../contexts/FinancialContext';
 import {
   Plus,
-  TrendingUp,
-  TrendingDown,
-  AlertCircle,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';

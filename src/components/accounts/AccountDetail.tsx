@@ -6,12 +6,10 @@ import { TransactionItem } from '../ui/TransactionItem';
 import { 
   ArrowLeft, 
   Search, 
-  Filter, 
-  Download, 
   Plus,
   TrendingUp,
   TrendingDown,
-  Calendar
+  
 } from 'lucide-react';
 import { Account, Transaction } from '../../types/financial';
 
