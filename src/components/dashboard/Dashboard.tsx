@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
+import { Account, Transaction } from '../../types/financial';
 import { DashboardHeader } from './DashboardHeader';
 import { KPISection } from './KPISection';
 import { AccountOverview } from './AccountOverview';
 import { RecentActivity } from './RecentActivity';
 import { AccountDetail } from '../accounts/AccountDetail';
+import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
 import {
   Building,
@@ -23,11 +25,285 @@ export const Dashboard: React.FC = () => {
     summary, 
     selectAccount,
     changeScreen,
-    viewAccountDetail
+    viewAccountDetail,
+    accountFilter,
+    changePeriod
   } = useFinancial();
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
+
+  // Filter accounts based on accountFilter
+  const filteredAccounts = useMemo(() => {
+    return state.accounts.filter((account: Account) => {
+      if (accountFilter === 'both') return true;
+      if (accountFilter === 'personal') return !account.type.includes('BUSINESS');
+      if (accountFilter === 'business') return account.type.includes('BUSINESS');
+      return true;
+    });
+  }, [state.accounts, accountFilter]);
+
+  // Calculate filtered total balance
+  const filteredTotalBalance = useMemo(() => {
+    return filteredAccounts.reduce((sum: number, account: Account) => sum + account.balance, 0);
+  }, [filteredAccounts]);
+
+  // Calculate filtered summary
+  const filteredSummary = useMemo(() => {
+    const filteredTransactions = filteredAccounts.flatMap((acc: Account) => acc.transactions || []);
+    const totalBalance = filteredTotalBalance;
+    
+    const today = new Date();
+    let startDate: Date;
+    let periodLabel: string;
+
+    // Calculate period boundaries based on selectedPeriod
+    switch (state.selectedPeriod) {
+      case 'day':
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        periodLabel = 'daily';
+        break;
+      case 'week':
+        const dayOfWeek = today.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToSubtract);
+        periodLabel = 'weekly';
+        break;
+      case 'month':
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        periodLabel = 'monthly';
+        break;
+      case 'quarter':
+        const currentQuarter = Math.floor(today.getMonth() / 3);
+        startDate = new Date(today.getFullYear(), currentQuarter * 3, 1);
+        periodLabel = 'quarterly';
+        break;
+      case 'year':
+        startDate = new Date(today.getFullYear(), 0, 1);
+        periodLabel = 'yearly';
+        break;
+      case '5year':
+        startDate = new Date(today.getFullYear() - 5, 0, 1);
+        periodLabel = '5-year';
+        break;
+      case 'custom':
+        if (state.customDateRange) {
+          startDate = new Date(state.customDateRange.startDate);
+          periodLabel = 'custom';
+        } else {
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+          periodLabel = 'monthly';
+        }
+        break;
+      default:
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        periodLabel = 'monthly';
+    }
+
+    const endDate = new Date();
+
+    // Filter transactions for the selected period
+    const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
+      const txnDate = new Date(txn.date);
+      return txnDate >= startDate && txnDate <= endDate;
+    });
+
+    const periodIncome = periodTransactions
+      .filter((txn: Transaction) => txn.amount > 0)
+      .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+
+    const periodExpenses = Math.abs(
+      periodTransactions
+        .filter((txn: Transaction) => txn.amount < 0)
+        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
+    );
+
+    const savingsRate = periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
+
+    // Calculate previous period for comparison
+    let prevStartDate: Date;
+    switch (state.selectedPeriod) {
+      case 'day':
+        prevStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+        break;
+      case 'week':
+        prevStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+        break;
+      case 'month':
+        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        break;
+      case 'quarter':
+        const prevQuarter = Math.floor(today.getMonth() / 3) - 1;
+        prevStartDate = prevQuarter >= 0 ? new Date(today.getFullYear(), prevQuarter * 3, 1) : new Date(today.getFullYear() - 1, 9, 1);
+        break;
+      case 'year':
+        prevStartDate = new Date(today.getFullYear() - 1, 0, 1);
+        break;
+      case '5year':
+        prevStartDate = new Date(today.getFullYear() - 10, 0, 1);
+        break;
+      default:
+        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    }
+
+    const prevEndDate = new Date(startDate.getTime() - 1);
+    const prevPeriodTransactions = filteredTransactions.filter((txn: Transaction) => {
+      const txnDate = new Date(txn.date);
+      return txnDate >= prevStartDate && txnDate <= prevEndDate;
+    });
+
+    const prevPeriodIncome = prevPeriodTransactions
+      .filter((txn: Transaction) => txn.amount > 0)
+      .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+
+    const prevPeriodExpenses = Math.abs(
+      prevPeriodTransactions
+        .filter((txn: Transaction) => txn.amount < 0)
+        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
+    );
+
+    return {
+      totalBalance,
+      monthlyIncome: Math.round(periodIncome * 100) / 100,
+      monthlyExpenses: Math.round(periodExpenses * 100) / 100,
+      netWorth: totalBalance,
+      debtToIncomeRatio: periodIncome > 0 ? periodExpenses / periodIncome : 0,
+      savingsRate: Math.max(0, savingsRate),
+      previousPeriodIncome: prevPeriodIncome,
+      previousPeriodExpenses: prevPeriodExpenses,
+      periodLabel,
+    };
+  }, [filteredAccounts, filteredTotalBalance, state.selectedPeriod, state.customDateRange]);
+
+  // Generate actual trend data based on selected period
+  const generateTrendData = useMemo(() => {
+    const filteredTransactions = filteredAccounts.flatMap((acc: Account) => acc.transactions || []);
+    const today = new Date();
+    
+    // Determine number of data points based on period
+    let dataPoints: number;
+    let intervalDays: number;
+    
+    switch (state.selectedPeriod) {
+      case 'day':
+        dataPoints = 24; // Hourly data for the day
+        intervalDays = 1/24;
+        break;
+      case 'week':
+        dataPoints = 7; // Daily data for the week
+        intervalDays = 1;
+        break;
+      case 'month':
+        dataPoints = 30; // Daily data for the month
+        intervalDays = 1;
+        break;
+      case 'quarter':
+        dataPoints = 13; // Weekly data for the quarter
+        intervalDays = 7;
+        break;
+      case 'year':
+        dataPoints = 12; // Monthly data for the year
+        intervalDays = 30;
+        break;
+      case '5year':
+        dataPoints = 60; // Monthly data for 5 years
+        intervalDays = 30;
+        break;
+      default:
+        dataPoints = 30;
+        intervalDays = 1;
+    }
+
+    // Generate trend data for balance over time
+    const balanceTrend = [];
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - (i * intervalDays));
+      
+      // Calculate balance up to this point in time
+      const transactionsUpToDate = filteredTransactions.filter((txn: Transaction) => {
+        const txnDate = new Date(txn.date);
+        return txnDate <= targetDate;
+      });
+      
+      const balanceAtDate = filteredAccounts.reduce((sum: number, account: Account) => {
+        return sum + account.balance;
+      }, 0) + transactionsUpToDate.reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+      
+      balanceTrend.push(Math.max(0, balanceAtDate)); // Ensure non-negative for display
+    }
+
+    // Generate trend data for income over time
+    const incomeTrend = [];
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - (i * intervalDays));
+      
+      const startDate = new Date(targetDate);
+      startDate.setDate(targetDate.getDate() - intervalDays);
+      
+      const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
+        const txnDate = new Date(txn.date);
+        return txnDate >= startDate && txnDate <= targetDate && txn.amount > 0;
+      });
+      
+      const periodIncome = periodTransactions.reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+      incomeTrend.push(periodIncome);
+    }
+
+    // Generate trend data for expenses over time
+    const expenseTrend = [];
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - (i * intervalDays));
+      
+      const startDate = new Date(targetDate);
+      startDate.setDate(targetDate.getDate() - intervalDays);
+      
+      const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
+        const txnDate = new Date(txn.date);
+        return txnDate >= startDate && txnDate <= targetDate && txn.amount < 0;
+      });
+      
+      const periodExpenses = Math.abs(periodTransactions.reduce((sum: number, txn: Transaction) => sum + txn.amount, 0));
+      expenseTrend.push(periodExpenses);
+    }
+
+    // Generate trend data for savings rate over time
+    const savingsTrend = [];
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - (i * intervalDays));
+      
+      const startDate = new Date(targetDate);
+      startDate.setDate(targetDate.getDate() - intervalDays);
+      
+      const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
+        const txnDate = new Date(txn.date);
+        return txnDate >= startDate && txnDate <= targetDate;
+      });
+      
+      const periodIncome = periodTransactions
+        .filter((txn: Transaction) => txn.amount > 0)
+        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+      
+      const periodExpenses = Math.abs(
+        periodTransactions
+          .filter((txn: Transaction) => txn.amount < 0)
+          .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
+      );
+      
+      const savingsRate = periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
+      savingsTrend.push(Math.max(0, savingsRate * 100)); // Convert to percentage
+    }
+
+    return {
+      balance: balanceTrend,
+      income: incomeTrend,
+      expenses: expenseTrend,
+      savings: savingsTrend,
+    };
+  }, [filteredAccounts, state.selectedPeriod]);
 
   // Add routing logic for account-detail screen
   if (state.currentScreen === 'account-detail') {
@@ -143,18 +419,54 @@ export const Dashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Period Selector - Centered above KPI Section */}
+        <div className="flex justify-center mb-6">
+          <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+            {DEFAULT_PERIODS.map((period) => (
+              <button
+                key={period}
+                onClick={() => {
+                  if (period === 'custom') {
+                    // Handle custom date picker
+                    alert('Custom date picker coming soon!');
+                  } else {
+                    changePeriod(period as any);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  state.selectedPeriod === period
+                    ? 'bg-white shadow-sm text-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                {period === 'day' ? 'D' : 
+                 period === 'week' ? 'W' : 
+                 period === 'month' ? 'M' : 
+                 period === 'quarter' ? 'Q' : 
+                 period === 'year' ? 'Y' : 
+                 period === '5year' ? '5Y' : 
+                 period === 'custom' ? 'Custom' : 
+                 period}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* KPI Section */}
-        <div className="mb-8">
+        <div className="mb-6">
           <KPISection
-            summary={summary}
-            totalBalance={totalBalance}
+            summary={filteredSummary}
+            totalBalance={filteredTotalBalance}
             period={state.selectedPeriod}
-            trendData={[2000, 2200, 2100, 2400, 2500]}
+            balanceTrend={generateTrendData.balance}
+            incomeTrend={generateTrendData.income}
+            expenseTrend={generateTrendData.expenses}
+            savingsTrend={generateTrendData.savings}
           />
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Left Column - Account Overview */}
           <div className="flex flex-col">
             <div className="bg-white rounded-lg shadow-sm border h-full flex flex-col">
@@ -163,20 +475,15 @@ export const Dashboard: React.FC = () => {
                 onAccountSelect={(account) => {
                   viewAccountDetail(account);
                 }}
+                accountFilter={accountFilter}
               />
             </div>
           </div>
 
           {/* Right Column - Quick Actions + Recent Activity */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8">
             {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Quick Actions
-                </h3>
-                <p className="text-sm text-gray-600">Common tasks and tools</p>
-              </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
@@ -217,7 +524,6 @@ export const Dashboard: React.FC = () => {
                       <h4 className="font-medium text-gray-900 mb-1">
                         {action.label}
                       </h4>
-                      <p className="text-xs text-gray-500">Click to explore</p>
                     </div>
                   </button>
                 ))}
@@ -225,150 +531,7 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* Recent Activity */}
-            <RecentActivity accounts={state.accounts} limit={5} />
-          </div>
-        </div>
-
-        {/* Additional Insights Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Spending Categories */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Top Spending Categories
-            </h3>
-            <div className="space-y-3">
-              {[
-                { category: 'Food & Dining', amount: 450, color: 'bg-red-500' },
-                {
-                  category: 'Transportation',
-                  amount: 320,
-                  color: 'bg-blue-500',
-                },
-                { category: 'Shopping', amount: 280, color: 'bg-purple-500' },
-                { category: 'Utilities', amount: 180, color: 'bg-orange-500' },
-              ].map((item, index) => {
-                const percentage = (item.amount / 1230) * 100;
-
-                return (
-                  <div
-                    key={item.category}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center">
-                      <div
-                        className={`w-3 h-3 rounded-full ${item.color} mr-3`}
-                      ></div>
-                      <span className="text-sm text-gray-700">
-                        {item.category}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${item.color} transition-all duration-300`}
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900 w-12 text-right">
-                        ${item.amount}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Financial Health Score */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Financial Health
-            </h3>
-            <div className="text-center">
-              <div className="relative w-24 h-24 mx-auto mb-4">
-                <svg
-                  className="w-24 h-24 transform -rotate-90"
-                  viewBox="0 0 36 36"
-                >
-                  {/* Background circle */}
-                  <path
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#e5e7eb"
-                    strokeWidth="2"
-                  />
-                  {/* Progress circle */}
-                  <path
-                    d="M18 2.0845
-                      a 15.9155 15.9155 0 0 1 0 31.831
-                      a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="2"
-                    strokeDasharray="85, 100"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-green-600">85</span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 mb-2">Excellent</p>
-              <p className="text-xs text-gray-500">
-                Your spending is well controlled and savings rate is healthy.
-              </p>
-            </div>
-          </div>
-
-          {/* Monthly Goals */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Monthly Goals
-            </h3>
-            <div className="space-y-4">
-              {[
-                {
-                  goal: 'Save $500',
-                  current: 380,
-                  target: 500,
-                  color: 'bg-green-500',
-                },
-                {
-                  goal: 'Dining Budget',
-                  current: 320,
-                  target: 400,
-                  color: 'bg-yellow-500',
-                },
-                {
-                  goal: 'Emergency Fund',
-                  current: 2400,
-                  target: 5000,
-                  color: 'bg-blue-500',
-                },
-              ].map((item, index) => {
-                const percentage = (item.current / item.target) * 100;
-
-                return (
-                  <div key={index}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-700">{item.goal}</span>
-                      <span className="text-gray-900 font-medium">
-                        ${item.current.toLocaleString()} / $
-                        {item.target.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`${item.color} h-2 rounded-full transition-all duration-300`}
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <RecentActivity accounts={filteredAccounts} limit={5} />
           </div>
         </div>
       </main>

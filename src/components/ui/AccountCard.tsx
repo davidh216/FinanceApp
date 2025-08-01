@@ -1,6 +1,7 @@
 import React from 'react';
 import { Account } from '../../types/financial';
 import { CreditCard, ArrowRight } from 'lucide-react';
+import { useFinancial } from '../../contexts/FinancialContext';
 
 interface AccountCardProps {
   account: Account;
@@ -15,6 +16,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
   showTransactionCount = false,
   className = '',
 }) => {
+  const { isPrivacyMode } = useFinancial();
   const isClickable = !!onClick;
 
   const Component = isClickable ? 'button' : 'div';
@@ -28,7 +30,13 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     >
       <div className="flex items-center flex-1">
         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-          <CreditCard className="w-5 h-5 text-blue-600" />
+          {account.type === 'INVESTMENT' && account.name.includes('Home') ? (
+            <span className="text-xl">🏠</span>
+          ) : account.type === 'LOAN' ? (
+            <span className="text-xl">🏦</span>
+          ) : (
+            <CreditCard className="w-5 h-5 text-blue-600" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-gray-900 truncate">
@@ -40,7 +48,14 @@ export const AccountCard: React.FC<AccountCardProps> = ({
           {/* Sync Status */}
           <div className="flex items-center mt-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div>
-            <span className="text-xs text-gray-500">Synced</span>
+            <span className="text-xs text-gray-500">
+              Synced • {new Date().toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
+            </span>
           </div>
         </div>
       </div>
@@ -52,12 +67,18 @@ export const AccountCard: React.FC<AccountCardProps> = ({
               account.balance < 0 ? 'text-red-600' : 'text-green-600'
             }`}
           >
-            $
-            {Math.abs(account.balance).toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-            })}
+            {isPrivacyMode ? (
+              <span className="text-gray-400">••••••</span>
+            ) : (
+              <>
+                $
+                {Math.abs(account.balance).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                })}
+              </>
+            )}
           </div>
-          {account.limit && (
+          {account.limit && !isPrivacyMode && (
             <div className="text-sm text-gray-500">
               Limit: ${account.limit.toLocaleString()}
             </div>

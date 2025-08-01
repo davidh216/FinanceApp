@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Transaction } from '../../types/financial';
 import { TAG_CATEGORIES } from '../../constants/financial';
+import { useFinancial } from '../../contexts/FinancialContext';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -19,6 +20,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   showTagging = true,
   className = '',
 }) => {
+  const { isPrivacyMode } = useFinancial();
   const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   const handleAddTag = (tagName: string) => {
@@ -155,10 +157,16 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
             }`}
           >
-            {transaction.amount > 0 ? '+' : ''}$
-            {Math.abs(transaction.amount).toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-            })}
+            {isPrivacyMode ? (
+              <span className="text-gray-400">••••••</span>
+            ) : (
+              <>
+                {transaction.amount > 0 ? '+' : ''}$
+                {Math.abs(transaction.amount).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                })}
+              </>
+            )}
           </div>
         </div>
       </div>
