@@ -3,7 +3,6 @@ import {
   FinancialState,
   FinancialAction,
   Account,
-  Transaction,
   FilterOptions,
   TimePeriod,
   FinancialSummary,
