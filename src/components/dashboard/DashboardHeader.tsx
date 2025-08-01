@@ -1,11 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
-import { CheckCircle, Plus, Settings, Bell } from 'lucide-react';
+import { DateRangePicker } from '../ui/DateRangePicker';
+import { CheckCircle, Plus, Settings, Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
-  const { state, changePeriod } = useFinancial();
+  const { state, changePeriod, setCustomDateRange, isPrivacyMode, togglePrivacyMode, accountFilter, setAccountFilter } = useFinancial();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+
+  // Function to get acronym labels for filter buttons
+  const getFilterLabel = (period: string): string => {
+    switch (period) {
+      case 'day': return 'D';
+      case 'week': return 'W';
+      case 'month': return 'M';
+      case 'quarter': return 'Q';
+      case 'year': return 'Y';
+      case '5year': return '5Y';
+      case 'custom': return 'Custom';
+      default: return period.charAt(0).toUpperCase() + period.slice(1);
+    }
+  };
+
+  const handlePeriodClick = (period: string) => {
+    if (period === 'custom') {
+      setIsDatePickerOpen(true);
+    } else {
+      changePeriod(period as any);
+    }
+  };
+
+  const handleDateRangeSelect = (startDate: string, endDate: string) => {
+    setCustomDateRange(startDate, endDate, 'Custom Range');
+  };
+
+  const handleRefresh = () => {
+    // For now, just show an alert. In a real app, this would refresh the data
+    alert('Refreshing data...');
+  };
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-40">
@@ -30,37 +63,63 @@ export const DashboardHeader: React.FC = () => {
             </div>
           </div>
 
-          {/* Period Selector */}
+
+
+          {/* Account Type Filter - Centered */}
           {state.accounts.length > 0 && (
-            <div className="hidden md:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-              {DEFAULT_PERIODS.map((period) => (
-                <button
-                  key={period}
-                  onClick={() => changePeriod(period)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    state.selectedPeriod === period
-                      ? 'bg-white shadow-sm text-blue-600'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  {period.charAt(0).toUpperCase() + period.slice(1)}
-                </button>
-              ))}
+            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setAccountFilter('personal')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  accountFilter === 'personal'
+                    ? 'bg-white shadow-sm text-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Personal
+              </button>
+              <button
+                onClick={() => setAccountFilter('business')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  accountFilter === 'business'
+                    ? 'bg-white shadow-sm text-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Business
+              </button>
+              <button
+                onClick={() => setAccountFilter('both')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  accountFilter === 'both'
+                    ? 'bg-white shadow-sm text-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Both
+              </button>
             </div>
           )}
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
-            {/* Connection Status */}
-            {state.accounts.length > 0 && (
-              <div className="hidden sm:flex items-center text-green-600 bg-green-50 px-3 py-1.5 rounded-full">
-                <CheckCircle className="w-4 h-4 mr-1.5" />
-                <span className="text-sm font-medium">
-                  {state.accounts.length} account
-                  {state.accounts.length !== 1 ? 's' : ''} connected
-                </span>
-              </div>
-            )}
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              title="Refresh data"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
+
+            {/* Privacy Toggle */}
+            <button
+              onClick={togglePrivacyMode}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              title={isPrivacyMode ? 'Show amounts' : 'Hide amounts'}
+            >
+              {isPrivacyMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
 
             {/* Notifications */}
             <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative">
@@ -68,19 +127,7 @@ export const DashboardHeader: React.FC = () => {
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
 
-            {/* Settings */}
-            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-              <Settings className="w-5 h-5" />
-            </button>
 
-            {/* Add Account Button */}
-            <Button
-              leftIcon={<Plus className="w-4 h-4" />}
-              size="sm"
-              onClick={() => alert('Bank connection coming soon!')}
-            >
-              Add Account
-            </Button>
 
             {/* User Avatar */}
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
@@ -89,6 +136,15 @@ export const DashboardHeader: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Date Range Picker */}
+      <DateRangePicker
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        onDateRangeSelect={handleDateRangeSelect}
+        currentStartDate={state.customDateRange?.startDate}
+        currentEndDate={state.customDateRange?.endDate}
+      />
     </header>
   );
 };

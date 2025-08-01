@@ -20,7 +20,7 @@ interface AccountDetailProps {
 }
 
 export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
-  const { state, addTag, removeTag, changeScreen } = useFinancial();
+  const { state, addTag, removeTag, changeScreen, isPrivacyMode } = useFinancial();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'merchant'>('date');
@@ -73,30 +73,89 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
       return 0;
     });
 
-    // Calculate monthly stats
-    const currentMonth = new Date().toISOString().substring(0, 7);
-    const monthlyTransactions = account.transactions.filter(txn => 
-      txn.date.startsWith(currentMonth)
-    );
+    // Calculate period-based stats based on selectedPeriod
+    const today = new Date();
+    let startDate: Date;
+    let endDate: Date;
+    let periodLabel: string;
+
+    // Calculate period boundaries based on selectedPeriod
+    switch (state.selectedPeriod) {
+      case 'day':
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        endDate = new Date(); // Today
+        periodLabel = 'Today';
+        break;
+      case 'week':
+        const dayOfWeek = today.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToSubtract);
+        endDate = new Date(); // Today
+        periodLabel = 'This Week';
+        break;
+      case 'month':
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        endDate = new Date(); // Today
+        periodLabel = 'This Month';
+        break;
+      case 'quarter':
+        const currentQuarter = Math.floor(today.getMonth() / 3);
+        startDate = new Date(today.getFullYear(), currentQuarter * 3, 1);
+        endDate = new Date(); // Today
+        periodLabel = 'This Quarter';
+        break;
+      case 'year':
+        startDate = new Date(today.getFullYear(), 0, 1);
+        endDate = new Date(); // Today
+        periodLabel = 'This Year';
+        break;
+      case '5year':
+        startDate = new Date(today.getFullYear() - 5, 0, 1);
+        endDate = new Date(); // Today
+        periodLabel = 'Last 5 Years';
+        break;
+      case 'custom':
+        if (state.customDateRange) {
+          startDate = new Date(state.customDateRange.startDate);
+          endDate = new Date(state.customDateRange.endDate);
+          periodLabel = state.customDateRange.label || 'Custom Range';
+        } else {
+          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+          endDate = new Date(); // Today
+          periodLabel = 'This Month';
+        }
+        break;
+      default:
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        endDate = new Date(); // Today
+        periodLabel = 'This Month';
+    }
     
-    const monthlyIncome = monthlyTransactions
+    // Filter transactions for the selected period
+    const periodTransactions = account.transactions.filter(txn => {
+      const txnDate = new Date(txn.date);
+      return txnDate >= startDate && txnDate <= endDate;
+    });
+    
+    const periodIncome = periodTransactions
       .filter(txn => txn.amount > 0)
       .reduce((sum, txn) => sum + txn.amount, 0);
     
-    const monthlyExpenses = Math.abs(monthlyTransactions
+    const periodExpenses = Math.abs(periodTransactions
       .filter(txn => txn.amount < 0)
       .reduce((sum, txn) => sum + txn.amount, 0));
 
     const stats = {
       totalTransactions: account.transactions.length,
-      monthlyTransactions: monthlyTransactions.length,
-      monthlyIncome,
-      monthlyExpenses,
-      netFlow: monthlyIncome - monthlyExpenses
+      periodTransactions: periodTransactions.length,
+      periodIncome,
+      periodExpenses,
+      netFlow: periodIncome - periodExpenses,
+      periodLabel
     };
 
     return { filteredTransactions: filtered, monthlyStats: stats };
-  }, [account, searchTerm, selectedCategory, sortBy, sortDirection]);
+  }, [account, searchTerm, selectedCategory, sortBy, sortDirection, state.selectedPeriod]);
 
   if (!account) {
     return (
@@ -157,9 +216,15 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 }`}
                 data-testid="account-balance"
               >
-                ${Math.abs(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                {isPrivacyMode ? (
+                  <span className="text-gray-400">••••••</span>
+                ) : (
+                  <>
+                    ${Math.abs(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </>
+                )}
               </div>
-              {account.limit && (
+              {account.limit && !isPrivacyMode && (
                 <div className="text-sm text-gray-500" data-testid="account-limit">
                   Limit: ${account.limit.toLocaleString()}
                 </div>
@@ -169,36 +234,50 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
 
           {/* Monthly Stats */}
           {monthlyStats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm text-gray-600">This Month</div>
-                <div className="text-lg font-semibold text-gray-900">
-                  {monthlyStats.monthlyTransactions} transactions
+            <div className="mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-gray-600">{monthlyStats.periodLabel}</div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {monthlyStats.periodTransactions} transactions
+                  </div>
                 </div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm text-gray-600">Income</div>
-                <div className="text-lg font-semibold text-green-600">
-                  +${monthlyStats.monthlyIncome.toLocaleString()}
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-gray-600">Income</div>
+                  <div className="text-lg font-semibold text-green-600">
+                    {isPrivacyMode ? (
+                      <span className="text-gray-400">••••••</span>
+                    ) : (
+                      <>+${monthlyStats.periodIncome.toLocaleString()}</>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm text-gray-600">Expenses</div>
-                <div className="text-lg font-semibold text-red-600">
-                  -${monthlyStats.monthlyExpenses.toLocaleString()}
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-gray-600">Expenses</div>
+                  <div className="text-lg font-semibold text-red-600">
+                    {isPrivacyMode ? (
+                      <span className="text-gray-400">••••••</span>
+                    ) : (
+                      <>-${monthlyStats.periodExpenses.toLocaleString()}</>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm text-gray-600">Net Flow</div>
-                <div className={`text-lg font-semibold flex items-center ${
-                  monthlyStats.netFlow >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {monthlyStats.netFlow >= 0 ? (
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4 mr-1" />
-                  )}
-                  ${Math.abs(monthlyStats.netFlow).toLocaleString()}
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-sm text-gray-600">Net Flow</div>
+                  <div className={`text-lg font-semibold flex items-center justify-center ${
+                    monthlyStats.netFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {monthlyStats.netFlow >= 0 ? (
+                      <TrendingUp className="w-4 h-4 mr-1" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 mr-1" />
+                    )}
+                    {isPrivacyMode ? (
+                      <span className="text-gray-400">••••••</span>
+                    ) : (
+                      <>${Math.abs(monthlyStats.netFlow).toLocaleString()}</>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

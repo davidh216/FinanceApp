@@ -93,7 +93,13 @@ export interface KPIData {
   period: TimePeriod;
 }
 
-export type TimePeriod = 'month' | 'quarter' | 'year';
+export type TimePeriod = 'day' | 'week' | 'month' | 'quarter' | 'year' | '5year' | 'custom';
+
+export interface CustomDateRange {
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string
+  label: string;
+}
 
 export interface FilterOptions {
   dateRange?: {
@@ -121,8 +127,9 @@ export interface FinancialState {
   accounts: Account[];
   transactions: Transaction[];
   selectedAccount: Account | null;
-  currentScreen: 'dashboard' | 'accounts' | 'transactions';
+  currentScreen: 'dashboard' | 'accounts' | 'transactions' | 'account-detail';
   selectedPeriod: TimePeriod;
+  customDateRange?: CustomDateRange;
   isLoading: boolean;
   error: string | null;
   filters: FilterOptions;
@@ -136,6 +143,10 @@ export interface FinancialSummary {
   netWorth: number;
   debtToIncomeRatio: number;
   savingsRate: number;
+  // Add comparison data for trends
+  previousPeriodIncome?: number;
+  previousPeriodExpenses?: number;
+  periodLabel?: string;
 }
 
 export interface BudgetGoal {
@@ -154,9 +165,10 @@ export type FinancialAction =
   | { type: 'SELECT_ACCOUNT'; payload: Account | null }
   | {
       type: 'CHANGE_SCREEN';
-      payload: 'dashboard' | 'accounts' | 'transactions';
+      payload: 'dashboard' | 'accounts' | 'transactions' | 'account-detail';
     }
   | { type: 'CHANGE_PERIOD'; payload: TimePeriod }
+  | { type: 'SET_CUSTOM_DATE_RANGE'; payload: CustomDateRange }
   | { type: 'ADD_TAG'; payload: { transactionId: string; tag: string } }
   | { type: 'REMOVE_TAG'; payload: { transactionId: string; tag: string } }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }

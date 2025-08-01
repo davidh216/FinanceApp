@@ -47,12 +47,9 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
       <div className="p-2 border-b border-gray-200">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 text-left">
               Recent Activity
             </h3>
-            <p className="text-sm text-gray-600">
-              Latest {limit} transactions across all accounts
-            </p>
           </div>
 
           <div className="flex items-center space-x-2">
