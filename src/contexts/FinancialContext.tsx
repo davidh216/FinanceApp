@@ -308,7 +308,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
       previousPeriodExpenses: prevPeriodExpenses,
       periodLabel,
     };
-  }, [state.transactions, totalBalance, state.selectedPeriod, state.customDateRange]);
+  }, [
+    state.transactions,
+    totalBalance,
+    state.selectedPeriod,
+    state.customDateRange,
+  ]);
 
   const selectAccount = (account: Account | null) => {
     dispatch({ type: 'SELECT_ACCOUNT', payload: account });

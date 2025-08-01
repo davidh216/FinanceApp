@@ -14,10 +14,6 @@ export const DashboardHeader: React.FC = () => {
   } = useFinancial();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-
-
-
-
   const handleDateRangeSelect = (startDate: string, endDate: string) => {
     setCustomDateRange(startDate, endDate, 'Custom Range');
   };
