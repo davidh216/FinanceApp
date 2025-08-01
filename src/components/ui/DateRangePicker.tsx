@@ -28,7 +28,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+      if (
+        pickerRef.current &&
+        !pickerRef.current.contains(event.target as Node)
+      ) {
         onClose();
       }
     };
@@ -49,28 +52,28 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const firstDayOfWeek = firstDay.getDay();
-    
+
     const days = [];
-    
+
     // Add days from previous month
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
       const prevDate = new Date(year, month, -i);
       days.push({ date: prevDate, isCurrentMonth: false });
     }
-    
+
     // Add days from current month
     for (let i = 1; i <= daysInMonth; i++) {
       const currentDate = new Date(year, month, i);
       days.push({ date: currentDate, isCurrentMonth: true });
     }
-    
+
     // Add days from next month to complete the grid
     const remainingDays = 42 - days.length; // 6 rows * 7 days
     for (let i = 1; i <= remainingDays; i++) {
       const nextDate = new Date(year, month + 1, i);
       days.push({ date: nextDate, isCurrentMonth: false });
     }
-    
+
     return days;
   };
 
@@ -115,8 +118,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
   const isDateSelected = (date: Date) => {
     return (
-      (selectedStartDate && date.toDateString() === selectedStartDate.toDateString()) ||
-      (selectedEndDate && date.toDateString() === selectedEndDate.toDateString())
+      (selectedStartDate &&
+        date.toDateString() === selectedStartDate.toDateString()) ||
+      (selectedEndDate &&
+        date.toDateString() === selectedEndDate.toDateString())
     );
   };
 
@@ -140,7 +145,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Select Date Range</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Select Date Range
+          </h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -153,7 +160,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
           <div className="text-sm text-gray-600 mb-2">Selected Range:</div>
           <div className="text-sm font-medium">
-            {selectedStartDate ? formatDate(selectedStartDate) : 'Start date'} 
+            {selectedStartDate ? formatDate(selectedStartDate) : 'Start date'}
             {' → '}
             {selectedEndDate ? formatDate(selectedEndDate) : 'End date'}
           </div>
@@ -162,16 +169,33 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         {/* Month Navigation */}
         <div className="flex items-center justify-between mb-4">
           <button
-            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+            onClick={() =>
+              setCurrentMonth(
+                new Date(
+                  currentMonth.getFullYear(),
+                  currentMonth.getMonth() - 1
+                )
+              )
+            }
             className="p-1 hover:bg-gray-100 rounded"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <h4 className="text-lg font-medium">
-            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            {currentMonth.toLocaleDateString('en-US', {
+              month: 'long',
+              year: 'numeric',
+            })}
           </h4>
           <button
-            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+            onClick={() =>
+              setCurrentMonth(
+                new Date(
+                  currentMonth.getFullYear(),
+                  currentMonth.getMonth() + 1
+                )
+              )
+            }
             className="p-1 hover:bg-gray-100 rounded"
           >
             <ChevronRight className="w-5 h-5" />
@@ -183,7 +207,10 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           {/* Day Headers */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-              <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+              <div
+                key={day}
+                className="text-center text-xs font-medium text-gray-500 py-1"
+              >
                 {day}
               </div>
             ))}
@@ -197,10 +224,26 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
                 onClick={() => handleDateClick(date)}
                 className={`
                   p-2 text-sm rounded-md transition-colors
-                  ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-900 hover:bg-blue-50'}
-                  ${isDateSelected(date) ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
-                  ${isDateInRange(date) && !isDateSelected(date) ? 'bg-blue-100' : ''}
-                  ${date.toDateString() === new Date().toDateString() ? 'font-bold' : ''}
+                  ${
+                    !isCurrentMonth
+                      ? 'text-gray-300'
+                      : 'text-gray-900 hover:bg-blue-50'
+                  }
+                  ${
+                    isDateSelected(date)
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : ''
+                  }
+                  ${
+                    isDateInRange(date) && !isDateSelected(date)
+                      ? 'bg-blue-100'
+                      : ''
+                  }
+                  ${
+                    date.toDateString() === new Date().toDateString()
+                      ? 'font-bold'
+                      : ''
+                  }
                 `}
               >
                 {date.getDate()}
@@ -228,4 +271,4 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
       </div>
     </div>
   );
-}; 
+};

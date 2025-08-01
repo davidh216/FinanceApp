@@ -6,20 +6,36 @@ import { DateRangePicker } from '../ui/DateRangePicker';
 import { Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
-  const { state, changePeriod, setCustomDateRange, isPrivacyMode, togglePrivacyMode, accountFilter, setAccountFilter } = useFinancial();
+  const {
+    state,
+    changePeriod,
+    setCustomDateRange,
+    isPrivacyMode,
+    togglePrivacyMode,
+    accountFilter,
+    setAccountFilter,
+  } = useFinancial();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // Function to get acronym labels for filter buttons
   const getFilterLabel = (period: string): string => {
     switch (period) {
-      case 'day': return 'D';
-      case 'week': return 'W';
-      case 'month': return 'M';
-      case 'quarter': return 'Q';
-      case 'year': return 'Y';
-      case '5year': return '5Y';
-      case 'custom': return 'Custom';
-      default: return period.charAt(0).toUpperCase() + period.slice(1);
+      case 'day':
+        return 'D';
+      case 'week':
+        return 'W';
+      case 'month':
+        return 'M';
+      case 'quarter':
+        return 'Q';
+      case 'year':
+        return 'Y';
+      case '5year':
+        return '5Y';
+      case 'custom':
+        return 'Custom';
+      default:
+        return period.charAt(0).toUpperCase() + period.slice(1);
     }
   };
 
@@ -62,8 +78,6 @@ export const DashboardHeader: React.FC = () => {
               </div>
             </div>
           </div>
-
-
 
           {/* Account Type Filter - Centered */}
           {state.accounts.length > 0 && (
@@ -118,7 +132,11 @@ export const DashboardHeader: React.FC = () => {
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
               title={isPrivacyMode ? 'Show amounts' : 'Hide amounts'}
             >
-              {isPrivacyMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {isPrivacyMode ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
 
             {/* Notifications */}
@@ -126,8 +144,6 @@ export const DashboardHeader: React.FC = () => {
               <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
-
-
 
             {/* User Avatar */}
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">

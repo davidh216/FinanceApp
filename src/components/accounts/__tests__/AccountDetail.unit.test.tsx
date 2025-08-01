@@ -15,7 +15,7 @@ const mockContextValue = {
     isLoading: false,
     error: null,
     filters: {},
-    sortBy: 'date-desc'
+    sortBy: 'date-desc',
   },
   dispatch: jest.fn(),
   totalBalance: 0,
@@ -38,7 +38,9 @@ const mockContextValue = {
 
 jest.mock('../../../contexts/FinancialContext', () => ({
   useFinancial: () => mockContextValue,
-  FinancialProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+  FinancialProvider: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 describe('AccountDetail Unit Tests', () => {
@@ -57,7 +59,7 @@ describe('AccountDetail Unit Tests', () => {
       isActive: true,
       createdAt: '2025-01-01T00:00:00Z',
       updatedAt: '2025-01-01T00:00:00Z',
-      transactions: []
+      transactions: [],
     };
 
     render(<AccountDetail />);
@@ -79,25 +81,27 @@ describe('AccountDetail Unit Tests', () => {
       isActive: true,
       createdAt: '2025-01-01T00:00:00Z',
       updatedAt: '2025-01-01T00:00:00Z',
-      transactions: [{
-        id: 'txn_1',
-        accountId: 'acc_test',
-        description: 'TEST MERCHANT',
-        amount: -50,
-        date: '2025-01-15',
-        category: 'Other',
-        tags: [],
-        pending: false,
-        cleanMerchant: {
-          cleanName: 'Test Merchant',
-          logo: '🏪',
-          suggestedCategory: 'Other',
-          original: 'TEST MERCHANT',
-          confidence: 0.5,
+      transactions: [
+        {
+          id: 'txn_1',
+          accountId: 'acc_test',
+          description: 'TEST MERCHANT',
+          amount: -50,
+          date: '2025-01-15',
+          category: 'Other',
+          tags: [],
+          pending: false,
+          cleanMerchant: {
+            cleanName: 'Test Merchant',
+            logo: '🏪',
+            suggestedCategory: 'Other',
+            original: 'TEST MERCHANT',
+            confidence: 0.5,
+          },
+          createdAt: '2025-01-15T00:00:00Z',
+          updatedAt: '2025-01-15T00:00:00Z',
         },
-        createdAt: '2025-01-15T00:00:00Z',
-        updatedAt: '2025-01-15T00:00:00Z',
-      }]
+      ],
     };
 
     mockContextValue.state.selectedAccount = mockAccount;
@@ -105,7 +109,7 @@ describe('AccountDetail Unit Tests', () => {
     render(<AccountDetail />);
 
     expect(screen.getByText('Test Merchant')).toBeInTheDocument();
-    
+
     // Test that the addTag function is passed correctly
     expect(mockContextValue.addTag).toBeDefined();
   });
@@ -121,11 +125,13 @@ describe('AccountDetail Unit Tests', () => {
       isActive: true,
       createdAt: '2025-01-01T00:00:00Z',
       updatedAt: '2025-01-01T00:00:00Z',
-      transactions: []
+      transactions: [],
     };
 
     render(<AccountDetail />);
 
-    expect(screen.getByTestId('empty-state')).toHaveTextContent('No transactions found');
+    expect(screen.getByTestId('empty-state')).toHaveTextContent(
+      'No transactions found'
+    );
   });
 });

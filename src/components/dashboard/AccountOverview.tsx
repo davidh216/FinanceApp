@@ -3,11 +3,7 @@ import { Account } from '../../types/financial';
 import { AccountCard } from '../ui/AccountCard';
 import { Button } from '../ui/Button';
 import { useFinancial } from '../../contexts/FinancialContext';
-import {
-  Plus,
-  ChevronDown,
-  ChevronRight,
-} from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface AccountOverviewProps {
   accounts: Account[];
@@ -21,11 +17,15 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   accountFilter = 'both',
 }) => {
   const { isPrivacyMode } = useFinancial();
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    'Personal': true,
-    'Business': true,
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({
+    Personal: true,
+    Business: true,
   });
-  const [expandedSubsections, setExpandedSubsections] = useState<Record<string, boolean>>({
+  const [expandedSubsections, setExpandedSubsections] = useState<
+    Record<string, boolean>
+  >({
     'Personal-Assets': false,
     'Personal-Liabilities': false,
     'Business-Assets': false,
@@ -37,7 +37,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
     if (previous === 0) return current > 0 ? 100 : 0;
     return ((current - previous) / previous) * 100;
   };
-  
+
   // Calculate summary stats
   const totalBalance = accounts.reduce(
     (sum, account) => sum + account.balance,
@@ -56,14 +56,14 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   // Mock previous values (in a real app, this would come from historical data)
   const prevAssets = totalAssets * 0.95;
   const prevLiabilities = totalLiabilities * 1.05;
-  
+
   const assetsChange = calculateChange(totalAssets, prevAssets);
   const liabilitiesChange = calculateChange(totalLiabilities, prevLiabilities);
   const assetsValueChange = totalAssets - prevAssets;
   const liabilitiesValueChange = totalLiabilities - prevLiabilities;
 
   // Filter accounts based on accountFilter
-  const filteredAccounts = accounts.filter(account => {
+  const filteredAccounts = accounts.filter((account) => {
     if (accountFilter === 'both') return true;
     if (accountFilter === 'personal') return !account.type.includes('BUSINESS');
     if (accountFilter === 'business') return account.type.includes('BUSINESS');
@@ -73,34 +73,37 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   // Account grouping by Personal/Business with Assets/Liabilities subsections
   const accountGroups = filteredAccounts.reduce((acc, account) => {
     // Determine main group (Personal or Business)
-    const mainGroup = account.type.includes('BUSINESS') ? 'Business' : 'Personal';
-    
+    const mainGroup = account.type.includes('BUSINESS')
+      ? 'Business'
+      : 'Personal';
+
     // Determine subsection (Assets or Liabilities)
-    const subsection: 'Assets' | 'Liabilities' = account.balance >= 0 ? 'Assets' : 'Liabilities';
-    
+    const subsection: 'Assets' | 'Liabilities' =
+      account.balance >= 0 ? 'Assets' : 'Liabilities';
+
     // Initialize structure if it doesn't exist
     if (!acc[mainGroup]) {
       acc[mainGroup] = { Assets: [], Liabilities: [] };
     }
-    
+
     // Add account to appropriate subsection
     acc[mainGroup][subsection].push(account);
-    
+
     return acc;
   }, {} as Record<string, { Assets: Account[]; Liabilities: Account[] }>);
 
   const toggleSection = (sectionName: string) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [sectionName]: !prev[sectionName]
+      [sectionName]: !prev[sectionName],
     }));
   };
 
   const toggleSubsection = (mainGroup: string, subsection: string) => {
     const key = `${mainGroup}-${subsection}`;
-    setExpandedSubsections(prev => ({
+    setExpandedSubsections((prev) => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: !prev[key],
     }));
   };
 
@@ -113,7 +116,6 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
             <h3 className="text-lg font-semibold text-gray-900">
               Account Overview
             </h3>
-
           </div>
 
           <Button
@@ -125,8 +127,6 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
             Add Account
           </Button>
         </div>
-
-
       </div>
 
       {/* Account List - Flex grow to fill available space */}
@@ -154,8 +154,15 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                     Net:{' '}
                     <span
                       className={`font-semibold ${
-                        (subsections.Assets.reduce((sum, acc) => sum + acc.balance, 0) +
-                         subsections.Liabilities.reduce((sum, acc) => sum + acc.balance, 0)) >= 0
+                        subsections.Assets.reduce(
+                          (sum, acc) => sum + acc.balance,
+                          0
+                        ) +
+                          subsections.Liabilities.reduce(
+                            (sum, acc) => sum + acc.balance,
+                            0
+                          ) >=
+                        0
                           ? 'text-green-600'
                           : 'text-red-600'
                       }`}
@@ -166,9 +173,17 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                         <>
                           $
                           {Math.abs(
-                            subsections.Assets.reduce((sum, acc) => sum + acc.balance, 0) +
-                            subsections.Liabilities.reduce((sum, acc) => sum + acc.balance, 0)
-                          ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            subsections.Assets.reduce(
+                              (sum, acc) => sum + acc.balance,
+                              0
+                            ) +
+                              subsections.Liabilities.reduce(
+                                (sum, acc) => sum + acc.balance,
+                                0
+                              )
+                          ).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                          })}
                         </>
                       )}
                     </span>
@@ -185,7 +200,9 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                       <div className="px-6 py-2 bg-gray-50 border-b">
                         <div className="flex items-center justify-between">
                           <button
-                            onClick={() => toggleSubsection(mainGroup, 'Assets')}
+                            onClick={() =>
+                              toggleSubsection(mainGroup, 'Assets')
+                            }
                             className="flex items-center hover:bg-gray-100 rounded px-2 py-1 transition-colors"
                           >
                             {expandedSubsections[`${mainGroup}-Assets`] ? (
@@ -200,29 +217,40 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                               </span>
                             </h4>
                           </button>
-                                                <div className="text-sm text-gray-600">
-                        Total:{' '}
-                        <span className="font-semibold text-green-600">
-                          {isPrivacyMode ? (
-                            <span className="text-gray-400">••••••</span>
-                          ) : (
-                            <>
-                              $
-                              {Math.abs(
-                                subsections.Assets.reduce((sum, acc) => sum + acc.balance, 0)
-                              ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                            </>
-                          )}
-                        </span>
-                        {!isPrivacyMode && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {assetsChange >= 0 ? '+' : ''}{assetsChange.toFixed(1)}%
-                            <span className="ml-1">
-                              ({assetsValueChange >= 0 ? '+' : ''}${Math.abs(assetsValueChange).toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                          <div className="text-sm text-gray-600">
+                            Total:{' '}
+                            <span className="font-semibold text-green-600">
+                              {isPrivacyMode ? (
+                                <span className="text-gray-400">••••••</span>
+                              ) : (
+                                <>
+                                  $
+                                  {Math.abs(
+                                    subsections.Assets.reduce(
+                                      (sum, acc) => sum + acc.balance,
+                                      0
+                                    )
+                                  ).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </>
+                              )}
                             </span>
+                            {!isPrivacyMode && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {assetsChange >= 0 ? '+' : ''}
+                                {assetsChange.toFixed(1)}%
+                                <span className="ml-1">
+                                  ({assetsValueChange >= 0 ? '+' : ''}$
+                                  {Math.abs(assetsValueChange).toLocaleString(
+                                    'en-US',
+                                    { minimumFractionDigits: 2 }
+                                  )}
+                                  )
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
                         </div>
                       </div>
                       {expandedSubsections[`${mainGroup}-Assets`] && (
@@ -248,7 +276,9 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                       <div className="px-6 py-2 bg-gray-50 border-b">
                         <div className="flex items-center justify-between">
                           <button
-                            onClick={() => toggleSubsection(mainGroup, 'Liabilities')}
+                            onClick={() =>
+                              toggleSubsection(mainGroup, 'Liabilities')
+                            }
                             className="flex items-center hover:bg-gray-100 rounded px-2 py-1 transition-colors"
                           >
                             {expandedSubsections[`${mainGroup}-Liabilities`] ? (
@@ -263,29 +293,41 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                               </span>
                             </h4>
                           </button>
-                                                <div className="text-sm text-gray-600">
-                        Total:{' '}
-                        <span className="font-semibold text-red-600">
-                          {isPrivacyMode ? (
-                            <span className="text-gray-400">••••••</span>
-                          ) : (
-                            <>
-                              $
-                              {Math.abs(
-                                subsections.Liabilities.reduce((sum, acc) => sum + acc.balance, 0)
-                              ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                            </>
-                          )}
-                        </span>
-                        {!isPrivacyMode && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {liabilitiesChange >= 0 ? '+' : ''}{liabilitiesChange.toFixed(1)}%
-                            <span className="ml-1">
-                              ({liabilitiesValueChange >= 0 ? '+' : ''}${Math.abs(liabilitiesValueChange).toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                          <div className="text-sm text-gray-600">
+                            Total:{' '}
+                            <span className="font-semibold text-red-600">
+                              {isPrivacyMode ? (
+                                <span className="text-gray-400">••••••</span>
+                              ) : (
+                                <>
+                                  $
+                                  {Math.abs(
+                                    subsections.Liabilities.reduce(
+                                      (sum, acc) => sum + acc.balance,
+                                      0
+                                    )
+                                  ).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </>
+                              )}
                             </span>
+                            {!isPrivacyMode && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {liabilitiesChange >= 0 ? '+' : ''}
+                                {liabilitiesChange.toFixed(1)}%
+                                <span className="ml-1">
+                                  ({liabilitiesValueChange >= 0 ? '+' : ''}$
+                                  {Math.abs(
+                                    liabilitiesValueChange
+                                  ).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                  )
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
                         </div>
                       </div>
                       {expandedSubsections[`${mainGroup}-Liabilities`] && (

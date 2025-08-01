@@ -1,6 +1,12 @@
 /* eslint-disable testing-library/no-wait-for-multiple-assertions */
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Dashboard } from '../../dashboard/Dashboard';
@@ -32,7 +38,9 @@ describe('AccountDetail Integration Tests', () => {
 
     // 3. Should now be on account detail page
     await waitFor(() => {
-      expect(screen.getByTestId('account-name')).toHaveTextContent('Primary Checking');
+      expect(screen.getByTestId('account-name')).toHaveTextContent(
+        'Primary Checking'
+      );
       expect(screen.getByTestId('back-button')).toBeInTheDocument();
     });
 
@@ -110,7 +118,7 @@ describe('AccountDetail Integration Tests', () => {
     await act(async () => {
       await user.click(sortAmountButton);
     });
-    
+
     await waitFor(() => {
       expect(sortAmountButton).toHaveTextContent('Amount ↑');
     });

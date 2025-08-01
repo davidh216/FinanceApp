@@ -3,13 +3,12 @@ import { useFinancial } from '../../contexts/FinancialContext';
 import { DashboardHeader } from '../dashboard/DashboardHeader';
 import { Button } from '../ui/Button';
 import { TransactionItem } from '../ui/TransactionItem';
-import { 
-  ArrowLeft, 
-  Search, 
+import {
+  ArrowLeft,
+  Search,
   Plus,
   TrendingUp,
   TrendingDown,
-  
 } from 'lucide-react';
 import { Account, Transaction } from '../../types/financial';
 
@@ -18,7 +17,8 @@ interface AccountDetailProps {
 }
 
 export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
-  const { state, addTag, removeTag, changeScreen, isPrivacyMode } = useFinancial();
+  const { state, addTag, removeTag, changeScreen, isPrivacyMode } =
+    useFinancial();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'merchant'>('date');
@@ -26,8 +26,8 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
 
   // Get the selected account
   const account = useMemo(() => {
-    return accountId 
-      ? state.accounts.find(acc => acc.id === accountId)
+    return accountId
+      ? state.accounts.find((acc) => acc.id === accountId)
       : state.selectedAccount;
   }, [accountId, state.accounts, state.selectedAccount]);
 
@@ -37,21 +37,26 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
       return { filteredTransactions: [], monthlyStats: null };
     }
 
-    let filtered = account.transactions.filter(txn => {
-      const matchesSearch = 
-        txn.cleanMerchant.cleanName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    let filtered = account.transactions.filter((txn) => {
+      const matchesSearch =
+        txn.cleanMerchant.cleanName
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         txn.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        txn.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesCategory = !selectedCategory || txn.tags.includes(selectedCategory);
-      
+        txn.tags.some((tag) =>
+          tag.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+      const matchesCategory =
+        !selectedCategory || txn.tags.includes(selectedCategory);
+
       return matchesSearch && matchesCategory;
     });
 
     // Sort transactions
     filtered.sort((a, b) => {
       let aVal: any, bVal: any;
-      
+
       switch (sortBy) {
         case 'amount':
           aVal = Math.abs(a.amount);
@@ -80,14 +85,22 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
     // Calculate period boundaries based on selectedPeriod
     switch (state.selectedPeriod) {
       case 'day':
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
         endDate = new Date(); // Today
         periodLabel = 'Today';
         break;
       case 'week':
         const dayOfWeek = today.getDay();
         const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToSubtract);
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() - daysToSubtract
+        );
         endDate = new Date(); // Today
         periodLabel = 'This Week';
         break;
@@ -128,20 +141,22 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
         endDate = new Date(); // Today
         periodLabel = 'This Month';
     }
-    
+
     // Filter transactions for the selected period
-    const periodTransactions = account.transactions.filter(txn => {
+    const periodTransactions = account.transactions.filter((txn) => {
       const txnDate = new Date(txn.date);
       return txnDate >= startDate && txnDate <= endDate;
     });
-    
+
     const periodIncome = periodTransactions
-      .filter(txn => txn.amount > 0)
+      .filter((txn) => txn.amount > 0)
       .reduce((sum, txn) => sum + txn.amount, 0);
-    
-    const periodExpenses = Math.abs(periodTransactions
-      .filter(txn => txn.amount < 0)
-      .reduce((sum, txn) => sum + txn.amount, 0));
+
+    const periodExpenses = Math.abs(
+      periodTransactions
+        .filter((txn) => txn.amount < 0)
+        .reduce((sum, txn) => sum + txn.amount, 0)
+    );
 
     const stats = {
       totalTransactions: account.transactions.length,
@@ -149,11 +164,18 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
       periodIncome,
       periodExpenses,
       netFlow: periodIncome - periodExpenses,
-      periodLabel
+      periodLabel,
     };
 
     return { filteredTransactions: filtered, monthlyStats: stats };
-  }, [account, searchTerm, selectedCategory, sortBy, sortDirection, state.selectedPeriod]);
+  }, [
+    account,
+    searchTerm,
+    selectedCategory,
+    sortBy,
+    sortDirection,
+    state.selectedPeriod,
+  ]);
 
   if (!account) {
     return (
@@ -161,8 +183,12 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
         <DashboardHeader />
         <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Not Found</h2>
-            <p className="text-gray-600 mb-4">The requested account could not be found.</p>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Account Not Found
+            </h2>
+            <p className="text-gray-600 mb-4">
+              The requested account could not be found.
+            </p>
             <Button onClick={() => changeScreen('dashboard')}>
               Back to Dashboard
             </Button>
@@ -184,7 +210,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardHeader />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
@@ -198,7 +224,10 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900" data-testid="account-name">
+                <h1
+                  className="text-2xl font-bold text-gray-900"
+                  data-testid="account-name"
+                >
                   {account.name}
                 </h1>
                 <p className="text-gray-600" data-testid="account-info">
@@ -206,9 +235,9 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 </p>
               </div>
             </div>
-            
+
             <div className="text-right">
-              <div 
+              <div
                 className={`text-3xl font-bold ${
                   account.balance < 0 ? 'text-red-600' : 'text-green-600'
                 }`}
@@ -218,12 +247,18 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                   <span className="text-gray-400">••••••</span>
                 ) : (
                   <>
-                    ${Math.abs(account.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    $
+                    {Math.abs(account.balance).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                    })}
                   </>
                 )}
               </div>
               {account.limit && !isPrivacyMode && (
-                <div className="text-sm text-gray-500" data-testid="account-limit">
+                <div
+                  className="text-sm text-gray-500"
+                  data-testid="account-limit"
+                >
                   Limit: ${account.limit.toLocaleString()}
                 </div>
               )}
@@ -235,7 +270,9 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
             <div className="mb-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4 text-center">
-                  <div className="text-sm text-gray-600">{monthlyStats.periodLabel}</div>
+                  <div className="text-sm text-gray-600">
+                    {monthlyStats.periodLabel}
+                  </div>
                   <div className="text-lg font-semibold text-gray-900">
                     {monthlyStats.periodTransactions} transactions
                   </div>
@@ -262,9 +299,13 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 text-center">
                   <div className="text-sm text-gray-600">Net Flow</div>
-                  <div className={`text-lg font-semibold flex items-center justify-center ${
-                    monthlyStats.netFlow >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <div
+                    className={`text-lg font-semibold flex items-center justify-center ${
+                      monthlyStats.netFlow >= 0
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}
+                  >
                     {monthlyStats.netFlow >= 0 ? (
                       <TrendingUp className="w-4 h-4 mr-1" />
                     ) : (
@@ -294,7 +335,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 data-testid="search-input"
               />
             </div>
-            
+
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -332,49 +373,58 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 <button
                   onClick={() => handleSort('date')}
                   className={`px-3 py-1 text-sm rounded transition-colors ${
-                    sortBy === 'date' 
-                      ? 'bg-blue-100 text-blue-700' 
+                    sortBy === 'date'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                   data-testid="sort-date"
                 >
-                  Date {sortBy === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  Date{' '}
+                  {sortBy === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </button>
                 <button
                   onClick={() => handleSort('amount')}
                   className={`px-3 py-1 text-sm rounded transition-colors ${
-                    sortBy === 'amount' 
-                      ? 'bg-blue-100 text-blue-700' 
+                    sortBy === 'amount'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                   data-testid="sort-amount"
                 >
-                  Amount {sortBy === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  Amount{' '}
+                  {sortBy === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
                 </button>
                 <button
                   onClick={() => handleSort('merchant')}
                   className={`px-3 py-1 text-sm rounded transition-colors ${
-                    sortBy === 'merchant' 
-                      ? 'bg-blue-100 text-blue-700' 
+                    sortBy === 'merchant'
+                      ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
                   data-testid="sort-merchant"
                 >
-                  Merchant {sortBy === 'merchant' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  Merchant{' '}
+                  {sortBy === 'merchant' &&
+                    (sortDirection === 'asc' ? '↑' : '↓')}
                 </button>
               </div>
             </div>
           </div>
 
           {/* Transaction List */}
-          <div className="divide-y divide-gray-200" data-testid="transaction-list">
+          <div
+            className="divide-y divide-gray-200"
+            data-testid="transaction-list"
+          >
             {filteredTransactions.length === 0 ? (
-              <div className="p-8 text-center text-gray-500" data-testid="empty-state">
+              <div
+                className="p-8 text-center text-gray-500"
+                data-testid="empty-state"
+              >
                 <p className="text-sm">
-                  {searchTerm || selectedCategory 
-                    ? 'No transactions match your filters' 
-                    : 'No transactions found'
-                  }
+                  {searchTerm || selectedCategory
+                    ? 'No transactions match your filters'
+                    : 'No transactions found'}
                 </p>
               </div>
             ) : (
