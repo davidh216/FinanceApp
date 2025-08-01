@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DateRangePickerProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
+    // const daysInMonth = lastDay.getDate();
     const firstDayOfWeek = firstDay.getDay();
 
     const days = [];

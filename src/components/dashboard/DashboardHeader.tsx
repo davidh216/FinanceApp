@@ -18,7 +18,7 @@ export const DashboardHeader: React.FC = () => {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // Function to get acronym labels for filter buttons
-  const getFilterLabel = (period: string): string => {
+  // const getFilterLabel = (period: string): string => {
     switch (period) {
       case 'day':
         return 'D';
@@ -39,7 +39,7 @@ export const DashboardHeader: React.FC = () => {
     }
   };
 
-  const handlePeriodClick = (period: string) => {
+  // const handlePeriodClick = (period: string) => {
     if (period === 'custom') {
       setIsDatePickerOpen(true);
     } else {

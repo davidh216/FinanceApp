@@ -39,7 +39,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   };
 
   // Calculate summary stats
-  const totalBalance = accounts.reduce(
+  // const totalBalance = accounts.reduce(
     (sum, account) => sum + account.balance,
     0
   );
