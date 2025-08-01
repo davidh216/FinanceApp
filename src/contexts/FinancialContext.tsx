@@ -207,9 +207,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
       return txnDate >= startDate && txnDate <= endDate;
     });
 
-    console.log(`=== ${periodLabel.toUpperCase()} SUMMARY ===`);
-    console.log(`Period: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
-    console.log(`Transactions found: ${periodTransactions.length}`);
 
     const periodIncome = periodTransactions
       .filter((txn) => txn.amount > 0)
@@ -221,8 +218,6 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
         .reduce((sum, txn) => sum + txn.amount, 0)
     );
 
-    console.log(`${periodLabel} income:`, periodIncome);
-    console.log(`${periodLabel} expenses:`, periodExpenses);
 
     const savingsRate = periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
 
