@@ -93,7 +93,14 @@ export interface KPIData {
   period: TimePeriod;
 }
 
-export type TimePeriod = 'day' | 'week' | 'month' | 'quarter' | 'year' | '5year' | 'custom';
+export type TimePeriod =
+  | 'day'
+  | 'week'
+  | 'month'
+  | 'quarter'
+  | 'year'
+  | '5year'
+  | 'custom';
 
 export interface CustomDateRange {
   startDate: string; // ISO date string

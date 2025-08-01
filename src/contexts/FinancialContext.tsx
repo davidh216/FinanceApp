@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useReducer, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useMemo,
+  useState,
+} from 'react';
 import {
   FinancialState,
   FinancialAction,
@@ -30,7 +36,7 @@ const financialReducer = (
       return {
         ...state,
         selectedAccount: action.payload,
-        currentScreen: 'account-detail'
+        currentScreen: 'account-detail',
       };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
@@ -100,10 +106,10 @@ const financialReducer = (
     case 'APPLY_FILTERS':
       return { ...state, filters: action.payload };
     case 'SET_CUSTOM_DATE_RANGE':
-      return { 
-        ...state, 
+      return {
+        ...state,
         selectedPeriod: 'custom',
-        customDateRange: action.payload 
+        customDateRange: action.payload,
       };
     default:
       return state;
@@ -122,7 +128,11 @@ interface FinancialContextType {
   removeTag: (transactionId: string, tag: string) => void;
   applyFilters: (filters: FilterOptions) => void;
   viewAccountDetail: (account: Account) => void;
-  setCustomDateRange: (startDate: string, endDate: string, label?: string) => void;
+  setCustomDateRange: (
+    startDate: string,
+    endDate: string,
+    label?: string
+  ) => void;
   isPrivacyMode: boolean;
   togglePrivacyMode: () => void;
   accountFilter: 'both' | 'personal' | 'business';
@@ -136,7 +146,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [state, dispatch] = useReducer(financialReducer, initialState);
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
-  const [accountFilter, setAccountFilter] = useState<'both' | 'personal' | 'business'>('personal');
+  const [accountFilter, setAccountFilter] = useState<
+    'both' | 'personal' | 'business'
+  >('personal');
 
   const totalBalance = useMemo(
     () => state.accounts.reduce((sum, account) => sum + account.balance, 0),
@@ -152,14 +164,22 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     // Calculate period boundaries based on selectedPeriod
     switch (state.selectedPeriod) {
       case 'day':
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
         endDate = new Date(); // Today
         periodLabel = 'daily';
         break;
       case 'week':
         const dayOfWeek = today.getDay();
         const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToSubtract);
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() - daysToSubtract
+        );
         endDate = new Date(); // Today
         periodLabel = 'weekly';
         break;
@@ -200,13 +220,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
         endDate = new Date(); // Today
         periodLabel = 'monthly';
     }
-    
+
     // Filter transactions for the selected period
     const periodTransactions = state.transactions.filter((txn) => {
       const txnDate = new Date(txn.date);
       return txnDate >= startDate && txnDate <= endDate;
     });
-
 
     const periodIncome = periodTransactions
       .filter((txn) => txn.amount > 0)
@@ -218,27 +237,37 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
         .reduce((sum, txn) => sum + txn.amount, 0)
     );
 
-
-    const savingsRate = periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
+    const savingsRate =
+      periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
 
     // Calculate previous period for comparison
     let prevStartDate: Date;
     switch (state.selectedPeriod) {
       case 'day':
-        prevStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+        prevStartDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() - 1
+        );
         break;
       case 'week':
-        const prevWeekDaysToSubtract = (today.getDay() === 0 ? 6 : today.getDay() - 1) + 7;
-        prevStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - prevWeekDaysToSubtract);
+        const prevWeekDaysToSubtract =
+          (today.getDay() === 0 ? 6 : today.getDay() - 1) + 7;
+        prevStartDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() - prevWeekDaysToSubtract
+        );
         break;
       case 'month':
         prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         break;
       case 'quarter':
         const prevQuarter = Math.floor(today.getMonth() / 3) - 1;
-        prevStartDate = prevQuarter >= 0 
-          ? new Date(today.getFullYear(), prevQuarter * 3, 1)
-          : new Date(today.getFullYear() - 1, 9, 1); // Q4 of previous year
+        prevStartDate =
+          prevQuarter >= 0
+            ? new Date(today.getFullYear(), prevQuarter * 3, 1)
+            : new Date(today.getFullYear() - 1, 9, 1); // Q4 of previous year
         break;
       case 'year':
         prevStartDate = new Date(today.getFullYear() - 1, 0, 1);
@@ -251,7 +280,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     const prevEndDate = new Date(startDate.getTime() - 1); // Day before current period starts
-    
+
     const prevPeriodTransactions = state.transactions.filter((txn) => {
       const txnDate = new Date(txn.date);
       return txnDate >= prevStartDate && txnDate <= prevEndDate;
@@ -309,14 +338,18 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
   };
 
-    const setCustomDateRange = (startDate: string, endDate: string, label?: string) => {
+  const setCustomDateRange = (
+    startDate: string,
+    endDate: string,
+    label?: string
+  ) => {
     dispatch({
       type: 'SET_CUSTOM_DATE_RANGE',
       payload: {
         startDate,
         endDate,
-        label: label || 'Custom Range'
-      }
+        label: label || 'Custom Range',
+      },
     });
   };
 

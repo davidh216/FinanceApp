@@ -26,7 +26,7 @@ export const KPICard: React.FC<KPICardProps> = ({
   period = 'month',
 }) => {
   const { isPrivacyMode } = useFinancial();
-  
+
   const colorClasses = {
     red: 'text-red-600',
     green: 'text-green-600',
@@ -123,10 +123,15 @@ export const KPICard: React.FC<KPICardProps> = ({
           {change.toFixed(1)}%
           {valueChange !== undefined && (
             <span className="ml-1">
-              ({valueChange >= 0 ? '+' : ''}${Math.abs(valueChange).toLocaleString('en-US', { minimumFractionDigits: 2 })})
+              ({valueChange >= 0 ? '+' : ''}$
+              {Math.abs(valueChange).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+              )
             </span>
           )}
-          {' vs last '}{period}
+          {' vs last '}
+          {period}
         </span>
       </div>
     </div>

@@ -1,6 +1,12 @@
 /* eslint-disable testing-library/no-unnecessary-act */
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import { AccountDetail } from '../AccountDetail';
 import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Account, Transaction } from '../../../types/financial';
@@ -8,9 +14,7 @@ import { Account, Transaction } from '../../../types/financial';
 // Mock data removed - using MOCK_ACCOUNTS from constants instead
 
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <FinancialProvider>
-    {children}
-  </FinancialProvider>
+  <FinancialProvider>{children}</FinancialProvider>
 );
 
 describe('AccountDetail Component', () => {
@@ -21,9 +25,15 @@ describe('AccountDetail Component', () => {
       </TestWrapper>
     );
 
-    expect(screen.getByTestId('account-name')).toHaveTextContent('Primary Checking');
-    expect(screen.getByTestId('account-info')).toHaveTextContent('Chase Bank • ****1234');
-    expect(screen.getByTestId('account-balance')).toHaveTextContent('$2,543.67');
+    expect(screen.getByTestId('account-name')).toHaveTextContent(
+      'Primary Checking'
+    );
+    expect(screen.getByTestId('account-info')).toHaveTextContent(
+      'Chase Bank • ****1234'
+    );
+    expect(screen.getByTestId('account-balance')).toHaveTextContent(
+      '$2,543.67'
+    );
   });
 
   it('displays monthly statistics', () => {
@@ -102,7 +112,7 @@ describe('AccountDetail Component', () => {
     await act(async () => {
       fireEvent.click(backButton);
     });
-    
+
     expect(backButton).toBeInTheDocument();
   });
 
@@ -119,7 +129,9 @@ describe('AccountDetail Component', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('empty-state')).toHaveTextContent('No transactions match your filters');
+      expect(screen.getByTestId('empty-state')).toHaveTextContent(
+        'No transactions match your filters'
+      );
     });
   });
 

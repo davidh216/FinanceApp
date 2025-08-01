@@ -49,11 +49,12 @@ export const AccountCard: React.FC<AccountCardProps> = ({
           <div className="flex items-center mt-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div>
             <span className="text-xs text-gray-500">
-              Synced • {new Date().toLocaleString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit' 
+              Synced •{' '}
+              {new Date().toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
               })}
             </span>
           </div>

@@ -26,13 +26,20 @@ export const KPISection: React.FC<KPISectionProps> = ({
   // Dynamic titles based on period
   const getPeriodLabel = (period: TimePeriod): string => {
     switch (period) {
-      case 'day': return 'Daily';
-      case 'week': return 'Weekly';
-      case 'month': return 'Monthly';
-      case 'quarter': return 'Quarterly';
-      case 'year': return 'Yearly';
-      case '5year': return '5-Year';
-      default: return 'Monthly';
+      case 'day':
+        return 'Daily';
+      case 'week':
+        return 'Weekly';
+      case 'month':
+        return 'Monthly';
+      case 'quarter':
+        return 'Quarterly';
+      case 'year':
+        return 'Yearly';
+      case '5year':
+        return '5-Year';
+      default:
+        return 'Monthly';
     }
   };
 
@@ -45,15 +52,19 @@ export const KPISection: React.FC<KPISectionProps> = ({
   };
 
   // Calculate previous period data for trend calculation
-  const prevIncome = summary.previousPeriodIncome || summary.monthlyIncome * 0.9;
-  const prevExpenses = summary.previousPeriodExpenses || summary.monthlyExpenses * 1.1;
+  const prevIncome =
+    summary.previousPeriodIncome || summary.monthlyIncome * 0.9;
+  const prevExpenses =
+    summary.previousPeriodExpenses || summary.monthlyExpenses * 1.1;
   const prevBalance = totalBalance * 0.95; // Mock previous balance
 
   // Calculate value changes
   const balanceValueChange = totalBalance - prevBalance;
   const incomeValueChange = summary.monthlyIncome - prevIncome;
   const expenseValueChange = summary.monthlyExpenses - prevExpenses;
-  const savingsValueChange = (summary.savingsRate * 100) - ((prevIncome > 0 ? (prevIncome - prevExpenses) / prevIncome : 0) * 100);
+  const savingsValueChange =
+    summary.savingsRate * 100 -
+    (prevIncome > 0 ? (prevIncome - prevExpenses) / prevIncome : 0) * 100;
 
   return (
     <div>

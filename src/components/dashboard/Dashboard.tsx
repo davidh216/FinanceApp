@@ -19,15 +19,15 @@ import {
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { 
-    state, 
-    totalBalance, 
-    summary, 
+  const {
+    state,
+    totalBalance,
+    summary,
     selectAccount,
     changeScreen,
     viewAccountDetail,
     accountFilter,
-    changePeriod
+    changePeriod,
   } = useFinancial();
 
   const hasAccounts = state.accounts.length > 0;
@@ -37,22 +37,29 @@ export const Dashboard: React.FC = () => {
   const filteredAccounts = useMemo(() => {
     return state.accounts.filter((account: Account) => {
       if (accountFilter === 'both') return true;
-      if (accountFilter === 'personal') return !account.type.includes('BUSINESS');
-      if (accountFilter === 'business') return account.type.includes('BUSINESS');
+      if (accountFilter === 'personal')
+        return !account.type.includes('BUSINESS');
+      if (accountFilter === 'business')
+        return account.type.includes('BUSINESS');
       return true;
     });
   }, [state.accounts, accountFilter]);
 
   // Calculate filtered total balance
   const filteredTotalBalance = useMemo(() => {
-    return filteredAccounts.reduce((sum: number, account: Account) => sum + account.balance, 0);
+    return filteredAccounts.reduce(
+      (sum: number, account: Account) => sum + account.balance,
+      0
+    );
   }, [filteredAccounts]);
 
   // Calculate filtered summary
   const filteredSummary = useMemo(() => {
-    const filteredTransactions = filteredAccounts.flatMap((acc: Account) => acc.transactions || []);
+    const filteredTransactions = filteredAccounts.flatMap(
+      (acc: Account) => acc.transactions || []
+    );
     const totalBalance = filteredTotalBalance;
-    
+
     const today = new Date();
     let startDate: Date;
     let periodLabel: string;
@@ -60,13 +67,21 @@ export const Dashboard: React.FC = () => {
     // Calculate period boundaries based on selectedPeriod
     switch (state.selectedPeriod) {
       case 'day':
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
         periodLabel = 'daily';
         break;
       case 'week':
         const dayOfWeek = today.getDay();
         const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysToSubtract);
+        startDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() - daysToSubtract
+        );
         periodLabel = 'weekly';
         break;
       case 'month':
@@ -103,10 +118,12 @@ export const Dashboard: React.FC = () => {
     const endDate = new Date();
 
     // Filter transactions for the selected period
-    const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
-      const txnDate = new Date(txn.date);
-      return txnDate >= startDate && txnDate <= endDate;
-    });
+    const periodTransactions = filteredTransactions.filter(
+      (txn: Transaction) => {
+        const txnDate = new Date(txn.date);
+        return txnDate >= startDate && txnDate <= endDate;
+      }
+    );
 
     const periodIncome = periodTransactions
       .filter((txn: Transaction) => txn.amount > 0)
@@ -118,23 +135,35 @@ export const Dashboard: React.FC = () => {
         .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
     );
 
-    const savingsRate = periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
+    const savingsRate =
+      periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
 
     // Calculate previous period for comparison
     let prevStartDate: Date;
     switch (state.selectedPeriod) {
       case 'day':
-        prevStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+        prevStartDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() - 1
+        );
         break;
       case 'week':
-        prevStartDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+        prevStartDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() - 7
+        );
         break;
       case 'month':
         prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         break;
       case 'quarter':
         const prevQuarter = Math.floor(today.getMonth() / 3) - 1;
-        prevStartDate = prevQuarter >= 0 ? new Date(today.getFullYear(), prevQuarter * 3, 1) : new Date(today.getFullYear() - 1, 9, 1);
+        prevStartDate =
+          prevQuarter >= 0
+            ? new Date(today.getFullYear(), prevQuarter * 3, 1)
+            : new Date(today.getFullYear() - 1, 9, 1);
         break;
       case 'year':
         prevStartDate = new Date(today.getFullYear() - 1, 0, 1);
@@ -147,10 +176,12 @@ export const Dashboard: React.FC = () => {
     }
 
     const prevEndDate = new Date(startDate.getTime() - 1);
-    const prevPeriodTransactions = filteredTransactions.filter((txn: Transaction) => {
-      const txnDate = new Date(txn.date);
-      return txnDate >= prevStartDate && txnDate <= prevEndDate;
-    });
+    const prevPeriodTransactions = filteredTransactions.filter(
+      (txn: Transaction) => {
+        const txnDate = new Date(txn.date);
+        return txnDate >= prevStartDate && txnDate <= prevEndDate;
+      }
+    );
 
     const prevPeriodIncome = prevPeriodTransactions
       .filter((txn: Transaction) => txn.amount > 0)
@@ -173,21 +204,28 @@ export const Dashboard: React.FC = () => {
       previousPeriodExpenses: prevPeriodExpenses,
       periodLabel,
     };
-  }, [filteredAccounts, filteredTotalBalance, state.selectedPeriod, state.customDateRange]);
+  }, [
+    filteredAccounts,
+    filteredTotalBalance,
+    state.selectedPeriod,
+    state.customDateRange,
+  ]);
 
   // Generate actual trend data based on selected period
   const generateTrendData = useMemo(() => {
-    const filteredTransactions = filteredAccounts.flatMap((acc: Account) => acc.transactions || []);
+    const filteredTransactions = filteredAccounts.flatMap(
+      (acc: Account) => acc.transactions || []
+    );
     const today = new Date();
-    
+
     // Determine number of data points based on period
     let dataPoints: number;
     let intervalDays: number;
-    
+
     switch (state.selectedPeriod) {
       case 'day':
         dataPoints = 24; // Hourly data for the day
-        intervalDays = 1/24;
+        intervalDays = 1 / 24;
         break;
       case 'week':
         dataPoints = 7; // Daily data for the week
@@ -218,18 +256,25 @@ export const Dashboard: React.FC = () => {
     const balanceTrend = [];
     for (let i = dataPoints - 1; i >= 0; i--) {
       const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - (i * intervalDays));
-      
+      targetDate.setDate(today.getDate() - i * intervalDays);
+
       // Calculate balance up to this point in time
-      const transactionsUpToDate = filteredTransactions.filter((txn: Transaction) => {
-        const txnDate = new Date(txn.date);
-        return txnDate <= targetDate;
-      });
-      
-      const balanceAtDate = filteredAccounts.reduce((sum: number, account: Account) => {
-        return sum + account.balance;
-      }, 0) + transactionsUpToDate.reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
-      
+      const transactionsUpToDate = filteredTransactions.filter(
+        (txn: Transaction) => {
+          const txnDate = new Date(txn.date);
+          return txnDate <= targetDate;
+        }
+      );
+
+      const balanceAtDate =
+        filteredAccounts.reduce((sum: number, account: Account) => {
+          return sum + account.balance;
+        }, 0) +
+        transactionsUpToDate.reduce(
+          (sum: number, txn: Transaction) => sum + txn.amount,
+          0
+        );
+
       balanceTrend.push(Math.max(0, balanceAtDate)); // Ensure non-negative for display
     }
 
@@ -237,17 +282,24 @@ export const Dashboard: React.FC = () => {
     const incomeTrend = [];
     for (let i = dataPoints - 1; i >= 0; i--) {
       const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - (i * intervalDays));
-      
+      targetDate.setDate(today.getDate() - i * intervalDays);
+
       const startDate = new Date(targetDate);
       startDate.setDate(targetDate.getDate() - intervalDays);
-      
-      const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
-        const txnDate = new Date(txn.date);
-        return txnDate >= startDate && txnDate <= targetDate && txn.amount > 0;
-      });
-      
-      const periodIncome = periodTransactions.reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+
+      const periodTransactions = filteredTransactions.filter(
+        (txn: Transaction) => {
+          const txnDate = new Date(txn.date);
+          return (
+            txnDate >= startDate && txnDate <= targetDate && txn.amount > 0
+          );
+        }
+      );
+
+      const periodIncome = periodTransactions.reduce(
+        (sum: number, txn: Transaction) => sum + txn.amount,
+        0
+      );
       incomeTrend.push(periodIncome);
     }
 
@@ -255,17 +307,26 @@ export const Dashboard: React.FC = () => {
     const expenseTrend = [];
     for (let i = dataPoints - 1; i >= 0; i--) {
       const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - (i * intervalDays));
-      
+      targetDate.setDate(today.getDate() - i * intervalDays);
+
       const startDate = new Date(targetDate);
       startDate.setDate(targetDate.getDate() - intervalDays);
-      
-      const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
-        const txnDate = new Date(txn.date);
-        return txnDate >= startDate && txnDate <= targetDate && txn.amount < 0;
-      });
-      
-      const periodExpenses = Math.abs(periodTransactions.reduce((sum: number, txn: Transaction) => sum + txn.amount, 0));
+
+      const periodTransactions = filteredTransactions.filter(
+        (txn: Transaction) => {
+          const txnDate = new Date(txn.date);
+          return (
+            txnDate >= startDate && txnDate <= targetDate && txn.amount < 0
+          );
+        }
+      );
+
+      const periodExpenses = Math.abs(
+        periodTransactions.reduce(
+          (sum: number, txn: Transaction) => sum + txn.amount,
+          0
+        )
+      );
       expenseTrend.push(periodExpenses);
     }
 
@@ -273,27 +334,30 @@ export const Dashboard: React.FC = () => {
     const savingsTrend = [];
     for (let i = dataPoints - 1; i >= 0; i--) {
       const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - (i * intervalDays));
-      
+      targetDate.setDate(today.getDate() - i * intervalDays);
+
       const startDate = new Date(targetDate);
       startDate.setDate(targetDate.getDate() - intervalDays);
-      
-      const periodTransactions = filteredTransactions.filter((txn: Transaction) => {
-        const txnDate = new Date(txn.date);
-        return txnDate >= startDate && txnDate <= targetDate;
-      });
-      
+
+      const periodTransactions = filteredTransactions.filter(
+        (txn: Transaction) => {
+          const txnDate = new Date(txn.date);
+          return txnDate >= startDate && txnDate <= targetDate;
+        }
+      );
+
       const periodIncome = periodTransactions
         .filter((txn: Transaction) => txn.amount > 0)
         .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
-      
+
       const periodExpenses = Math.abs(
         periodTransactions
           .filter((txn: Transaction) => txn.amount < 0)
           .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
       );
-      
-      const savingsRate = periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
+
+      const savingsRate =
+        periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
       savingsTrend.push(Math.max(0, savingsRate * 100)); // Convert to percentage
     }
 
@@ -439,14 +503,21 @@ export const Dashboard: React.FC = () => {
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                {period === 'day' ? 'D' : 
-                 period === 'week' ? 'W' : 
-                 period === 'month' ? 'M' : 
-                 period === 'quarter' ? 'Q' : 
-                 period === 'year' ? 'Y' : 
-                 period === '5year' ? '5Y' : 
-                 period === 'custom' ? 'Custom' : 
-                 period}
+                {period === 'day'
+                  ? 'D'
+                  : period === 'week'
+                  ? 'W'
+                  : period === 'month'
+                  ? 'M'
+                  : period === 'quarter'
+                  ? 'Q'
+                  : period === 'year'
+                  ? 'Y'
+                  : period === '5year'
+                  ? '5Y'
+                  : period === 'custom'
+                  ? 'Custom'
+                  : period}
               </button>
             ))}
           </div>
@@ -484,7 +555,6 @@ export const Dashboard: React.FC = () => {
           <div className="space-y-8">
             {/* Quick Actions */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
-
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
                   {

@@ -287,38 +287,41 @@ export const MERCHANT_PATTERNS: Record<
 };
 
 // Add some more business-focused merchant patterns
-export const BUSINESS_MERCHANT_PATTERNS: Record<string, Omit<MerchantInfo, 'original'>> = {
+export const BUSINESS_MERCHANT_PATTERNS: Record<
+  string,
+  Omit<MerchantInfo, 'original'>
+> = {
   'OFFICE DEPOT': {
     cleanName: 'Office Depot',
     logo: '🖥️',
     suggestedCategory: 'Business',
     confidence: 0.95,
   },
-  'ZOOM': {
+  ZOOM: {
     cleanName: 'Zoom',
     logo: '📹',
     suggestedCategory: 'Business',
     confidence: 0.95,
   },
-  'SLACK': {
+  SLACK: {
     cleanName: 'Slack',
     logo: '💬',
     suggestedCategory: 'Business',
     confidence: 0.95,
   },
-  'AWS': {
+  AWS: {
     cleanName: 'Amazon Web Services',
     logo: '☁️',
     suggestedCategory: 'Business',
     confidence: 0.95,
   },
-  'GITHUB': {
+  GITHUB: {
     cleanName: 'GitHub',
     logo: '👨‍💻',
     suggestedCategory: 'Business',
     confidence: 0.95,
   },
-  'QUICKBOOKS': {
+  QUICKBOOKS: {
     cleanName: 'QuickBooks',
     logo: '📊',
     suggestedCategory: 'Business',
@@ -327,12 +330,40 @@ export const BUSINESS_MERCHANT_PATTERNS: Record<string, Omit<MerchantInfo, 'orig
 };
 
 // Add loan payment merchant patterns
-export const LOAN_MERCHANT_PATTERNS: Record<string, Omit<MerchantInfo, 'original'>> = {
-  'QUICKEN LOANS': { cleanName: 'Quicken Loans', logo: '🏠', suggestedCategory: 'Loan Payment', confidence: 0.95 },
-  'NELNET': { cleanName: 'Nelnet', logo: '🎓', suggestedCategory: 'Loan Payment', confidence: 0.95 },
-  'SALLIE MAE': { cleanName: 'Sallie Mae', logo: '🎓', suggestedCategory: 'Loan Payment', confidence: 0.95 },
-  'FEDLOAN SERVICING': { cleanName: 'FedLoan Servicing', logo: '🎓', suggestedCategory: 'Loan Payment', confidence: 0.95 },
-  'GREAT LAKES': { cleanName: 'Great Lakes', logo: '🎓', suggestedCategory: 'Loan Payment', confidence: 0.95 },
+export const LOAN_MERCHANT_PATTERNS: Record<
+  string,
+  Omit<MerchantInfo, 'original'>
+> = {
+  'QUICKEN LOANS': {
+    cleanName: 'Quicken Loans',
+    logo: '🏠',
+    suggestedCategory: 'Loan Payment',
+    confidence: 0.95,
+  },
+  NELNET: {
+    cleanName: 'Nelnet',
+    logo: '🎓',
+    suggestedCategory: 'Loan Payment',
+    confidence: 0.95,
+  },
+  'SALLIE MAE': {
+    cleanName: 'Sallie Mae',
+    logo: '🎓',
+    suggestedCategory: 'Loan Payment',
+    confidence: 0.95,
+  },
+  'FEDLOAN SERVICING': {
+    cleanName: 'FedLoan Servicing',
+    logo: '🎓',
+    suggestedCategory: 'Loan Payment',
+    confidence: 0.95,
+  },
+  'GREAT LAKES': {
+    cleanName: 'Great Lakes',
+    logo: '🎓',
+    suggestedCategory: 'Loan Payment',
+    confidence: 0.95,
+  },
 };
 
 // FIXED: Update the generateMockTransactions function in src/constants/financial.ts
@@ -355,14 +386,20 @@ export const generateMockTransactions = (
 
     // FIX: Better date generation that ensures current month data
     let transactionDate: Date;
-    
+
     if (i < count * 0.7) {
       // 70% of transactions in current month
-      transactionDate = new Date(today.getFullYear(), today.getMonth(), Math.floor(Math.random() * today.getDate()) + 1);
+      transactionDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        Math.floor(Math.random() * today.getDate()) + 1
+      );
     } else {
       // 30% of transactions in past months (for historical data)
       transactionDate = new Date(today);
-      transactionDate.setDate(today.getDate() - Math.floor(Math.random() * 60 + 30)); // 30-90 days ago
+      transactionDate.setDate(
+        today.getDate() - Math.floor(Math.random() * 60 + 30)
+      ); // 30-90 days ago
     }
 
     transactions.push({
@@ -400,28 +437,39 @@ export const generateHistoricalTransactions = (
   if (accountId.includes('mortgage') || accountId.includes('student_loan')) {
     return generateLoanTransactions(accountId, monthsBack);
   }
-  
+
   const merchants = Object.keys(MERCHANT_PATTERNS);
   const transactions: Transaction[] = [];
   const today = new Date();
-  
+
   // Generate transactions for each month going back
   for (let monthOffset = 0; monthOffset < monthsBack; monthOffset++) {
-    const targetDate = new Date(today.getFullYear(), today.getMonth() - monthOffset, 1);
-    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
-    
+    const targetDate = new Date(
+      today.getFullYear(),
+      today.getMonth() - monthOffset,
+      1
+    );
+    const daysInMonth = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth() + 1,
+      0
+    ).getDate();
+
     // Generate seasonal spending patterns
     const seasonalMultiplier = getSeasonalMultiplier(targetDate.getMonth());
-    const monthlyTransactionCount = Math.floor(transactionsPerMonth * seasonalMultiplier);
-    
+    const monthlyTransactionCount = Math.floor(
+      transactionsPerMonth * seasonalMultiplier
+    );
+
     for (let i = 0; i < monthlyTransactionCount; i++) {
-      const merchantKey = merchants[Math.floor(Math.random() * merchants.length)];
+      const merchantKey =
+        merchants[Math.floor(Math.random() * merchants.length)];
       const merchantInfo = MERCHANT_PATTERNS[merchantKey];
-      
+
       // More realistic income/expense patterns
       let amount: number;
       let isIncome = false;
-      
+
       if (merchantInfo.suggestedCategory === 'Income' || Math.random() < 0.15) {
         // Income transactions (salary, freelance, etc.)
         isIncome = true;
@@ -434,13 +482,17 @@ export const generateHistoricalTransactions = (
         }
       } else {
         // Expense transactions with category-based amounts
-        amount = -(getCategoryExpenseAmount(merchantInfo.suggestedCategory));
+        amount = -getCategoryExpenseAmount(merchantInfo.suggestedCategory);
       }
-      
+
       // Random day in the month
       const dayOfMonth = Math.floor(Math.random() * daysInMonth) + 1;
-      const transactionDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), dayOfMonth);
-      
+      const transactionDate = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        dayOfMonth
+      );
+
       transactions.push({
         id: `txn_${accountId}_${monthOffset}_${i}`,
         accountId,
@@ -459,7 +511,7 @@ export const generateHistoricalTransactions = (
       });
     }
   }
-  
+
   return transactions.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
@@ -472,11 +524,11 @@ const generateLoanTransactions = (
 ): Transaction[] => {
   const transactions: Transaction[] = [];
   const today = new Date();
-  
+
   // Determine loan type and payment amount
   let loanMerchant: string;
   let monthlyPayment: number;
-  
+
   if (accountId.includes('mortgage')) {
     loanMerchant = 'QUICKEN LOANS';
     monthlyPayment = 1850 + Math.random() * 200; // $1850-$2050 monthly mortgage payment
@@ -487,19 +539,31 @@ const generateLoanTransactions = (
     loanMerchant = 'SALLIE MAE';
     monthlyPayment = 120 + Math.random() * 40; // $120-$160 monthly student loan payment
   }
-  
+
   // Generate one payment per month
   for (let monthOffset = 0; monthOffset < monthsBack; monthOffset++) {
-    const targetDate = new Date(today.getFullYear(), today.getMonth() - monthOffset, 1);
-    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
-    
+    const targetDate = new Date(
+      today.getFullYear(),
+      today.getMonth() - monthOffset,
+      1
+    );
+    const daysInMonth = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth() + 1,
+      0
+    ).getDate();
+
     // Payment is usually made between 1st and 15th of the month
     const dayOfMonth = Math.floor(Math.random() * 15) + 1;
-    const transactionDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), dayOfMonth);
-    
+    const transactionDate = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      dayOfMonth
+    );
+
     // Small variation in payment amount
     const paymentAmount = monthlyPayment + (Math.random() * 20 - 10); // ±$10 variation
-    
+
     transactions.push({
       id: `txn_${accountId}_${monthOffset}`,
       accountId,
@@ -520,7 +584,7 @@ const generateLoanTransactions = (
       updatedAt: new Date().toISOString(),
     });
   }
-  
+
   return transactions.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
@@ -529,16 +593,16 @@ const generateLoanTransactions = (
 // Seasonal spending multipliers (higher in holiday seasons, etc.)
 const getSeasonalMultiplier = (month: number): number => {
   const seasonalFactors = {
-    0: 1.1,  // January - New Year expenses
-    1: 0.9,  // February - slower month
-    2: 1.0,  // March - normal
-    3: 1.0,  // April - normal
-    4: 1.1,  // May - spring spending
-    5: 1.2,  // June - vacation season
-    6: 1.2,  // July - vacation season
-    7: 1.1,  // August - back to school
-    8: 1.0,  // September - normal
-    9: 1.0,  // October - normal
+    0: 1.1, // January - New Year expenses
+    1: 0.9, // February - slower month
+    2: 1.0, // March - normal
+    3: 1.0, // April - normal
+    4: 1.1, // May - spring spending
+    5: 1.2, // June - vacation season
+    6: 1.2, // July - vacation season
+    7: 1.1, // August - back to school
+    8: 1.0, // September - normal
+    9: 1.0, // October - normal
     10: 1.3, // November - Black Friday
     11: 1.4, // December - Holiday season
   };
@@ -549,19 +613,20 @@ const getSeasonalMultiplier = (month: number): number => {
 const getCategoryExpenseAmount = (category: string): number => {
   const categoryAmounts = {
     'Food & Dining': () => 15 + Math.random() * 85, // $15-$100
-    'Groceries': () => 50 + Math.random() * 150, // $50-$200
-    'Transportation': () => 25 + Math.random() * 75, // $25-$100
-    'Shopping': () => 30 + Math.random() * 270, // $30-$300
-    'Entertainment': () => 20 + Math.random() * 80, // $20-$100
-    'Utilities': () => 80 + Math.random() * 120, // $80-$200
-    'Healthcare': () => 40 + Math.random() * 160, // $40-$200
-    'Business': () => 25 + Math.random() * 175, // $25-$200
-    'Travel': () => 100 + Math.random() * 400, // $100-$500
-    'Subscriptions': () => 10 + Math.random() * 40, // $10-$50
-    'Other': () => 20 + Math.random() * 80, // $20-$100
+    Groceries: () => 50 + Math.random() * 150, // $50-$200
+    Transportation: () => 25 + Math.random() * 75, // $25-$100
+    Shopping: () => 30 + Math.random() * 270, // $30-$300
+    Entertainment: () => 20 + Math.random() * 80, // $20-$100
+    Utilities: () => 80 + Math.random() * 120, // $80-$200
+    Healthcare: () => 40 + Math.random() * 160, // $40-$200
+    Business: () => 25 + Math.random() * 175, // $25-$200
+    Travel: () => 100 + Math.random() * 400, // $100-$500
+    Subscriptions: () => 10 + Math.random() * 40, // $10-$50
+    Other: () => 20 + Math.random() * 80, // $20-$100
   };
-  
-  const amountGenerator = categoryAmounts[category as keyof typeof categoryAmounts];
+
+  const amountGenerator =
+    categoryAmounts[category as keyof typeof categoryAmounts];
   return amountGenerator ? amountGenerator() : 25 + Math.random() * 75;
 };
 
@@ -620,7 +685,7 @@ export const MOCK_ACCOUNTS: Account[] = [
     id: 'acc_home_value',
     name: 'Home Value',
     type: 'INVESTMENT',
-    balance: 425000.00, // Home value as asset
+    balance: 425000.0, // Home value as asset
     accountNumber: '🏠',
     bankName: 'Property Asset',
     isActive: true,
@@ -632,7 +697,7 @@ export const MOCK_ACCOUNTS: Account[] = [
     id: 'acc_mortgage',
     name: 'Home Mortgage',
     type: 'LOAN',
-    balance: -285000.00, // Negative balance for loans
+    balance: -285000.0, // Negative balance for loans
     accountNumber: '****7890',
     bankName: 'Quicken Loans',
     isActive: true,
@@ -644,7 +709,7 @@ export const MOCK_ACCOUNTS: Account[] = [
     id: 'acc_student_loan_1',
     name: 'Federal Student Loan',
     type: 'LOAN',
-    balance: -18500.00, // Negative balance for loans
+    balance: -18500.0, // Negative balance for loans
     accountNumber: '****2345',
     bankName: 'Nelnet',
     isActive: true,
@@ -656,7 +721,7 @@ export const MOCK_ACCOUNTS: Account[] = [
     id: 'acc_student_loan_2',
     name: 'Private Student Loan',
     type: 'LOAN',
-    balance: -12500.00, // Negative balance for loans
+    balance: -12500.0, // Negative balance for loans
     accountNumber: '****6789',
     bankName: 'Sallie Mae',
     isActive: true,
@@ -666,7 +731,15 @@ export const MOCK_ACCOUNTS: Account[] = [
   },
 ];
 
-export const DEFAULT_PERIODS = ['day', 'week', 'month', 'quarter', 'year', '5year', 'custom'] as const;
+export const DEFAULT_PERIODS = [
+  'day',
+  'week',
+  'month',
+  'quarter',
+  'year',
+  '5year',
+  'custom',
+] as const;
 
 export const VALIDATION_RULES = {
   ACCOUNT_NAME: {
