@@ -22,9 +22,6 @@ export const Dashboard: React.FC = () => {
   const {
     state,
     totalBalance,
-    summary,
-    selectAccount,
-    changeScreen,
     viewAccountDetail,
     accountFilter,
     changePeriod,
@@ -206,9 +203,9 @@ export const Dashboard: React.FC = () => {
     };
   }, [
     filteredAccounts,
-    filteredTotalBalance,
     state.selectedPeriod,
     state.customDateRange,
+    totalBalance,
   ]);
 
   // Generate actual trend data based on selected period

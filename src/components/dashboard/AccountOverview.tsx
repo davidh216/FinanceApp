@@ -39,10 +39,6 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   };
 
   // Calculate summary stats
-  // const totalBalance = accounts.reduce(
-    (sum, account) => sum + account.balance,
-    0
-  );
   const positiveAccounts = accounts.filter((account) => account.balance > 0);
   const negativeAccounts = accounts.filter((account) => account.balance < 0);
   const totalAssets = positiveAccounts.reduce(
