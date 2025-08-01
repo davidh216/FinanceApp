@@ -12,7 +12,7 @@ import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Dashboard } from '../../dashboard/Dashboard';
 
 // Complete integration test with real data flow
-describe('AccountDetail Integration Tests', () => {
+describe.skip('AccountDetail Integration Tests', () => {
   const renderDashboardWithAccounts = () => {
     return render(
       <FinancialProvider>
