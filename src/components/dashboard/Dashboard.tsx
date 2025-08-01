@@ -58,7 +58,7 @@ export const Dashboard: React.FC = () => {
     const filteredTransactions = filteredAccounts.flatMap(
       (acc: Account) => acc.transactions || []
     );
-    const totalBalance = filteredTotalBalance;
+    // const totalBalance = filteredTotalBalance;
 
     const today = new Date();
     let startDate: Date;
