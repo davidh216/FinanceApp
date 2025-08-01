@@ -161,7 +161,8 @@ export type FinancialAction =
   | { type: 'REMOVE_TAG'; payload: { transactionId: string; tag: string } }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
-  | { type: 'APPLY_FILTERS'; payload: FilterOptions };
+  | { type: 'APPLY_FILTERS'; payload: FilterOptions }
+  | { type: 'VIEW_ACCOUNT_DETAIL'; payload: Account };
 
 export class FinancialError extends Error {
   constructor(
