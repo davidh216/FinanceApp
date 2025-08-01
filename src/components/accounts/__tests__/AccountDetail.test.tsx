@@ -19,7 +19,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 describe.skip('AccountDetail Component', () => {
   it('renders account information correctly', () => {
-    const { container } = render(
+    render(
       <TestWrapper>
         <AccountDetail accountId="acc_checking" />
       </TestWrapper>

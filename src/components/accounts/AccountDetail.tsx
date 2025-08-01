@@ -10,7 +10,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
-import { Account, Transaction } from '../../types/financial';
+
 
 interface AccountDetailProps {
   accountId?: string;
