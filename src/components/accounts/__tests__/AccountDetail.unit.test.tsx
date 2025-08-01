@@ -9,7 +9,7 @@ const mockContextValue = {
   state: {
     accounts: [],
     transactions: [],
-    selectedAccount: null,
+    selectedAccount: null as Account | null,
     currentScreen: 'account-detail' as const,
     selectedPeriod: 'month' as const,
     isLoading: false,
@@ -52,7 +52,7 @@ describe('AccountDetail Unit Tests', () => {
     mockContextValue.state.selectedAccount = {
       id: 'acc_test',
       name: 'Test Account',
-      type: 'CHECKING',
+      type: 'CHECKING' as const,
       balance: 1000,
       accountNumber: '****1234',
       bankName: 'Test Bank',
@@ -118,7 +118,7 @@ describe('AccountDetail Unit Tests', () => {
     mockContextValue.state.selectedAccount = {
       id: 'acc_test',
       name: 'Empty Account',
-      type: 'CHECKING',
+      type: 'CHECKING' as const,
       balance: 0,
       accountNumber: '****1234',
       bankName: 'Test Bank',
