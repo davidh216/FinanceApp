@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/no-unnecessary-act */
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { AccountDetail } from '../AccountDetail';

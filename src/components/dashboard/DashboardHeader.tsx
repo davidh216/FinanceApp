@@ -3,7 +3,7 @@ import { useFinancial } from '../../contexts/FinancialContext';
 import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
 import { DateRangePicker } from '../ui/DateRangePicker';
-import { CheckCircle, Plus, Settings, Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
   const { state, changePeriod, setCustomDateRange, isPrivacyMode, togglePrivacyMode, accountFilter, setAccountFilter } = useFinancial();
