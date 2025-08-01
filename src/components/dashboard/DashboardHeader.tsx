@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { DEFAULT_PERIODS } from '../../constants/financial';
-import { Button } from '../ui/Button';
 import { DateRangePicker } from '../ui/DateRangePicker';
 import { Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
   const {
     state,
-    changePeriod,
     setCustomDateRange,
     isPrivacyMode,
     togglePrivacyMode,
@@ -17,35 +14,9 @@ export const DashboardHeader: React.FC = () => {
   } = useFinancial();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  // Function to get acronym labels for filter buttons
-  // const getFilterLabel = (period: string): string => {
-    switch (period) {
-      case 'day':
-        return 'D';
-      case 'week':
-        return 'W';
-      case 'month':
-        return 'M';
-      case 'quarter':
-        return 'Q';
-      case 'year':
-        return 'Y';
-      case '5year':
-        return '5Y';
-      case 'custom':
-        return 'Custom';
-      default:
-        return period.charAt(0).toUpperCase() + period.slice(1);
-    }
-  };
 
-  // const handlePeriodClick = (period: string) => {
-    if (period === 'custom') {
-      setIsDatePickerOpen(true);
-    } else {
-      changePeriod(period as any);
-    }
-  };
+
+
 
   const handleDateRangeSelect = (startDate: string, endDate: string) => {
     setCustomDateRange(startDate, endDate, 'Custom Range');

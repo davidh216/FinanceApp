@@ -379,7 +379,7 @@ export const generateMockTransactions = (
   for (let i = 0; i < count; i++) {
     const merchantKey = merchants[Math.floor(Math.random() * merchants.length)];
     const merchantInfo = MERCHANT_PATTERNS[merchantKey];
-    // const isIncome = Math.random() < 0.2; // 20% chance of income
+    const isIncome = Math.random() < 0.2; // 20% chance of income
     const amount = isIncome
       ? Math.random() * 2000 + 1000 // Income: $1000-$3000
       : -(Math.random() * 200 + 10); // Expense: $10-$210
@@ -449,7 +449,7 @@ export const generateHistoricalTransactions = (
       today.getMonth() - monthOffset,
       1
     );
-    // const daysInMonth = new Date(
+    const daysInMonth = new Date(
       targetDate.getFullYear(),
       targetDate.getMonth() + 1,
       0
@@ -468,11 +468,9 @@ export const generateHistoricalTransactions = (
 
       // More realistic income/expense patterns
       let amount: number;
-      let isIncome = false;
 
       if (merchantInfo.suggestedCategory === 'Income' || Math.random() < 0.15) {
         // Income transactions (salary, freelance, etc.)
-        isIncome = true;
         if (merchantKey.includes('PAYROLL')) {
           amount = 3500 + Math.random() * 1500; // Salary: $3500-$5000
         } else if (merchantKey.includes('FREELANCE')) {
@@ -547,12 +545,6 @@ const generateLoanTransactions = (
       today.getMonth() - monthOffset,
       1
     );
-    // const daysInMonth = new Date(
-      targetDate.getFullYear(),
-      targetDate.getMonth() + 1,
-      0
-    ).getDate();
-
     // Payment is usually made between 1st and 15th of the month
     const dayOfMonth = Math.floor(Math.random() * 15) + 1;
     const transactionDate = new Date(

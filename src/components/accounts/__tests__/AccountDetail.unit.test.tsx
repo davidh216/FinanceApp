@@ -37,9 +37,7 @@ const mockContextValue = {
 };
 
 jest.mock('../../../contexts/FinancialContext', () => ({
-  useFinancial: () => mockContextValue: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
+  useFinancial: () => mockContextValue,
 }));
 
 describe('AccountDetail Unit Tests', () => {

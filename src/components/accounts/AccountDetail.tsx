@@ -175,6 +175,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
     sortBy,
     sortDirection,
     state.selectedPeriod,
+    state.customDateRange,
   ]);
 
   if (!account) {
