@@ -166,6 +166,51 @@ export interface BudgetGoal {
   isActive: boolean;
 }
 
+// Add budget management types
+export interface Budget {
+  id: string;
+  userId: string;
+  category: string;
+  amount: number;
+  period: TimePeriod;
+  startDate: string;
+  endDate: string;
+  spent: number;
+  remaining: number;
+  alerts: BudgetAlert[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BudgetAlert {
+  id: string;
+  type: 'warning' | 'danger' | 'info';
+  threshold: number;
+  message: string;
+  triggered: boolean;
+  createdAt: string;
+}
+
+export interface BudgetProgress {
+  budgetId: string;
+  spent: number;
+  remaining: number;
+  percentageUsed: number;
+  isOverBudget: boolean;
+  daysRemaining: number;
+  projectedSpending: number;
+}
+
+export interface BudgetSummary {
+  totalBudgets: number;
+  totalBudgeted: number;
+  totalSpent: number;
+  totalRemaining: number;
+  overBudgetCategories: string[];
+  upcomingAlerts: BudgetAlert[];
+}
+
 export type FinancialAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }

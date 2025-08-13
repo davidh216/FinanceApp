@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { KPICard } from '../ui/KPICard';
-import { FinancialSummary, TimePeriod } from '../../types/financial';
+import { FinancialSummary, TimePeriod, Budget } from '../../types/financial';
 
 interface KPISectionProps {
   summary: FinancialSummary;
   totalBalance: number;
   period: TimePeriod;
+  budgets?: Budget[];
   balanceTrend?: number[];
   incomeTrend?: number[];
   expenseTrend?: number[];
@@ -18,6 +19,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
   summary,
   totalBalance,
   period,
+  budgets = [],
   balanceTrend = [],
   incomeTrend = [],
   expenseTrend = [],
@@ -65,6 +67,13 @@ export const KPISection: React.FC<KPISectionProps> = ({
   const savingsValueChange =
     summary.savingsRate * 100 -
     (prevIncome > 0 ? (prevIncome - prevExpenses) / prevIncome : 0) * 100;
+
+  // Calculate budget metrics
+  const activeBudgets = budgets.filter(budget => budget.isActive);
+  const totalBudgeted = activeBudgets.reduce((sum, budget) => sum + budget.amount, 0);
+  const totalSpent = activeBudgets.reduce((sum, budget) => sum + budget.spent, 0);
+  const overBudgetCategories = activeBudgets.filter(budget => budget.spent > budget.amount).length;
+  const budgetUtilization = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
 
   return (
     <div>
@@ -114,6 +123,56 @@ export const KPISection: React.FC<KPISectionProps> = ({
           period={period}
         />
       </div>
+
+      {/* Budget KPIs - Show only if there are active budgets */}
+      {activeBudgets.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Budget Overview</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KPICard
+              title="Total Budgeted"
+              value={totalBudgeted}
+              change={0} // No change calculation for now
+              valueChange={0}
+              isPositive={true}
+              color="blue"
+              period={period}
+            />
+
+            <KPICard
+              title="Total Spent"
+              value={totalSpent}
+              change={0}
+              valueChange={0}
+              isPositive={totalSpent <= totalBudgeted}
+              color={totalSpent > totalBudgeted ? 'red' : 'green'}
+              period={period}
+            />
+
+            <KPICard
+              title="Budget Utilization"
+              value={budgetUtilization}
+              change={0}
+              valueChange={0}
+              isPositive={budgetUtilization <= 100}
+              isCurrency={false}
+              color={budgetUtilization > 100 ? 'red' : budgetUtilization > 80 ? 'orange' : 'green'}
+              period={period}
+            />
+
+            <KPICard
+              title="Over Budget Categories"
+              value={overBudgetCategories}
+              change={0}
+              valueChange={0}
+              isPositive={overBudgetCategories === 0}
+              isCurrency={false}
+              color={overBudgetCategories > 0 ? 'red' : 'green'}
+              period={period}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

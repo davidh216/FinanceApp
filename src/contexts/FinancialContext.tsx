@@ -14,6 +14,8 @@ import {
   FinancialSummary,
 } from '../types/financial';
 import { MOCK_ACCOUNTS } from '../constants/financial';
+import { calculateFinancialSummary } from '../utils/periodCalculations';
+import { updateTransactionTagsInAccounts, updateTransactionTagsInArray } from '../utils/transactionUtils';
 
 const initialState: FinancialState = {
   accounts: MOCK_ACCOUNTS,
@@ -51,48 +53,14 @@ const financialReducer = (
     case 'ADD_TAG':
       return {
         ...state,
-        accounts: state.accounts.map((account) => ({
-          ...account,
-          transactions: account.transactions?.map((txn) =>
-            txn.id === action.payload.transactionId
-              ? {
-                  ...txn,
-                  tags: Array.from(new Set([...txn.tags, action.payload.tag])),
-                }
-              : txn
-          ),
-        })),
-        transactions: state.transactions.map((txn) =>
-          txn.id === action.payload.transactionId
-            ? {
-                ...txn,
-                tags: Array.from(new Set([...txn.tags, action.payload.tag])),
-              }
-            : txn
-        ),
+        accounts: updateTransactionTagsInAccounts(state.accounts, action.payload.transactionId, action.payload.tag, 'add'),
+        transactions: updateTransactionTagsInArray(state.transactions, action.payload.transactionId, action.payload.tag, 'add'),
       };
     case 'REMOVE_TAG':
       return {
         ...state,
-        accounts: state.accounts.map((account) => ({
-          ...account,
-          transactions: account.transactions?.map((txn) =>
-            txn.id === action.payload.transactionId
-              ? {
-                  ...txn,
-                  tags: txn.tags.filter((tag) => tag !== action.payload.tag),
-                }
-              : txn
-          ),
-        })),
-        transactions: state.transactions.map((txn) =>
-          txn.id === action.payload.transactionId
-            ? {
-                ...txn,
-                tags: txn.tags.filter((tag) => tag !== action.payload.tag),
-              }
-            : txn
-        ),
+        accounts: updateTransactionTagsInAccounts(state.accounts, action.payload.transactionId, action.payload.tag, 'remove'),
+        transactions: updateTransactionTagsInArray(state.transactions, action.payload.transactionId, action.payload.tag, 'remove'),
       };
     case 'CONNECT_ACCOUNT':
       return {
@@ -141,10 +109,16 @@ interface FinancialContextType {
 
 const FinancialContext = createContext<FinancialContextType | null>(null);
 
-export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
+interface FinancialProviderProps {
+  children: React.ReactNode;
+  initialState?: FinancialState;
+}
+
+export const FinancialProvider: React.FC<FinancialProviderProps> = ({
   children,
+  initialState: customInitialState,
 }) => {
-  const [state, dispatch] = useReducer(financialReducer, initialState);
+  const [state, dispatch] = useReducer(financialReducer, customInitialState || initialState);
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const [accountFilter, setAccountFilter] = useState<
     'both' | 'personal' | 'business'
@@ -156,158 +130,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const summary = useMemo((): FinancialSummary => {
-    const today = new Date();
-    let startDate: Date;
-    let endDate: Date;
-    let periodLabel: string;
-
-    // Calculate period boundaries based on selectedPeriod
-    switch (state.selectedPeriod) {
-      case 'day':
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
-        endDate = new Date(); // Today
-        periodLabel = 'daily';
-        break;
-      case 'week':
-        const dayOfWeek = today.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - daysToSubtract
-        );
-        endDate = new Date(); // Today
-        periodLabel = 'weekly';
-        break;
-      case 'month':
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        endDate = new Date(); // Today
-        periodLabel = 'monthly';
-        break;
-      case 'quarter':
-        const currentQuarter = Math.floor(today.getMonth() / 3);
-        startDate = new Date(today.getFullYear(), currentQuarter * 3, 1);
-        endDate = new Date(); // Today
-        periodLabel = 'quarterly';
-        break;
-      case 'year':
-        startDate = new Date(today.getFullYear(), 0, 1);
-        endDate = new Date(); // Today
-        periodLabel = 'yearly';
-        break;
-      case '5year':
-        startDate = new Date(today.getFullYear() - 5, 0, 1);
-        endDate = new Date(); // Today
-        periodLabel = '5-year';
-        break;
-      case 'custom':
-        if (state.customDateRange) {
-          startDate = new Date(state.customDateRange.startDate);
-          endDate = new Date(state.customDateRange.endDate);
-          periodLabel = state.customDateRange.label || 'custom';
-        } else {
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-          endDate = new Date(); // Today
-          periodLabel = 'monthly';
-        }
-        break;
-      default:
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        endDate = new Date(); // Today
-        periodLabel = 'monthly';
-    }
-
-    // Filter transactions for the selected period
-    const periodTransactions = state.transactions.filter((txn) => {
-      const txnDate = new Date(txn.date);
-      return txnDate >= startDate && txnDate <= endDate;
-    });
-
-    const periodIncome = periodTransactions
-      .filter((txn) => txn.amount > 0)
-      .reduce((sum, txn) => sum + txn.amount, 0);
-
-    const periodExpenses = Math.abs(
-      periodTransactions
-        .filter((txn) => txn.amount < 0)
-        .reduce((sum, txn) => sum + txn.amount, 0)
+    return calculateFinancialSummary(
+      state.transactions,
+      state.selectedPeriod,
+      state.customDateRange,
+      totalBalance
     );
-
-    const savingsRate =
-      periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
-
-    // Calculate previous period for comparison
-    let prevStartDate: Date;
-    switch (state.selectedPeriod) {
-      case 'day':
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - 1
-        );
-        break;
-      case 'week':
-        const prevWeekDaysToSubtract =
-          (today.getDay() === 0 ? 6 : today.getDay() - 1) + 7;
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - prevWeekDaysToSubtract
-        );
-        break;
-      case 'month':
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        break;
-      case 'quarter':
-        const prevQuarter = Math.floor(today.getMonth() / 3) - 1;
-        prevStartDate =
-          prevQuarter >= 0
-            ? new Date(today.getFullYear(), prevQuarter * 3, 1)
-            : new Date(today.getFullYear() - 1, 9, 1); // Q4 of previous year
-        break;
-      case 'year':
-        prevStartDate = new Date(today.getFullYear() - 1, 0, 1);
-        break;
-      case '5year':
-        prevStartDate = new Date(today.getFullYear() - 10, 0, 1);
-        break;
-      default:
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    }
-
-    const prevEndDate = new Date(startDate.getTime() - 1); // Day before current period starts
-
-    const prevPeriodTransactions = state.transactions.filter((txn) => {
-      const txnDate = new Date(txn.date);
-      return txnDate >= prevStartDate && txnDate <= prevEndDate;
-    });
-
-    const prevPeriodIncome = prevPeriodTransactions
-      .filter((txn) => txn.amount > 0)
-      .reduce((sum, txn) => sum + txn.amount, 0);
-
-    const prevPeriodExpenses = Math.abs(
-      prevPeriodTransactions
-        .filter((txn) => txn.amount < 0)
-        .reduce((sum, txn) => sum + txn.amount, 0)
-    );
-
-    return {
-      totalBalance,
-      monthlyIncome: Math.round(periodIncome * 100) / 100,
-      monthlyExpenses: Math.round(periodExpenses * 100) / 100,
-      netWorth: totalBalance,
-      debtToIncomeRatio: periodIncome > 0 ? periodExpenses / periodIncome : 0,
-      savingsRate: Math.max(0, savingsRate),
-      // Add comparison data for trends
-      previousPeriodIncome: prevPeriodIncome,
-      previousPeriodExpenses: prevPeriodExpenses,
-      periodLabel,
-    };
   }, [
     state.transactions,
     totalBalance,

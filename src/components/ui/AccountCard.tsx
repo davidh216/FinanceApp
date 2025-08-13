@@ -10,7 +10,7 @@ interface AccountCardProps {
   className?: string;
 }
 
-export const AccountCard: React.FC<AccountCardProps> = ({
+export const AccountCard = React.memo<AccountCardProps>(({
   account,
   onClick,
   showTransactionCount = false,
@@ -89,4 +89,12 @@ export const AccountCard: React.FC<AccountCardProps> = ({
       </div>
     </Component>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison for account card props
+  return prevProps.account.id === nextProps.account.id &&
+         prevProps.account.balance === nextProps.account.balance &&
+         prevProps.showTransactionCount === nextProps.showTransactionCount &&
+         prevProps.className === nextProps.className;
+});
+
+AccountCard.displayName = 'AccountCard';

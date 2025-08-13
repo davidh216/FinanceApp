@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { DateRangePicker } from '../ui/DateRangePicker';
-import { Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { DateRangePicker, DateRange } from '../ui/DateRangePicker';
+import { ThemeToggle } from '../ui/ThemeToggle';
+import { Bell, Eye, EyeOff, RefreshCw, LogOut } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
   const {
@@ -14,13 +15,23 @@ export const DashboardHeader: React.FC = () => {
   } = useFinancial();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  const handleDateRangeSelect = (startDate: string, endDate: string) => {
-    setCustomDateRange(startDate, endDate, 'Custom Range');
+  const handleDateRangeSelect = (range: DateRange) => {
+    setCustomDateRange(range.startDate.toISOString(), range.endDate.toISOString(), range.label);
   };
 
   const handleRefresh = () => {
     // For now, just show an alert. In a real app, this would refresh the data
     alert('Refreshing data...');
+  };
+
+  // Check if we're in demo mode
+  const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                    new URLSearchParams(window.location.search).get('demo') === 'true';
+
+  const handleExitDemo = () => {
+    // Clear demo mode and redirect to login
+    localStorage.removeItem('financeapp-demo-mode');
+    window.location.href = '/';
   };
 
   return (
@@ -37,10 +48,20 @@ export const DashboardHeader: React.FC = () => {
                 <h1 className="text-xl font-semibold text-gray-900">
                   FinanceApp
                 </h1>
-                <div className="flex items-center">
+                <div className="flex items-center space-x-2">
                   <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
                     DEMO
                   </span>
+                  {isDemoMode && (
+                    <button
+                      onClick={handleExitDemo}
+                      className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded hover:bg-red-200 transition-colors flex items-center space-x-1"
+                      title="Exit Demo Mode"
+                    >
+                      <LogOut className="w-3 h-3" />
+                      <span>Exit Demo</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -84,6 +105,9 @@ export const DashboardHeader: React.FC = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}
@@ -122,11 +146,13 @@ export const DashboardHeader: React.FC = () => {
 
       {/* Date Range Picker */}
       <DateRangePicker
-        isOpen={isDatePickerOpen}
+        value={state.customDateRange ? {
+          startDate: new Date(state.customDateRange.startDate),
+          endDate: new Date(state.customDateRange.endDate),
+          label: state.customDateRange.label,
+        } : undefined}
+        onChange={handleDateRangeSelect}
         onClose={() => setIsDatePickerOpen(false)}
-        onDateRangeSelect={handleDateRangeSelect}
-        currentStartDate={state.customDateRange?.startDate}
-        currentEndDate={state.customDateRange?.endDate}
       />
     </header>
   );

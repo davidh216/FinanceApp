@@ -9,12 +9,12 @@ interface KPICardProps {
   valueChange?: number; // Dollar value change
   isPositive: boolean;
   isCurrency?: boolean;
-  color?: 'red' | 'green' | 'blue' | 'purple';
+  color?: 'red' | 'green' | 'blue' | 'purple' | 'orange';
   trendData?: number[];
   period?: string;
 }
 
-export const KPICard: React.FC<KPICardProps> = ({
+export const KPICard = React.memo<KPICardProps>(({
   title,
   value,
   change,
@@ -32,6 +32,7 @@ export const KPICard: React.FC<KPICardProps> = ({
     green: 'text-green-600',
     blue: 'text-blue-600',
     purple: 'text-purple-600',
+    orange: 'text-orange-600',
   };
 
   const strokeColors = {
@@ -39,6 +40,7 @@ export const KPICard: React.FC<KPICardProps> = ({
     green: '#22c55e',
     blue: '#3b82f6',
     purple: '#a855f7',
+    orange: '#f97316',
   };
 
   return (
@@ -136,4 +138,12 @@ export const KPICard: React.FC<KPICardProps> = ({
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison for expensive props
+  return prevProps.value === nextProps.value && 
+         prevProps.change === nextProps.change &&
+         prevProps.trendData?.length === nextProps.trendData?.length &&
+         prevProps.isPositive === nextProps.isPositive;
+});
+
+KPICard.displayName = 'KPICard';

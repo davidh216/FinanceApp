@@ -10,15 +10,17 @@ interface TransactionItemProps {
   showAccountName?: boolean;
   showTagging?: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
-export const TransactionItem: React.FC<TransactionItemProps> = ({
+export const TransactionItem = React.memo<TransactionItemProps>(({
   transaction,
   onAddTag,
   onRemoveTag,
   showAccountName = false,
   showTagging = true,
   className = '',
+  onClick,
 }) => {
   const { isPrivacyMode } = useFinancial();
   const [showTagDropdown, setShowTagDropdown] = useState(false);
@@ -37,7 +39,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   };
 
   return (
-    <div className={`p-2 hover:bg-gray-50 transition-colors ${className}`}>
+    <div 
+      className={`p-2 hover:bg-gray-50 transition-colors cursor-pointer ${className}`}
+      onClick={onClick}
+    >
       <div className="grid grid-cols-4 gap-4 items-center">
         {/* Column 1: Merchant Name - Left aligned */}
         <div className="min-w-0 text-left">
@@ -172,4 +177,14 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison for transaction item props
+  return prevProps.transaction.id === nextProps.transaction.id &&
+         prevProps.transaction.amount === nextProps.transaction.amount &&
+         prevProps.transaction.tags.length === nextProps.transaction.tags.length &&
+         prevProps.showAccountName === nextProps.showAccountName &&
+         prevProps.showTagging === nextProps.showTagging &&
+         prevProps.className === nextProps.className;
+});
+
+TransactionItem.displayName = 'TransactionItem';

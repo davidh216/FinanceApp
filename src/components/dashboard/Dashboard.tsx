@@ -1,386 +1,81 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Account, Transaction } from '../../types/financial';
+import { Budget } from '../../types/financial';
 import { DashboardHeader } from './DashboardHeader';
-import { KPISection } from './KPISection';
-import { AccountOverview } from './AccountOverview';
-import { RecentActivity } from './RecentActivity';
-import { AccountDetail } from '../accounts/AccountDetail';
 import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
+import { FullScreenSpinner, InlineSpinner } from '../ui/LoadingSpinner';
 import {
   Building,
   Plus,
-  Calculator,
-  Target,
-  PieChart,
   Upload,
   Download,
 } from 'lucide-react';
+import { ChartContainer } from '../charts';
+import { useCharts } from '../../hooks/useCharts';
+import { useDashboardData } from '../../hooks/useDashboardData';
+import { useBudget } from '../../hooks/useBudget';
+
+// Lazy load components for code splitting
+const AccountDetail = React.lazy(() => import('../accounts/AccountDetail').then(module => ({ default: module.AccountDetail })));
+const KPISection = React.lazy(() => import('./KPISection').then(module => ({ default: module.KPISection })));
+const AccountOverview = React.lazy(() => import('./AccountOverview').then(module => ({ default: module.AccountOverview })));
+const RecentActivity = React.lazy(() => import('./RecentActivity').then(module => ({ default: module.RecentActivity })));
+const BudgetOverview = React.lazy(() => import('../budget/BudgetOverview').then(module => ({ default: module.BudgetOverview })));
+const BudgetForm = React.lazy(() => import('../budget/BudgetForm').then(module => ({ default: module.BudgetForm })));
 
 export const Dashboard: React.FC = () => {
   const {
     state,
-    totalBalance,
     viewAccountDetail,
     accountFilter,
     changePeriod,
   } = useFinancial();
 
-  const hasAccounts = state.accounts.length > 0;
+  // Budget management state
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
+
+  // Use budget hook
+  const { budgets } = useBudget();
+
+  // Use consolidated dashboard data hook
+  const dashboardData = useDashboardData({
+    accounts: state.accounts,
+    accountFilter,
+    selectedPeriod: state.selectedPeriod,
+    customDateRange: state.customDateRange,
+    isLoading: state.isLoading,
+  });
+
+  const { filteredAccounts, filteredSummary, trendData, allTransactions, hasAccounts } = dashboardData;
   const isLoading = state.isLoading;
 
-  // Filter accounts based on accountFilter
-  const filteredAccounts = useMemo(() => {
-    return state.accounts.filter((account: Account) => {
-      if (accountFilter === 'both') return true;
-      if (accountFilter === 'personal')
-        return !account.type.includes('BUSINESS');
-      if (accountFilter === 'business')
-        return account.type.includes('BUSINESS');
-      return true;
-    });
-  }, [state.accounts, accountFilter]);
+  // Use charts hook
+  const {
+    isExporting,
+    exportError,
+    handleExportTransactions,
+    handleExportSummary,
+    refreshCharts,
+  } = useCharts(allTransactions, filteredAccounts, state.selectedPeriod, state.filters);
 
-  // Calculate filtered total balance
-  const filteredTotalBalance = useMemo(() => {
-    return filteredAccounts.reduce(
-      (sum: number, account: Account) => sum + account.balance,
-      0
-    );
-  }, [filteredAccounts]);
+  // Check if we're in demo mode
+  const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                    new URLSearchParams(window.location.search).get('demo') === 'true';
 
-  // Calculate filtered summary
-  const filteredSummary = useMemo(() => {
-    const filteredTransactions = filteredAccounts.flatMap(
-      (acc: Account) => acc.transactions || []
-    );
-    // const totalBalance = filteredTotalBalance;
-
-    const today = new Date();
-    let startDate: Date;
-    let periodLabel: string;
-
-    // Calculate period boundaries based on selectedPeriod
-    switch (state.selectedPeriod) {
-      case 'day':
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
-        periodLabel = 'daily';
-        break;
-      case 'week':
-        const dayOfWeek = today.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - daysToSubtract
-        );
-        periodLabel = 'weekly';
-        break;
-      case 'month':
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        periodLabel = 'monthly';
-        break;
-      case 'quarter':
-        const currentQuarter = Math.floor(today.getMonth() / 3);
-        startDate = new Date(today.getFullYear(), currentQuarter * 3, 1);
-        periodLabel = 'quarterly';
-        break;
-      case 'year':
-        startDate = new Date(today.getFullYear(), 0, 1);
-        periodLabel = 'yearly';
-        break;
-      case '5year':
-        startDate = new Date(today.getFullYear() - 5, 0, 1);
-        periodLabel = '5-year';
-        break;
-      case 'custom':
-        if (state.customDateRange) {
-          startDate = new Date(state.customDateRange.startDate);
-          periodLabel = 'custom';
-        } else {
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-          periodLabel = 'monthly';
-        }
-        break;
-      default:
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        periodLabel = 'monthly';
-    }
-
-    const endDate = new Date();
-
-    // Filter transactions for the selected period
-    const periodTransactions = filteredTransactions.filter(
-      (txn: Transaction) => {
-        const txnDate = new Date(txn.date);
-        return txnDate >= startDate && txnDate <= endDate;
-      }
-    );
-
-    const periodIncome = periodTransactions
-      .filter((txn: Transaction) => txn.amount > 0)
-      .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
-
-    const periodExpenses = Math.abs(
-      periodTransactions
-        .filter((txn: Transaction) => txn.amount < 0)
-        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
-    );
-
-    const savingsRate =
-      periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
-
-    // Calculate previous period for comparison
-    let prevStartDate: Date;
-    switch (state.selectedPeriod) {
-      case 'day':
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - 1
-        );
-        break;
-      case 'week':
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - 7
-        );
-        break;
-      case 'month':
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        break;
-      case 'quarter':
-        const prevQuarter = Math.floor(today.getMonth() / 3) - 1;
-        prevStartDate =
-          prevQuarter >= 0
-            ? new Date(today.getFullYear(), prevQuarter * 3, 1)
-            : new Date(today.getFullYear() - 1, 9, 1);
-        break;
-      case 'year':
-        prevStartDate = new Date(today.getFullYear() - 1, 0, 1);
-        break;
-      case '5year':
-        prevStartDate = new Date(today.getFullYear() - 10, 0, 1);
-        break;
-      default:
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    }
-
-    const prevEndDate = new Date(startDate.getTime() - 1);
-    const prevPeriodTransactions = filteredTransactions.filter(
-      (txn: Transaction) => {
-        const txnDate = new Date(txn.date);
-        return txnDate >= prevStartDate && txnDate <= prevEndDate;
-      }
-    );
-
-    const prevPeriodIncome = prevPeriodTransactions
-      .filter((txn: Transaction) => txn.amount > 0)
-      .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
-
-    const prevPeriodExpenses = Math.abs(
-      prevPeriodTransactions
-        .filter((txn: Transaction) => txn.amount < 0)
-        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
-    );
-
-    return {
-      totalBalance,
-      monthlyIncome: Math.round(periodIncome * 100) / 100,
-      monthlyExpenses: Math.round(periodExpenses * 100) / 100,
-      netWorth: totalBalance,
-      debtToIncomeRatio: periodIncome > 0 ? periodExpenses / periodIncome : 0,
-      savingsRate: Math.max(0, savingsRate),
-      previousPeriodIncome: prevPeriodIncome,
-      previousPeriodExpenses: prevPeriodExpenses,
-      periodLabel,
-    };
-  }, [
-    filteredAccounts,
-    state.selectedPeriod,
-    state.customDateRange,
-    totalBalance,
-  ]);
-
-  // Generate actual trend data based on selected period
-  const generateTrendData = useMemo(() => {
-    const filteredTransactions = filteredAccounts.flatMap(
-      (acc: Account) => acc.transactions || []
-    );
-    const today = new Date();
-
-    // Determine number of data points based on period
-    let dataPoints: number;
-    let intervalDays: number;
-
-    switch (state.selectedPeriod) {
-      case 'day':
-        dataPoints = 24; // Hourly data for the day
-        intervalDays = 1 / 24;
-        break;
-      case 'week':
-        dataPoints = 7; // Daily data for the week
-        intervalDays = 1;
-        break;
-      case 'month':
-        dataPoints = 30; // Daily data for the month
-        intervalDays = 1;
-        break;
-      case 'quarter':
-        dataPoints = 13; // Weekly data for the quarter
-        intervalDays = 7;
-        break;
-      case 'year':
-        dataPoints = 12; // Monthly data for the year
-        intervalDays = 30;
-        break;
-      case '5year':
-        dataPoints = 60; // Monthly data for 5 years
-        intervalDays = 30;
-        break;
-      default:
-        dataPoints = 30;
-        intervalDays = 1;
-    }
-
-    // Generate trend data for balance over time
-    const balanceTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      // Calculate balance up to this point in time
-      const transactionsUpToDate = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
-          return txnDate <= targetDate;
-        }
-      );
-
-      const balanceAtDate =
-        filteredAccounts.reduce((sum: number, account: Account) => {
-          return sum + account.balance;
-        }, 0) +
-        transactionsUpToDate.reduce(
-          (sum: number, txn: Transaction) => sum + txn.amount,
-          0
-        );
-
-      balanceTrend.push(Math.max(0, balanceAtDate)); // Ensure non-negative for display
-    }
-
-    // Generate trend data for income over time
-    const incomeTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      const startDate = new Date(targetDate);
-      startDate.setDate(targetDate.getDate() - intervalDays);
-
-      const periodTransactions = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
-          return (
-            txnDate >= startDate && txnDate <= targetDate && txn.amount > 0
-          );
-        }
-      );
-
-      const periodIncome = periodTransactions.reduce(
-        (sum: number, txn: Transaction) => sum + txn.amount,
-        0
-      );
-      incomeTrend.push(periodIncome);
-    }
-
-    // Generate trend data for expenses over time
-    const expenseTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      const startDate = new Date(targetDate);
-      startDate.setDate(targetDate.getDate() - intervalDays);
-
-      const periodTransactions = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
-          return (
-            txnDate >= startDate && txnDate <= targetDate && txn.amount < 0
-          );
-        }
-      );
-
-      const periodExpenses = Math.abs(
-        periodTransactions.reduce(
-          (sum: number, txn: Transaction) => sum + txn.amount,
-          0
-        )
-      );
-      expenseTrend.push(periodExpenses);
-    }
-
-    // Generate trend data for savings rate over time
-    const savingsTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      const startDate = new Date(targetDate);
-      startDate.setDate(targetDate.getDate() - intervalDays);
-
-      const periodTransactions = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
-          return txnDate >= startDate && txnDate <= targetDate;
-        }
-      );
-
-      const periodIncome = periodTransactions
-        .filter((txn: Transaction) => txn.amount > 0)
-        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
-
-      const periodExpenses = Math.abs(
-        periodTransactions
-          .filter((txn: Transaction) => txn.amount < 0)
-          .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
-      );
-
-      const savingsRate =
-        periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
-      savingsTrend.push(Math.max(0, savingsRate * 100)); // Convert to percentage
-    }
-
-    return {
-      balance: balanceTrend,
-      income: incomeTrend,
-      expenses: expenseTrend,
-      savings: savingsTrend,
-    };
-  }, [filteredAccounts, state.selectedPeriod]);
-
-  // Add routing logic for account-detail screen
+  // Add routing logic for account-detail screen with lazy loading
   if (state.currentScreen === 'account-detail') {
-    return <AccountDetail />;
+    return (
+      <Suspense fallback={<FullScreenSpinner text="Loading Account Details..." />}>
+        <AccountDetail />
+      </Suspense>
+    );
   }
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="mt-4 text-gray-600">Loading your financial data...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenSpinner text="Loading your financial data..." />;
   }
 
   // Empty state - no accounts connected
@@ -421,14 +116,14 @@ export const Dashboard: React.FC = () => {
 
             <div className="text-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🏷️</span>
+                <span className="text-2xl">🎯</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Auto-Tagging
+                Budget Management
               </h3>
               <p className="text-gray-600">
-                Automatically categorize transactions with AI-powered merchant
-                recognition and smart tagging.
+                Set budgets, track spending, and get alerts when you're
+                approaching your limits.
               </p>
             </div>
 
@@ -437,7 +132,7 @@ export const Dashboard: React.FC = () => {
                 <span className="text-2xl">🔒</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Bank-Level Security
+                Secure & Private
               </h3>
               <p className="text-gray-600">
                 Your data is protected with 256-bit encryption and
@@ -456,6 +151,32 @@ export const Dashboard: React.FC = () => {
       <DashboardHeader />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Demo Mode Banner */}
+        {isDemoMode && (
+          <div className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <span className="text-2xl">🎯</span>
+                <div>
+                  <h3 className="font-semibold text-lg">Demo Mode Active</h3>
+                  <p className="text-blue-100 text-sm">
+                    You're viewing sample data. Sign in to connect your real accounts.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('financeapp-demo-mode');
+                  window.location.href = '/';
+                }}
+                className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Error Display */}
         {state.error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
@@ -522,86 +243,117 @@ export const Dashboard: React.FC = () => {
 
         {/* KPI Section */}
         <div className="mb-6">
-          <KPISection
-            summary={filteredSummary}
-            totalBalance={filteredTotalBalance}
+          <Suspense fallback={<InlineSpinner />}>
+            <KPISection
+              summary={filteredSummary}
+              totalBalance={filteredSummary.totalBalance}
+              period={state.selectedPeriod}
+              budgets={budgets}
+              balanceTrend={trendData?.balance}
+              incomeTrend={trendData?.income}
+              expenseTrend={trendData?.expenses}
+              savingsTrend={trendData?.savings}
+            />
+          </Suspense>
+        </div>
+
+        {/* Account Overview */}
+        <div className="mb-6">
+          <Suspense fallback={<InlineSpinner />}>
+            <AccountOverview
+              accounts={filteredAccounts}
+              onAccountSelect={viewAccountDetail}
+              accountFilter={accountFilter}
+            />
+          </Suspense>
+        </div>
+
+        {/* Charts Section */}
+        <div className="mb-6">
+          <ChartContainer
+            transactions={allTransactions}
+            accounts={filteredAccounts}
             period={state.selectedPeriod}
-            balanceTrend={generateTrendData.balance}
-            incomeTrend={generateTrendData.income}
-            expenseTrend={generateTrendData.expenses}
-            savingsTrend={generateTrendData.savings}
+            budgets={budgets}
+            loading={isLoading}
+            error={state.error}
+            onExport={handleExportTransactions}
+            onRefresh={refreshCharts}
           />
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Left Column - Account Overview */}
-          <div className="flex flex-col">
-            <div className="bg-white rounded-lg shadow-sm border h-full flex flex-col">
-              <AccountOverview
-                accounts={state.accounts}
-                onAccountSelect={(account) => {
-                  viewAccountDetail(account);
-                }}
-                accountFilter={accountFilter}
-              />
-            </div>
+        {/* Budget Section */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">Budget Management</h2>
+            <Button
+              onClick={() => setShowBudgetForm(true)}
+              className="flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Budget</span>
+            </Button>
           </div>
+          
+          <Suspense fallback={<InlineSpinner />}>
+            <BudgetOverview
+              onBudgetSelect={setSelectedBudget}
+              onCreateBudget={() => setShowBudgetForm(true)}
+            />
+          </Suspense>
+        </div>
 
-          {/* Right Column - Quick Actions + Recent Activity */}
-          <div className="space-y-8">
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {[
-                  {
-                    icon: Plus,
-                    label: 'Add Transaction',
-                    color: 'bg-blue-500',
-                  },
-                  { icon: Upload, label: 'Import CSV', color: 'bg-green-500' },
-                  { icon: Target, label: 'Set Budget', color: 'bg-purple-500' },
-                  {
-                    icon: Calculator,
-                    label: 'Calculator',
-                    color: 'bg-orange-500',
-                  },
-                  {
-                    icon: PieChart,
-                    label: 'Generate Report',
-                    color: 'bg-pink-500',
-                  },
-                  {
-                    icon: Download,
-                    label: 'Export Data',
-                    color: 'bg-gray-500',
-                  },
-                ].map((action, index) => (
-                  <button
-                    key={index}
-                    className="group p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all text-left"
-                    onClick={() => alert(`${action.label} coming soon!`)}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-lg ${action.color} flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}
-                    >
-                      <action.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-1">
-                        {action.label}
-                      </h4>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Recent Activity */}
+        <div className="mb-6">
+          <Suspense fallback={<InlineSpinner />}>
+            <RecentActivity
+              accounts={filteredAccounts}
+              limit={10}
+            />
+          </Suspense>
+        </div>
 
-            {/* Recent Activity */}
-            <RecentActivity accounts={filteredAccounts} limit={5} />
+        {/* Export Section */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Data</h3>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={handleExportTransactions}
+              disabled={isExporting}
+              className="flex items-center space-x-2"
+            >
+              <Download className="w-4 h-4" />
+              <span>{isExporting ? 'Exporting...' : 'Export Transactions'}</span>
+            </Button>
+            <Button
+              onClick={handleExportSummary}
+              disabled={isExporting}
+              className="flex items-center space-x-2"
+            >
+              <Upload className="w-4 h-4" />
+              <span>{isExporting ? 'Exporting...' : 'Export Summary'}</span>
+            </Button>
           </div>
+          {exportError && (
+            <p className="text-red-600 text-sm mt-2">{exportError}</p>
+          )}
         </div>
       </main>
+
+      {/* Budget Form Modal */}
+      {showBudgetForm && (
+        <Suspense fallback={<FullScreenSpinner text="Loading Budget Form..." />}>
+          <BudgetForm
+            budget={selectedBudget}
+            onSave={(budget) => {
+              // TODO: Save budget
+              setShowBudgetForm(false);
+            }}
+            onCancel={() => setShowBudgetForm(false)}
+            isOpen={showBudgetForm}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

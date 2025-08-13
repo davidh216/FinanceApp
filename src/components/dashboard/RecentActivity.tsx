@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Account } from '../../types/financial';
-import { TransactionItem } from '../ui/TransactionItem';
+import { VirtualizedTransactionList } from '../ui/VirtualizedTransactionList';
 import { Button } from '../ui/Button';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Eye, Filter, ArrowUpDown } from 'lucide-react';
@@ -18,7 +18,7 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
   const { addTag, removeTag, changeScreen } = useFinancial();
 
-  // Get all recent transactions
+  // Get all transactions from all accounts
   const allTransactions = accounts
     .flatMap(
       (account) =>
@@ -34,8 +34,10 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
       } else {
         return Math.abs(b.amount) - Math.abs(a.amount);
       }
-    })
-    .slice(0, limit);
+    });
+
+  // Use virtualized list for better performance with large datasets
+  const displayTransactions = allTransactions.slice(0, limit);
 
   const handleViewAll = () => {
     changeScreen('transactions');
@@ -118,42 +120,34 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
       </div>
 
       {/* Transaction List */}
-      <div className="divide-y divide-gray-200">
-        {allTransactions.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">📋</span>
-            </div>
-            <p className="text-sm">No recent transactions found</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Transactions will appear here once you connect accounts
-            </p>
+      {allTransactions.length === 0 ? (
+        <div className="p-6 text-center text-gray-500">
+          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">📋</span>
           </div>
-        ) : (
-          allTransactions.map((transaction) => (
-            <TransactionItem
-              key={transaction.id}
-              transaction={transaction}
-              onAddTag={addTag}
-              onRemoveTag={removeTag}
-              showAccountName={true}
-              showTagging={true}
-            />
-          ))
-        )}
-      </div>
+          <p className="text-sm">No recent transactions found</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Transactions will appear here once you connect accounts
+          </p>
+        </div>
+      ) : (
+        <VirtualizedTransactionList
+          transactions={displayTransactions}
+          height={400}
+          itemHeight={72}
+          onTransactionClick={(transaction) => {
+            // Handle transaction click - could open detail modal or navigate
+            console.log('Transaction clicked:', transaction);
+          }}
+        />
+      )}
 
       {/* Footer */}
       {allTransactions.length > 0 && (
         <div className="p-2 bg-gray-50 border-t">
           <div className="flex items-center justify-between text-sm">
             <div className="text-gray-500">
-              Showing {allTransactions.length} of{' '}
-              {accounts.reduce(
-                (sum, acc) => sum + (acc.transactions?.length || 0),
-                0
-              )}{' '}
-              total transactions
+              Showing {displayTransactions.length} of {allTransactions.length} total transactions
             </div>
             <button
               onClick={handleViewAll}
