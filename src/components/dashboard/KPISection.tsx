@@ -77,7 +77,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
           title="Total Balance"
           value={totalBalance}
@@ -128,7 +128,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
       {activeBudgets.length > 0 && (
         <div className="mt-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Budget Overview</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <KPICard
               title="Total Budgeted"
               value={totalBudgeted}

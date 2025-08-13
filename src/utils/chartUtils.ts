@@ -88,8 +88,34 @@ export const processBalanceTrendData = (
 
   // Generate data points
   for (let i = 0; i < dataPoints; i++) {
-    const currentDate = new Date(startDate);
-    currentDate.setDate(startDate.getDate() + i);
+    let currentDate: Date;
+    
+    // Calculate the correct date based on period
+    switch (period) {
+      case 'day':
+        currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        break;
+      case 'week':
+        currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + (i * 7));
+        break;
+      case 'month':
+        currentDate = new Date(startDate);
+        currentDate.setMonth(startDate.getMonth() + i);
+        break;
+      case 'quarter':
+        currentDate = new Date(startDate);
+        currentDate.setMonth(startDate.getMonth() + (i * 3));
+        break;
+      case 'year':
+        currentDate = new Date(startDate);
+        currentDate.setFullYear(startDate.getFullYear() + i);
+        break;
+      default:
+        currentDate = new Date(startDate);
+        currentDate.setMonth(startDate.getMonth() + i);
+    }
     
     // Calculate balance for this date (simplified - in real app, you'd calculate actual balance)
     const balanceChange = transactions
@@ -141,8 +167,34 @@ export const processIncomeExpenseData = (
   }
 
   for (let i = 0; i < dataPoints; i++) {
-    const currentDate = new Date(startDate);
-    currentDate.setDate(startDate.getDate() + i);
+    let currentDate: Date;
+    
+    // Calculate the correct date based on period
+    switch (period) {
+      case 'day':
+        currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        break;
+      case 'week':
+        currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + (i * 7));
+        break;
+      case 'month':
+        currentDate = new Date(startDate);
+        currentDate.setMonth(startDate.getMonth() + i);
+        break;
+      case 'quarter':
+        currentDate = new Date(startDate);
+        currentDate.setMonth(startDate.getMonth() + (i * 3));
+        break;
+      case 'year':
+        currentDate = new Date(startDate);
+        currentDate.setFullYear(startDate.getFullYear() + i);
+        break;
+      default:
+        currentDate = new Date(startDate);
+        currentDate.setMonth(startDate.getMonth() + i);
+    }
     
     const periodStart = getPeriodStart(currentDate, period);
     const periodEnd = getPeriodEnd(currentDate, period);
@@ -183,27 +235,28 @@ export const processCategorySpendingData = (
 ): ChartDataPoint[] => {
   const categoryMap = new Map<string, number>();
   
+  // Get date range based on period - same logic as other charts
   const endDate = new Date();
   let startDate: Date;
   
   switch (period) {
     case 'day':
-      startDate = startOfDay(endDate);
+      startDate = subDays(endDate, 30); // Last 30 days for daily view
       break;
     case 'week':
-      startDate = startOfWeek(endDate);
+      startDate = subWeeks(endDate, 12); // Last 12 weeks
       break;
     case 'month':
-      startDate = startOfMonth(endDate);
+      startDate = subMonths(endDate, 12); // Last 12 months
       break;
     case 'quarter':
-      startDate = startOfQuarter(endDate);
+      startDate = subQuarters(endDate, 4); // Last 4 quarters
       break;
     case 'year':
-      startDate = startOfYear(endDate);
+      startDate = subYears(endDate, 5); // Last 5 years
       break;
     default:
-      startDate = startOfMonth(endDate);
+      startDate = subMonths(endDate, 12);
   }
 
   // Filter transactions for the period
@@ -264,7 +317,7 @@ const getDateFormat = (period: TimePeriod): string => {
     case 'month':
       return 'MMM yyyy';
     case 'quarter':
-      return 'QQQ yyyy';
+      return 'Qo yyyy';
     case 'year':
       return 'yyyy';
     default:

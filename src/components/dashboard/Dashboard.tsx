@@ -148,6 +148,7 @@ export const Dashboard: React.FC = () => {
   // Main dashboard with data
   return (
     <div className="min-h-screen bg-gray-50">
+
       <DashboardHeader />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -176,6 +177,8 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+
 
         {/* Error Display */}
         {state.error && (
@@ -298,7 +301,6 @@ export const Dashboard: React.FC = () => {
           <Suspense fallback={<InlineSpinner />}>
             <BudgetOverview
               onBudgetSelect={setSelectedBudget}
-              onCreateBudget={() => setShowBudgetForm(true)}
             />
           </Suspense>
         </div>
@@ -313,8 +315,8 @@ export const Dashboard: React.FC = () => {
           </Suspense>
         </div>
 
-        {/* Export Section */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
+        {/* Export Section - Hidden for now */}
+        {/* <div className="bg-white rounded-lg shadow-sm border p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Data</h3>
           <div className="flex flex-wrap gap-3">
             <Button
@@ -337,7 +339,7 @@ export const Dashboard: React.FC = () => {
           {exportError && (
             <p className="text-red-600 text-sm mt-2">{exportError}</p>
           )}
-        </div>
+        </div> */}
       </main>
 
       {/* Budget Form Modal */}

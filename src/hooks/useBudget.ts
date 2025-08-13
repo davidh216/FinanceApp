@@ -55,18 +55,34 @@ export const useBudget = (config: UseBudgetConfig = {}): UseBudgetReturn => {
 
   // Create budget service instance
   const budgetService = useMemo(() => {
-    if (!currentUser?.id) return null;
+    // Check if we're in demo mode
+    const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                      new URLSearchParams(window.location.search).get('demo') === 'true';
+    
+    // Use demo user ID if in demo mode, otherwise require current user
+    const userId = isDemoMode ? 'demo-user' : currentUser?.id;
+    
+    if (!userId) return null;
     
     const serviceConfig: BudgetServiceConfig = {
       useMockData: config.useMockData ?? true, // Default to mock data for development
     };
     
-    return createBudgetService(serviceConfig, currentUser.id);
+    return createBudgetService(serviceConfig, userId);
   }, [currentUser?.id, config.useMockData]);
 
   // Load budgets on mount and when user changes
   useEffect(() => {
-    if (!budgetService || !currentUser?.id) return;
+    if (!budgetService) return;
+
+    // Check if we're in demo mode
+    const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                      new URLSearchParams(window.location.search).get('demo') === 'true';
+    
+    // Use demo user ID if in demo mode, otherwise require current user
+    const userId = isDemoMode ? 'demo-user' : currentUser?.id;
+    
+    if (!userId) return;
 
     const loadBudgets = async () => {
       setIsLoading(true);
@@ -74,8 +90,8 @@ export const useBudget = (config: UseBudgetConfig = {}): UseBudgetReturn => {
       
       try {
         const [budgetsData, summaryData] = await Promise.all([
-          budgetService.getBudgets(currentUser.id),
-          budgetService.getBudgetSummary(currentUser.id),
+          budgetService.getBudgets(userId),
+          budgetService.getBudgetSummary(userId),
         ]);
         
         setBudgets(budgetsData);
@@ -90,7 +106,7 @@ export const useBudget = (config: UseBudgetConfig = {}): UseBudgetReturn => {
     loadBudgets();
 
     // Subscribe to real-time updates
-    const unsubscribe = budgetService.subscribeToBudgets(currentUser.id, (updatedBudgets) => {
+    const unsubscribe = budgetService.subscribeToBudgets(userId, (updatedBudgets) => {
       setBudgets(updatedBudgets);
     });
 
@@ -113,8 +129,12 @@ export const useBudget = (config: UseBudgetConfig = {}): UseBudgetReturn => {
       setBudgets(prev => [...prev, newBudget]);
       
       // Refresh summary
-      if (currentUser?.id) {
-        const summary = await budgetService.getBudgetSummary(currentUser.id);
+      const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                        new URLSearchParams(window.location.search).get('demo') === 'true';
+      const userId = isDemoMode ? 'demo-user' : currentUser?.id;
+      
+      if (userId) {
+        const summary = await budgetService.getBudgetSummary(userId);
         setBudgetSummary(summary);
       }
       
@@ -150,8 +170,12 @@ export const useBudget = (config: UseBudgetConfig = {}): UseBudgetReturn => {
       }
       
       // Refresh summary
-      if (currentUser?.id) {
-        const summary = await budgetService.getBudgetSummary(currentUser.id);
+      const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                        new URLSearchParams(window.location.search).get('demo') === 'true';
+      const userId = isDemoMode ? 'demo-user' : currentUser?.id;
+      
+      if (userId) {
+        const summary = await budgetService.getBudgetSummary(userId);
         setBudgetSummary(summary);
       }
       
@@ -186,8 +210,12 @@ export const useBudget = (config: UseBudgetConfig = {}): UseBudgetReturn => {
         }
         
         // Refresh summary
-        if (currentUser?.id) {
-          const summary = await budgetService.getBudgetSummary(currentUser.id);
+        const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                          new URLSearchParams(window.location.search).get('demo') === 'true';
+        const userId = isDemoMode ? 'demo-user' : currentUser?.id;
+        
+        if (userId) {
+          const summary = await budgetService.getBudgetSummary(userId);
           setBudgetSummary(summary);
         }
       }
@@ -250,15 +278,24 @@ export const useBudget = (config: UseBudgetConfig = {}): UseBudgetReturn => {
 
   // Utility functions
   const refreshBudgets = useCallback(async () => {
-    if (!budgetService || !currentUser?.id) return;
+    if (!budgetService) return;
+
+    // Check if we're in demo mode
+    const isDemoMode = localStorage.getItem('financeapp-demo-mode') === 'true' || 
+                      new URLSearchParams(window.location.search).get('demo') === 'true';
+    
+    // Use demo user ID if in demo mode, otherwise require current user
+    const userId = isDemoMode ? 'demo-user' : currentUser?.id;
+    
+    if (!userId) return;
 
     setIsLoading(true);
     setError(null);
     
     try {
       const [budgetsData, summaryData] = await Promise.all([
-        budgetService.getBudgets(currentUser.id),
-        budgetService.getBudgetSummary(currentUser.id),
+        budgetService.getBudgets(userId),
+        budgetService.getBudgetSummary(userId),
       ]);
       
       setBudgets(budgetsData);

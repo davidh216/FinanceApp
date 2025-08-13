@@ -193,8 +193,35 @@ class ServiceWorkerManager {
 // Create singleton instance
 const serviceWorkerManager = new ServiceWorkerManager();
 
-// Export functions for easy use
-export const registerServiceWorker = () => serviceWorkerManager.register();
+/**
+ * Register service worker with development mode handling
+ * Prevents cache issues during development by disabling SW in dev mode
+ */
+export const registerServiceWorker = async () => {
+  // Disable service worker in development mode to prevent cache issues
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Service worker disabled in development mode to prevent cache issues');
+    
+    // Unregister any existing service workers
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+        console.log('Unregistered existing service worker');
+      }
+    }
+    return;
+  }
+
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      console.log('Service worker registered successfully:', registration);
+    } catch (error) {
+      console.error('Service worker registration failed:', error);
+    }
+  }
+};
 export const updateServiceWorker = () => serviceWorkerManager.update();
 export const skipWaiting = () => serviceWorkerManager.skipWaiting();
 export const unregisterServiceWorker = () => serviceWorkerManager.unregister();

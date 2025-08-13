@@ -183,15 +183,6 @@ export const ChartFactory: React.FC<ChartFactoryProps> = ({
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          {chartConfig.title}
-        </h3>
-        <p className="text-sm text-gray-600">
-          {chartConfig.description}
-        </p>
-      </div>
-      
       <BaseChart
         type={getChartType(chartType)}
         data={chartData}
@@ -258,20 +249,10 @@ const getBaseOptions = (chartType: ChartType, title: string) => {
   const baseOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      title: {
-        display: true,
-        text: title,
-        font: {
-          size: 16,
-          weight: 'bold' as const,
-        },
-        color: '#374151',
-        padding: {
-          top: 10,
-          bottom: 20,
-        },
-      },
+         plugins: {
+       title: {
+         display: false,
+       },
       legend: {
         position: 'bottom' as const,
         labels: {

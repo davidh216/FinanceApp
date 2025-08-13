@@ -12,7 +12,9 @@
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css,md}\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clear-cache": "node scripts/clear-cache.js",
+    "dev-reset": "npm run clear-cache && npm start"
   },
   "dependencies": {
     "@firebase/app": "^0.14.1",

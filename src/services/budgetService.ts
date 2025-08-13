@@ -60,28 +60,74 @@ class MockBudgetService implements BudgetService {
   private alerts: BudgetAlert[] = [];
 
   constructor() {
+    console.log('🔍 MockBudgetService constructor called');
     this.generateMockBudgets();
   }
 
   private generateMockBudgets(): void {
-    const categories = ['Food & Dining', 'Transportation', 'Shopping', 'Entertainment', 'Utilities', 'Healthcare'];
-    const periods: TimePeriod[] = ['month', 'quarter', 'year'];
+    console.log('🔍 MockBudgetService.generateMockBudgets called');
+    const budgetData = [
+      {
+        category: 'Food & Dining',
+        amount: 800,
+        spent: 720, // 90% - on track
+        period: 'month' as TimePeriod,
+      },
+      {
+        category: 'Transportation',
+        amount: 400,
+        spent: 450, // 112.5% - over budget
+        period: 'month' as TimePeriod,
+      },
+      {
+        category: 'Shopping',
+        amount: 600,
+        spent: 480, // 80% - on track
+        period: 'month' as TimePeriod,
+      },
+      {
+        category: 'Entertainment',
+        amount: 300,
+        spent: 330, // 110% - over budget
+        period: 'month' as TimePeriod,
+      },
+      {
+        category: 'Utilities',
+        amount: 250,
+        spent: 200, // 80% - on track
+        period: 'month' as TimePeriod,
+      },
+      {
+        category: 'Healthcare',
+        amount: 150,
+        spent: 180, // 120% - over budget
+        period: 'month' as TimePeriod,
+      },
+      {
+        category: 'Travel',
+        amount: 1200,
+        spent: 900, // 75% - on track
+        period: 'quarter' as TimePeriod,
+      },
+      {
+        category: 'Home Improvement',
+        amount: 2000,
+        spent: 2200, // 110% - over budget
+        period: 'quarter' as TimePeriod,
+      },
+    ];
     
-    categories.forEach((category, index) => {
-      const period = periods[index % periods.length];
-      const amount = Math.random() * 1000 + 200; // $200-$1200
-      const spent = Math.random() * amount;
-      
+    budgetData.forEach((data, index) => {
       this.budgets.push({
         id: `budget-${index}`,
-        userId: 'mock-user',
-        category,
-        amount,
-        period,
+        userId: 'demo-user', // Changed from 'mock-user' to 'demo-user'
+        category: data.category,
+        amount: data.amount,
+        period: data.period,
         startDate: new Date().toISOString(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        spent,
-        remaining: amount - spent,
+        spent: data.spent,
+        remaining: data.amount - data.spent,
         alerts: [],
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -96,7 +142,7 @@ class MockBudgetService implements BudgetService {
     const budget: Budget = {
       ...budgetData,
       id: `budget-${Date.now()}`,
-      userId: 'mock-user',
+      userId: 'demo-user', // Changed from 'mock-user' to 'demo-user'
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -107,6 +153,9 @@ class MockBudgetService implements BudgetService {
 
   async getBudgets(userId: string): Promise<Budget[]> {
     await new Promise(resolve => setTimeout(resolve, 100));
+    console.log('🔍 MockBudgetService.getBudgets called with userId:', userId);
+    console.log('🔍 Total budgets in service:', this.budgets.length);
+    console.log('🔍 Budgets for userId:', this.budgets.filter(budget => budget.userId === userId).length);
     return this.budgets.filter(budget => budget.userId === userId);
   }
 
@@ -563,12 +612,15 @@ class FirebaseBudgetService implements BudgetService {
 }
 
 export function createBudgetService(config: BudgetServiceConfig, userId?: string): BudgetService {
+  console.log('🔍 createBudgetService called with config:', config, 'userId:', userId);
   if (config.useMockData) {
+    console.log('🔍 Creating MockBudgetService');
     return new MockBudgetService();
   } else {
     if (!userId) {
       throw new Error('User ID is required for Firebase BudgetService');
     }
+    console.log('🔍 Creating FirebaseBudgetService');
     return new FirebaseBudgetService(config, userId);
   }
 }

@@ -97,29 +97,11 @@ export const BudgetVsActualChart: React.FC<BudgetVsActualChartProps> = ({
     maintainAspectRatio: false,
     plugins: {
       title: {
-        display: true,
-        text: 'Budget vs Actual Spending',
-        font: {
-          size: 16,
-          weight: 'bold' as const,
-        },
-        color: '#374151',
-        padding: {
-          top: 10,
-          bottom: 20,
-        },
+        display: false,
       },
-      legend: {
-        position: 'bottom' as const,
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          font: {
-            size: 12,
-          },
-          color: '#374151',
-        },
-      },
+             legend: {
+         display: false,
+       },
       tooltip: {
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         titleColor: '#fff',
@@ -220,10 +202,7 @@ export const BudgetVsActualChart: React.FC<BudgetVsActualChartProps> = ({
     return (
       <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
         <div className="text-center py-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Budget vs Actual Spending
-          </h3>
-          <p className="text-gray-500 mb-4">
+          <p className="text-gray-500">
             No budgets found. Create budgets to see spending comparisons.
           </p>
         </div>
@@ -231,18 +210,9 @@ export const BudgetVsActualChart: React.FC<BudgetVsActualChartProps> = ({
     );
   }
 
-  return (
-    <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Budget vs Actual Spending
-        </h3>
-        <p className="text-sm text-gray-600">
-          Compare your budgeted amounts with actual spending by category
-        </p>
-      </div>
-      
-      <BaseChart
+     return (
+     <div className={`bg-white rounded-lg shadow-sm border p-6 ${className}`}>
+       <BaseChart
         type="bar"
         data={chartData}
         options={chartOptions}
@@ -252,28 +222,6 @@ export const BudgetVsActualChart: React.FC<BudgetVsActualChartProps> = ({
         loading={loading}
         error={error}
       />
-      
-      {/* Summary Stats */}
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {budgets.filter(b => b.isActive).length}
-          </div>
-          <div className="text-gray-500">Active Budgets</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {budgets.filter(b => b.isActive && b.spent <= b.amount).length}
-          </div>
-          <div className="text-gray-500">On Track</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-red-600">
-            {budgets.filter(b => b.isActive && b.spent > b.amount).length}
-          </div>
-          <div className="text-gray-500">Over Budget</div>
-        </div>
-      </div>
     </div>
   );
 }; 

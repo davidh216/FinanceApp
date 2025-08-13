@@ -1,23 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { DateRangePicker, DateRange } from '../ui/DateRangePicker';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { Bell, Eye, EyeOff, RefreshCw, LogOut } from 'lucide-react';
+
+/**
+ * DashboardHeader - Main Navigation Header
+ * 
+ * Layout Changes (Sprint 6):
+ * - Temporarily hidden DateRangePicker for improved layout focus
+ * - Maintained all other functionality and accessibility features
+ * - Period selector remains available in main dashboard area
+ */
 
 export const DashboardHeader: React.FC = () => {
   const {
     state,
-    setCustomDateRange,
     isPrivacyMode,
     togglePrivacyMode,
     accountFilter,
     setAccountFilter,
   } = useFinancial();
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
-  const handleDateRangeSelect = (range: DateRange) => {
-    setCustomDateRange(range.startDate.toISOString(), range.endDate.toISOString(), range.label);
-  };
 
   const handleRefresh = () => {
     // For now, just show an alert. In a real app, this would refresh the data
@@ -105,8 +107,8 @@ export const DashboardHeader: React.FC = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* Theme Toggle - Hidden for now */}
+            {/* <ThemeToggle /> */}
 
             {/* Refresh Button */}
             <button
@@ -144,8 +146,8 @@ export const DashboardHeader: React.FC = () => {
         </div>
       </div>
 
-      {/* Date Range Picker */}
-      <DateRangePicker
+      {/* Date Range Picker - Temporarily hidden for layout improvement */}
+      {/* <DateRangePicker
         value={state.customDateRange ? {
           startDate: new Date(state.customDateRange.startDate),
           endDate: new Date(state.customDateRange.endDate),
@@ -153,7 +155,7 @@ export const DashboardHeader: React.FC = () => {
         } : undefined}
         onChange={handleDateRangeSelect}
         onClose={() => setIsDatePickerOpen(false)}
-      />
+      /> */}
     </header>
   );
 };

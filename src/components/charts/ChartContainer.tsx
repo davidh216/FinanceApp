@@ -4,6 +4,17 @@ import { ChartFactory, ChartType } from './ChartFactory';
 import { Button } from '../ui/Button';
 import { Download, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
 
+/**
+ * ChartContainer - Financial Analytics Dashboard
+ * 
+ * Layout Changes (Sprint 6):
+ * - Changed from horizontal columns to vertical rows layout
+ * - Improved mobile experience and data flow
+ * - Charts start collapsed (200px height) and can expand to 600px
+ * - Removed redundant container header, moved export button to individual charts
+ * - Maintained ChartFactory pattern and performance optimizations
+ */
+
 interface ChartContainerProps {
   transactions: Transaction[];
   accounts: Account[];
@@ -81,55 +92,65 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
     return (
       <div 
         key={chartConfig.type}
-        className={`bg-white rounded-lg shadow-sm border transition-all duration-300 ${
-          isExpanded ? 'col-span-full' : 'col-span-1'
-        }`}
+        className="bg-white rounded-lg shadow-sm border transition-all duration-300"
       >
-        {/* Chart Header */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {chartConfig.title}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {chartConfig.description}
-              </p>
-            </div>
+                 {/* Chart Header */}
+         <div className="p-4 border-b border-gray-200">
+           <div className="flex items-center justify-between">
+             <div>
+               <h3 className="text-lg font-semibold text-gray-900">
+                 {chartConfig.title}
+               </h3>
+               <p className="text-sm text-gray-600">
+                 {chartConfig.description}
+               </p>
+             </div>
             
-            <div className="flex items-center space-x-2">
-              {/* Refresh Button */}
-              <Button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
-              </Button>
+                         <div className="flex items-center space-x-2">
+               {/* Export Button */}
+               <Button
+                 onClick={onExport}
+                 disabled={loading}
+                 variant="outline"
+                 size="sm"
+                 className="flex items-center space-x-1"
+               >
+                 <Download className="w-4 h-4" />
+                 <span>Export</span>
+               </Button>
 
-              {/* Expand/Collapse Button */}
-              <Button
-                onClick={() => toggleChartExpansion(chartConfig.type)}
-                variant="outline"
-                size="sm"
-                className="flex items-center space-x-1"
-              >
-                {isExpanded ? (
-                  <>
-                    <Minimize2 className="w-4 h-4" />
-                    <span>Collapse</span>
-                  </>
-                ) : (
-                  <>
-                    <Maximize2 className="w-4 h-4" />
-                    <span>Expand</span>
-                  </>
-                )}
-              </Button>
-            </div>
+               {/* Refresh Button */}
+               <Button
+                 onClick={handleRefresh}
+                 disabled={isRefreshing}
+                 variant="outline"
+                 size="sm"
+                 className="flex items-center space-x-1"
+               >
+                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                 <span>Refresh</span>
+               </Button>
+
+               {/* Expand/Collapse Button */}
+               <Button
+                 onClick={() => toggleChartExpansion(chartConfig.type)}
+                 variant="outline"
+                 size="sm"
+                 className="flex items-center space-x-1"
+               >
+                 {isExpanded ? (
+                   <>
+                     <Minimize2 className="w-4 h-4" />
+                     <span>Collapse</span>
+                   </>
+                 ) : (
+                   <>
+                     <Maximize2 className="w-4 h-4" />
+                     <span>Expand</span>
+                   </>
+                 )}
+               </Button>
+             </div>
           </div>
         </div>
 
@@ -141,7 +162,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
             accounts={accounts}
             period={period}
             budgets={budgets}
-            height={isExpanded ? 500 : 300}
+            height={isExpanded ? 600 : 200}
             loading={loading}
             error={error}
             onDataPointClick={handleDataPointClick}
@@ -153,30 +174,9 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Financial Analytics</h2>
-          <p className="text-gray-600">
-            Interactive charts and insights for your financial data
-          </p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          {/* Export Button */}
-          <Button
-            onClick={onExport}
-            disabled={loading}
-            className="flex items-center space-x-2"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export Data</span>
-          </Button>
-        </div>
-      </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+      {/* Charts Grid - Vertical rows layout for improved mobile experience and data flow */}
+      <div className="grid grid-cols-1 gap-6 max-w-full">
         {CHART_CONFIGS.map(renderChartCard)}
       </div>
 
