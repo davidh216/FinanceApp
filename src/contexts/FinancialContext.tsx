@@ -2,6 +2,7 @@ import React, {
   createContext,
   useContext,
   useReducer,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -14,6 +15,24 @@ import {
   FinancialSummary,
 } from '../types/financial';
 import { MOCK_ACCOUNTS } from '../constants/financial';
+import { isImportedAccount } from '../utils/csvImport';
+
+const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
+
+const loadImportedAccounts = (): Account[] => {
+  try {
+    const stored = window.localStorage.getItem(IMPORTED_ACCOUNTS_STORAGE_KEY);
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (account) =>
+            typeof account?.id === 'string' && isImportedAccount(account)
+        )
+      : [];
+  } catch {
+    return [];
+  }
+};
 
 const initialState: FinancialState = {
   accounts: MOCK_ACCOUNTS,
@@ -25,6 +44,15 @@ const initialState: FinancialState = {
   error: null,
   filters: {},
   sortBy: 'date-desc',
+};
+
+const createInitialState = (state: FinancialState): FinancialState => {
+  const accounts = [...state.accounts, ...loadImportedAccounts()];
+  return {
+    ...state,
+    accounts,
+    transactions: accounts.flatMap((acc) => acc.transactions || []),
+  };
 };
 
 const financialReducer = (
@@ -103,6 +131,18 @@ const financialReducer = (
           ...(action.payload.transactions || []),
         ],
       };
+    case 'REMOVE_ACCOUNT': {
+      const isSelected = state.selectedAccount?.id === action.payload;
+      return {
+        ...state,
+        accounts: state.accounts.filter((acc) => acc.id !== action.payload),
+        transactions: state.transactions.filter(
+          (txn) => txn.accountId !== action.payload
+        ),
+        selectedAccount: isSelected ? null : state.selectedAccount,
+        currentScreen: isSelected ? 'dashboard' : state.currentScreen,
+      };
+    }
     case 'APPLY_FILTERS':
       return { ...state, filters: action.payload };
     case 'SET_CUSTOM_DATE_RANGE':
@@ -128,6 +168,8 @@ interface FinancialContextType {
   removeTag: (transactionId: string, tag: string) => void;
   applyFilters: (filters: FilterOptions) => void;
   viewAccountDetail: (account: Account) => void;
+  importAccount: (account: Account) => void;
+  removeAccount: (accountId: string) => void;
   setCustomDateRange: (
     startDate: string,
     endDate: string,
@@ -144,11 +186,29 @@ const FinancialContext = createContext<FinancialContextType | null>(null);
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [state, dispatch] = useReducer(financialReducer, initialState);
+  const [state, dispatch] = useReducer(
+    financialReducer,
+    initialState,
+    createInitialState
+  );
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const [accountFilter, setAccountFilter] = useState<
     'both' | 'personal' | 'business'
   >('personal');
+
+  // Imported accounts are the only user data that must survive a reload;
+  // mock accounts are regenerated on every load.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        IMPORTED_ACCOUNTS_STORAGE_KEY,
+        JSON.stringify(state.accounts.filter(isImportedAccount))
+      );
+    } catch {
+      // Storage can be unavailable (private mode, quota); imports still
+      // work for the current session.
+    }
+  }, [state.accounts]);
 
   const totalBalance = useMemo(
     () => state.accounts.reduce((sum, account) => sum + account.balance, 0),
@@ -343,6 +403,15 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
   };
 
+  const importAccount = (account: Account) => {
+    dispatch({ type: 'CONNECT_ACCOUNT', payload: account });
+    dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
+  };
+
+  const removeAccount = (accountId: string) => {
+    dispatch({ type: 'REMOVE_ACCOUNT', payload: accountId });
+  };
+
   const setCustomDateRange = (
     startDate: string,
     endDate: string,
@@ -374,6 +443,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     removeTag,
     applyFilters,
     viewAccountDetail,
+    importAccount,
+    removeAccount,
     setCustomDateRange,
     isPrivacyMode,
     togglePrivacyMode,

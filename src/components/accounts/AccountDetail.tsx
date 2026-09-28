@@ -3,12 +3,14 @@ import { useFinancial } from '../../contexts/FinancialContext';
 import { DashboardHeader } from '../dashboard/DashboardHeader';
 import { Button } from '../ui/Button';
 import { TransactionItem } from '../ui/TransactionItem';
+import { isImportedAccount } from '../../utils/csvImport';
 import {
   ArrowLeft,
   Search,
   Plus,
   TrendingUp,
   TrendingDown,
+  Trash2,
 } from 'lucide-react';
 
 interface AccountDetailProps {
@@ -16,8 +18,14 @@ interface AccountDetailProps {
 }
 
 export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
-  const { state, addTag, removeTag, changeScreen, isPrivacyMode } =
-    useFinancial();
+  const {
+    state,
+    addTag,
+    removeTag,
+    changeScreen,
+    removeAccount,
+    isPrivacyMode,
+  } = useFinancial();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'merchant'>('date');
@@ -261,6 +269,26 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 >
                   Limit: ${account.limit.toLocaleString()}
                 </div>
+              )}
+              {isImportedAccount(account) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  leftIcon={<Trash2 className="w-4 h-4" />}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Remove ${account.name} and its imported transactions?`
+                      )
+                    ) {
+                      removeAccount(account.id);
+                    }
+                  }}
+                  data-testid="remove-account-button"
+                >
+                  Remove account
+                </Button>
               )}
             </div>
           </div>
