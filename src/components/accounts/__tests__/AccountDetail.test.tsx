@@ -9,7 +9,6 @@ import {
 } from '@testing-library/react';
 import { AccountDetail } from '../AccountDetail';
 import { FinancialProvider } from '../../../contexts/FinancialContext';
-import { Account, Transaction } from '../../../types/financial';
 
 // Mock data removed - using MOCK_ACCOUNTS from constants instead
 
@@ -17,7 +16,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <FinancialProvider>{children}</FinancialProvider>
 );
 
-describe.skip('AccountDetail Component', () => {
+describe('AccountDetail Component', () => {
   it('renders account information correctly', () => {
     render(
       <TestWrapper>
@@ -44,7 +43,7 @@ describe.skip('AccountDetail Component', () => {
     );
 
     expect(screen.getByText(/transactions/)).toBeInTheDocument();
-    expect(screen.getByText(/Income/)).toBeInTheDocument();
+    expect(screen.getByText('Income', { selector: 'div' })).toBeInTheDocument();
     expect(screen.getByText(/Expenses/)).toBeInTheDocument();
   });
 

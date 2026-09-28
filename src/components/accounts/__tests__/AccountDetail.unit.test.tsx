@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AccountDetail } from '../AccountDetail';
-import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Account } from '../../../types/financial';
 
 // Mock the context to test specific behaviors
