@@ -18,7 +18,8 @@ import {
   Upload,
   Download,
 } from 'lucide-react';
-import { parseLocalDate } from '../../utils/date';
+import { parseLocalDate, toLocalDateString } from '../../utils/date';
+import { totalBalanceAsOf } from '../../utils/balances';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -194,6 +195,8 @@ export const Dashboard: React.FC = () => {
         .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
     );
 
+    const previousPeriodEndDate = toLocalDateString(prevEndDate);
+
     return {
       totalBalance,
       monthlyIncome: Math.round(periodIncome * 100) / 100,
@@ -203,6 +206,11 @@ export const Dashboard: React.FC = () => {
       savingsRate: Math.max(0, savingsRate),
       previousPeriodIncome: prevPeriodIncome,
       previousPeriodExpenses: prevPeriodExpenses,
+      previousPeriodBalance: totalBalanceAsOf(
+        filteredAccounts,
+        previousPeriodEndDate
+      ),
+      previousPeriodEndDate,
       periodLabel,
     };
   }, [
@@ -259,22 +267,11 @@ export const Dashboard: React.FC = () => {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() - i * intervalDays);
 
-      // Calculate balance up to this point in time
-      const transactionsUpToDate = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnDate = parseLocalDate(txn.date);
-          return txnDate <= targetDate;
-        }
+      // Today's balance with the transactions after this date undone.
+      const balanceAtDate = totalBalanceAsOf(
+        filteredAccounts,
+        toLocalDateString(targetDate)
       );
-
-      const balanceAtDate =
-        filteredAccounts.reduce((sum: number, account: Account) => {
-          return sum + account.balance;
-        }, 0) +
-        transactionsUpToDate.reduce(
-          (sum: number, txn: Transaction) => sum + txn.amount,
-          0
-        );
 
       balanceTrend.push(Math.max(0, balanceAtDate)); // Ensure non-negative for display
     }
@@ -565,6 +562,7 @@ export const Dashboard: React.FC = () => {
                   viewAccountDetail(account);
                 }}
                 accountFilter={accountFilter}
+                comparisonDate={filteredSummary.previousPeriodEndDate}
               />
             </div>
           </div>

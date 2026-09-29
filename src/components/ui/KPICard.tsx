@@ -6,7 +6,9 @@ import { formatMoney, formatSignedMoney } from '../../utils/format';
 interface KPICardProps {
   title: string;
   value: number;
-  change: number;
+  // Percent change on the previous period; null when there's nothing to
+  // compare against (a previous value of zero).
+  change: number | null;
   valueChange?: number; // Dollar value change
   isPositive: boolean;
   isCurrency?: boolean;
@@ -122,23 +124,29 @@ export const KPICard: React.FC<KPICardProps> = ({
           isPositive ? 'text-green-600' : 'text-red-600'
         }`}
       >
-        {change >= 0 ? (
+        {(valueChange ?? change ?? 0) >= 0 ? (
           <TrendingUp className="w-3 h-3 mr-1" />
         ) : (
           <TrendingDown className="w-3 h-3 mr-1" />
         )}
         <span>
-          {change >= 0 ? '+' : ''}
-          {change.toFixed(1)}%
-          {valueChange !== undefined && (
-            <span className="ml-1">
-              (
-              {isCurrency
-                ? formatSignedMoney(valueChange)
-                : formatSignedPoints(valueChange)}
-              )
-            </span>
+          {change !== null && (
+            <>
+              {change >= 0 ? '+' : ''}
+              {change.toFixed(1)}%
+            </>
           )}
+          {valueChange !== undefined &&
+            (() => {
+              const formatted = isCurrency
+                ? formatSignedMoney(valueChange)
+                : formatSignedPoints(valueChange);
+              return change !== null ? (
+                <span className="ml-1">({formatted})</span>
+              ) : (
+                formatted
+              );
+            })()}
           {' vs last '}
           {period}
         </span>
