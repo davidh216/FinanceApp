@@ -15,8 +15,13 @@ import {
   Upload,
 } from 'lucide-react';
 import { parseLocalDate } from '../../utils/date';
-import { formatMoney } from '../../utils/format';
-import { incomeOf, spendingOf } from '../../utils/cashflow';
+import { formatMoney, formatSignedMoney } from '../../utils/format';
+import {
+  incomeOf,
+  isTransfer,
+  spendingOf,
+  transfersOf,
+} from '../../utils/cashflow';
 
 interface AccountDetailProps {
   accountId?: string;
@@ -168,13 +173,19 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
     const periodIncome = incomeOf(periodTransactions);
 
     const periodExpenses = spendingOf(periodTransactions);
+    // Transfers (like loan payments) aren't income or spending, but they do
+    // move money in or out of this account.
+    const periodTransfers = transfersOf(periodTransactions);
 
     const stats = {
       totalTransactions: account.transactions.length,
       periodTransactions: periodTransactions.length,
       periodIncome,
       periodExpenses,
-      netFlow: periodIncome - periodExpenses,
+      periodTransfers,
+      hasTransfers: periodTransactions.some(isTransfer),
+      // The account's actual change: income - expenses +/- transfers.
+      netFlow: periodIncome - periodExpenses + periodTransfers,
       periodLabel,
     };
 
@@ -307,7 +318,13 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
           {/* Monthly Stats */}
           {monthlyStats && (
             <div className="mb-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div
+                className={`grid grid-cols-2 gap-4 ${
+                  monthlyStats.hasTransfers
+                    ? 'md:grid-cols-5'
+                    : 'md:grid-cols-4'
+                }`}
+              >
                 <div
                   className="bg-gray-50 rounded-lg p-4 text-center"
                   data-testid="stat-period"
@@ -316,7 +333,10 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     {monthlyStats.periodLabel}
                   </div>
                   <div className="text-lg font-semibold text-gray-900">
-                    {monthlyStats.periodTransactions} transactions
+                    {monthlyStats.periodTransactions}{' '}
+                    {monthlyStats.periodTransactions === 1
+                      ? 'transaction'
+                      : 'transactions'}
                   </div>
                 </div>
                 <div
@@ -345,6 +365,22 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     )}
                   </div>
                 </div>
+                {monthlyStats.hasTransfers && (
+                  <div
+                    className="bg-gray-50 rounded-lg p-4 text-center"
+                    data-testid="stat-transfers"
+                    title="Money moved between your own accounts, like loan payments. Not counted as income or expenses."
+                  >
+                    <div className="text-sm text-gray-600">Transfers</div>
+                    <div className="text-lg font-semibold text-gray-900">
+                      {isPrivacyMode ? (
+                        <span className="text-gray-400">••••••</span>
+                      ) : (
+                        formatSignedMoney(monthlyStats.periodTransfers)
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div
                   className="bg-gray-50 rounded-lg p-4 text-center"
                   data-testid="stat-net"
@@ -365,7 +401,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     {isPrivacyMode ? (
                       <span className="text-gray-400">••••••</span>
                     ) : (
-                      <>{formatMoney(monthlyStats.netFlow)}</>
+                      formatSignedMoney(monthlyStats.netFlow)
                     )}
                   </div>
                 </div>
