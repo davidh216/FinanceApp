@@ -17,6 +17,7 @@ import {
   parseCsv,
   splitDuplicates,
 } from '../../utils/csvImport';
+import { findTransferMatches, linkTransfers } from '../../utils/transfers';
 import { formatMoney } from '../../utils/format';
 
 interface CsvImportModalProps {
@@ -60,7 +61,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   onClose,
   defaultAccountId,
 }) => {
-  const { state, importAccount, updateImportedAccount } = useFinancial();
+  const { state, importAccount, updateImportedAccount, replaceAccount } =
+    useFinancial();
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -78,14 +80,48 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     (acc) => acc.id === targetAccountId
   );
 
+  // Other imported accounts this file's transactions can be transfers with.
+  const transferAccounts = importableAccounts.filter(
+    (acc) => acc.id !== targetAccount?.id
+  );
+
   const preview = useMemo(() => {
     if (!parsed || !mapping) return null;
     const built = buildTransactions(parsed, mapping, 'preview', flipSigns);
     const { fresh, duplicates } = targetAccount
       ? splitDuplicates(built.transactions, targetAccount.transactions || [])
       : { fresh: built.transactions, duplicates: [] };
-    return { ...built, fresh, duplicates };
-  }, [parsed, mapping, flipSigns, targetAccount]);
+    const transferMatches = findTransferMatches(
+      fresh,
+      targetAccount?.id ?? 'preview',
+      transferAccounts
+    );
+    const transferAccountNames = Array.from(
+      new Set(
+        transferMatches.map(
+          (m) =>
+            transferAccounts.find((acc) => acc.id === m.otherAccountId)?.name
+        )
+      )
+    );
+    // Show matched transactions as they will be saved: as transfers.
+    const rows = linkTransfers(
+      fresh,
+      targetAccount?.id ?? 'preview',
+      transferAccounts,
+      transferMatches
+    ).transactions;
+    return {
+      ...built,
+      fresh,
+      rows,
+      duplicates,
+      transferMatches,
+      transferAccountNames,
+    };
+    // transferAccounts is derived from state.accounts and targetAccount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsed, mapping, flipSigns, targetAccount, state.accounts]);
 
   if (!isOpen) return null;
 
@@ -167,8 +203,20 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         transactions,
         targetAccount.transactions || []
       );
+      const linked = linkTransfers(
+        fresh,
+        targetAccount.id,
+        transferAccounts,
+        findTransferMatches(fresh, targetAccount.id, transferAccounts)
+      );
+      linked.changedAccounts.forEach(replaceAccount);
       updateImportedAccount(
-        mergeImportedTransactions(targetAccount, fresh, balance, flipSigns)
+        mergeImportedTransactions(
+          targetAccount,
+          linked.transactions,
+          balance,
+          flipSigns
+        )
       );
     } else {
       const id = `${IMPORTED_ACCOUNT_PREFIX}${batch}`;
@@ -178,6 +226,13 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         id,
         flipSigns
       );
+      const linked = linkTransfers(
+        transactions,
+        id,
+        transferAccounts,
+        findTransferMatches(transactions, id, transferAccounts)
+      );
+      linked.changedAccounts.forEach(replaceAccount);
       importAccount(
         createImportedAccount({
           id,
@@ -185,7 +240,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           type: accountType,
           bankName,
           balance,
-          transactions,
+          transactions: linked.transactions,
           flipSigns,
         })
       );
@@ -437,6 +492,23 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                       }) because they are missing a date, description or amount`}
                     .
                   </p>
+                  {preview.transferMatches.length > 0 && (
+                    <p
+                      className="text-sm text-gray-600 mb-3"
+                      data-testid="import-transfers"
+                    >
+                      {plural(preview.transferMatches.length, 'transaction')}{' '}
+                      {preview.transferMatches.length === 1
+                        ? 'matches a payment'
+                        : 'match payments'}{' '}
+                      in {preview.transferAccountNames.join(' and ')} and will
+                      be recorded as{' '}
+                      {preview.transferMatches.length === 1
+                        ? 'a transfer'
+                        : 'transfers'}
+                      , not income or spending.
+                    </p>
+                  )}
                   {preview.fresh.length > 0 && (
                     <div className="overflow-x-auto border rounded-lg">
                       <table className="min-w-full text-sm">
@@ -453,7 +525,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {preview.fresh.slice(0, PREVIEW_ROWS).map((txn) => (
+                          {preview.rows.slice(0, PREVIEW_ROWS).map((txn) => (
                             <tr key={txn.id}>
                               <td className="px-3 py-2 whitespace-nowrap">
                                 {txn.date}

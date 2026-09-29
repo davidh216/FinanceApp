@@ -290,4 +290,53 @@ describe('CSV import', () => {
       );
     });
   });
+
+  it('records a card payment from an imported checking account as a transfer', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    await importFile(
+      user,
+      'Date,Description,Amount\n' +
+        '06/02/2025,PAYROLL DEPOSIT,3000.00\n' +
+        '06/03/2025,CHASE CREDIT CRD AUTOPAY,-500.00\n',
+      'Checking.csv'
+    );
+    await confirmImport(user);
+
+    // The card's statement shows the payment arriving two days later.
+    await act(async () => {
+      await user.click(screen.getByTestId('back-button'));
+    });
+    await importFile(
+      user,
+      'Date,Description,Amount\n' +
+        '06/04/2025,AMAZON MKTPLACE,-80.00\n' +
+        '06/05/2025,PAYMENT THANK YOU,500.00\n',
+      'Card.csv'
+    );
+    expect(screen.getByTestId('import-transfers')).toHaveTextContent(
+      '1 transaction matches a payment in Checking and will be recorded as a transfer, not income or spending.'
+    );
+    // The preview lists the payment as it will be saved.
+    expect(
+      within(screen.getByRole('dialog')).getByText('Transfer')
+    ).toBeInTheDocument();
+    await confirmImport(user);
+
+    const [checking, card] = JSON.parse(
+      window.localStorage.getItem(STORAGE_KEY) || ''
+    );
+    const byDescription = (acc: any, description: string) =>
+      acc.transactions.find((t: any) => t.description === description);
+    expect(byDescription(card, 'PAYMENT THANK YOU').transferAccountId).toBe(
+      checking.id
+    );
+    expect(
+      byDescription(checking, 'CHASE CREDIT CRD AUTOPAY').transferAccountId
+    ).toBe(card.id);
+    // Unrelated transactions are untouched.
+    expect(
+      byDescription(card, 'AMAZON MKTPLACE').transferAccountId
+    ).toBeUndefined();
+  });
 });

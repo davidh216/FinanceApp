@@ -185,6 +185,8 @@ interface FinancialContextType {
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
   updateImportedAccount: (account: Account) => void;
+  // Saves changes to an account without opening it.
+  replaceAccount: (account: Account) => void;
   removeAccount: (accountId: string) => void;
   setCustomDateRange: (
     startDate: string,
@@ -417,6 +419,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
   };
 
+  const replaceAccount = (account: Account) => {
+    dispatch({ type: 'REPLACE_ACCOUNT', payload: account });
+  };
+
   const removeAccount = (accountId: string) => {
     dispatch({ type: 'REMOVE_ACCOUNT', payload: accountId });
   };
@@ -454,6 +460,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     viewAccountDetail,
     importAccount,
     updateImportedAccount,
+    replaceAccount,
     removeAccount,
     setCustomDateRange,
     isPrivacyMode,
