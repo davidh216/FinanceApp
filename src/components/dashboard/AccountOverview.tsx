@@ -5,17 +5,21 @@ import { Button } from '../ui/Button';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { formatMoney, formatSignedMoney } from '../../utils/format';
+import { totalBalanceAsOf } from '../../utils/balances';
 
 interface AccountOverviewProps {
   accounts: Account[];
   onAccountSelect: (account: Account) => void;
   accountFilter?: 'both' | 'personal' | 'business';
+  // End of the previous period ("YYYY-MM-DD"), for the change lines.
+  comparisonDate?: string;
 }
 
 export const AccountOverview: React.FC<AccountOverviewProps> = ({
   accounts,
   onAccountSelect,
   accountFilter = 'both',
+  comparisonDate,
 }) => {
   const { isPrivacyMode } = useFinancial();
   const [expandedSections, setExpandedSections] = useState<
@@ -33,31 +37,29 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
     'Business-Liabilities': false,
   });
 
-  // Calculate changes for assets and liabilities
-  const calculateChange = (current: number, previous: number) => {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / previous) * 100;
+  // A group's total now versus at the end of the previous period, from its
+  // own accounts. Liabilities compare the amount owed, so growing debt shows
+  // as an increase.
+  const renderChange = (groupAccounts: Account[]) => {
+    if (!comparisonDate || isPrivacyMode) return null;
+    const current = Math.abs(
+      groupAccounts.reduce((sum, account) => sum + account.balance, 0)
+    );
+    const previous = Math.abs(totalBalanceAsOf(groupAccounts, comparisonDate));
+    const valueChange = current - previous;
+    const percent = previous === 0 ? null : (valueChange / previous) * 100;
+    return (
+      <div className="text-xs text-gray-500 mt-1">
+        {percent !== null && (
+          <>
+            {percent >= 0 ? '+' : ''}
+            {percent.toFixed(1)}%{' '}
+          </>
+        )}
+        <span>({formatSignedMoney(valueChange)})</span>
+      </div>
+    );
   };
-
-  // Calculate summary stats
-  const positiveAccounts = accounts.filter((account) => account.balance > 0);
-  const negativeAccounts = accounts.filter((account) => account.balance < 0);
-  const totalAssets = positiveAccounts.reduce(
-    (sum, account) => sum + account.balance,
-    0
-  );
-  const totalLiabilities = Math.abs(
-    negativeAccounts.reduce((sum, account) => sum + account.balance, 0)
-  );
-
-  // Mock previous values (in a real app, this would come from historical data)
-  const prevAssets = totalAssets * 0.95;
-  const prevLiabilities = totalLiabilities * 1.05;
-
-  const assetsChange = calculateChange(totalAssets, prevAssets);
-  const liabilitiesChange = calculateChange(totalLiabilities, prevLiabilities);
-  const assetsValueChange = totalAssets - prevAssets;
-  const liabilitiesValueChange = totalLiabilities - prevLiabilities;
 
   // Filter accounts based on accountFilter
   const filteredAccounts = accounts.filter((account) => {
@@ -227,15 +229,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                                 </>
                               )}
                             </span>
-                            {!isPrivacyMode && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {assetsChange >= 0 ? '+' : ''}
-                                {assetsChange.toFixed(1)}%
-                                <span className="ml-1">
-                                  ({formatSignedMoney(assetsValueChange)})
-                                </span>
-                              </div>
-                            )}
+                            {renderChange(subsections.Assets)}
                           </div>
                         </div>
                       </div>
@@ -295,15 +289,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                                 </>
                               )}
                             </span>
-                            {!isPrivacyMode && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {liabilitiesChange >= 0 ? '+' : ''}
-                                {liabilitiesChange.toFixed(1)}%
-                                <span className="ml-1">
-                                  ({formatSignedMoney(liabilitiesValueChange)})
-                                </span>
-                              </div>
-                            )}
+                            {renderChange(subsections.Liabilities)}
                           </div>
                         </div>
                       </div>

@@ -22,16 +22,17 @@ describe('Dashboard totals (personal accounts, June 2025)', () => {
     expect(screen.getByTestId('kpi-balance')).toHaveTextContent('$123,045.85');
   });
 
-  it('shows dollar changes with two decimals and a sign', () => {
+  it('compares balances with the end of May', () => {
     renderDashboard();
-    // The previous balance is a placeholder (95% of the current one), so
-    // the change is $6,152.2925; it used to render as "+$6,152.293".
+    // Personal accounts on 31 May: $117,087.87 (today's balances with June's
+    // transactions undone), so the balance is up $5,957.98.
     expect(screen.getByTestId('kpi-balance')).toHaveTextContent(
-      '+5.3%(+$6,152.29)'
+      '+5.1%(+$5,957.98)'
     );
-    const [, liabilities] = screen.getAllByText(/^Total:/);
-    // Previously "(15,862.391)" with no minus sign.
-    expect(liabilities).toHaveTextContent('-4.8%(-$15,862.39)');
+    // Assets were $435,974.93; $318,887.06 was owed, so debt went down.
+    const [assets, liabilities] = screen.getAllByText(/^Total:/);
+    expect(assets).toHaveTextContent('+1.0% (+$4,318.74)');
+    expect(liabilities).toHaveTextContent('-0.5% (-$1,639.24)');
   });
 
   it('shows the savings rate as a percentage', () => {
@@ -40,7 +41,7 @@ describe('Dashboard totals (personal accounts, June 2025)', () => {
     // change is in percentage points, not dollars.
     expect(screen.getByTestId('kpi-savings-rate')).toHaveTextContent('18.9%');
     expect(screen.getByTestId('kpi-savings-rate')).toHaveTextContent(
-      '(-39.3 pts)'
+      '18.9%-39.3 pts vs last month'
     );
   });
 

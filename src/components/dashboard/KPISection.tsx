@@ -45,26 +45,31 @@ export const KPISection: React.FC<KPISectionProps> = ({
 
   const periodLabel = getPeriodLabel(period);
 
-  // Calculate trend changes (mock for now, but you could calculate real trends)
-  const calculateTrendChange = (current: number, previous: number): number => {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / previous) * 100;
+  // Percent change, or null when the previous value is zero and a
+  // percentage would be meaningless.
+  const calculateTrendChange = (
+    current: number,
+    previous: number
+  ): number | null => {
+    if (previous === 0) return null;
+    return ((current - previous) / Math.abs(previous)) * 100;
   };
 
-  // Calculate previous period data for trend calculation
-  const prevIncome =
-    summary.previousPeriodIncome || summary.monthlyIncome * 0.9;
-  const prevExpenses =
-    summary.previousPeriodExpenses || summary.monthlyExpenses * 1.1;
-  const prevBalance = totalBalance * 0.95; // Mock previous balance
+  // The previous period's actual figures. A previous period with no income
+  // or spending really was zero.
+  const prevIncome = summary.previousPeriodIncome ?? 0;
+  const prevExpenses = summary.previousPeriodExpenses ?? 0;
+  const prevBalance = summary.previousPeriodBalance ?? totalBalance;
+  // Clamped at zero like the current rate (see Dashboard).
+  const prevSavingsRate =
+    prevIncome > 0 ? Math.max(0, (prevIncome - prevExpenses) / prevIncome) : 0;
 
   // Calculate value changes
   const balanceValueChange = totalBalance - prevBalance;
   const incomeValueChange = summary.monthlyIncome - prevIncome;
   const expenseValueChange = summary.monthlyExpenses - prevExpenses;
-  const savingsValueChange =
-    summary.savingsRate * 100 -
-    (prevIncome > 0 ? (prevIncome - prevExpenses) / prevIncome : 0) * 100;
+  // In percentage points.
+  const savingsValueChange = (summary.savingsRate - prevSavingsRate) * 100;
 
   return (
     <div>
@@ -109,9 +114,9 @@ export const KPISection: React.FC<KPISectionProps> = ({
           title="Savings Rate"
           testId="kpi-savings-rate"
           value={summary.savingsRate * 100}
-          change={2.1} // Mock change for now
+          change={null}
           valueChange={savingsValueChange}
-          isPositive={true}
+          isPositive={savingsValueChange >= 0}
           isCurrency={false}
           color="blue"
           trendData={savingsTrend}

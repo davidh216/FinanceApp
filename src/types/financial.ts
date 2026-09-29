@@ -157,6 +157,10 @@ export interface FinancialSummary {
   // Add comparison data for trends
   previousPeriodIncome?: number;
   previousPeriodExpenses?: number;
+  // Total balance at the end of the previous period, and that date
+  // ("YYYY-MM-DD"), reconstructed from transactions.
+  previousPeriodBalance?: number;
+  previousPeriodEndDate?: string;
   periodLabel?: string;
 }
 
