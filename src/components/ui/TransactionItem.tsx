@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Transaction } from '../../types/financial';
 import { TAG_CATEGORIES } from '../../constants/financial';
 import { useFinancial } from '../../contexts/FinancialContext';
+import { formatMoney } from '../../utils/format';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -161,10 +162,8 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               <span className="text-gray-400">••••••</span>
             ) : (
               <>
-                {transaction.amount > 0 ? '+' : ''}$
-                {Math.abs(transaction.amount).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                })}
+                {transaction.amount > 0 ? '+' : ''}
+                {formatMoney(transaction.amount)}
               </>
             )}
           </div>
