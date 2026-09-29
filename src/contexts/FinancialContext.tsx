@@ -17,6 +17,7 @@ import {
 import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
 import { parseLocalDate } from '../utils/date';
+import { incomeOf, spendingOf } from '../utils/cashflow';
 
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 
@@ -302,15 +303,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
       return txnDate >= startDate && txnDate <= endDate;
     });
 
-    const periodIncome = periodTransactions
-      .filter((txn) => txn.amount > 0)
-      .reduce((sum, txn) => sum + txn.amount, 0);
+    const periodIncome = incomeOf(periodTransactions);
 
-    const periodExpenses = Math.abs(
-      periodTransactions
-        .filter((txn) => txn.amount < 0)
-        .reduce((sum, txn) => sum + txn.amount, 0)
-    );
+    const periodExpenses = spendingOf(periodTransactions);
 
     const savingsRate =
       periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
@@ -361,15 +356,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
       return txnDate >= prevStartDate && txnDate <= prevEndDate;
     });
 
-    const prevPeriodIncome = prevPeriodTransactions
-      .filter((txn) => txn.amount > 0)
-      .reduce((sum, txn) => sum + txn.amount, 0);
+    const prevPeriodIncome = incomeOf(prevPeriodTransactions);
 
-    const prevPeriodExpenses = Math.abs(
-      prevPeriodTransactions
-        .filter((txn) => txn.amount < 0)
-        .reduce((sum, txn) => sum + txn.amount, 0)
-    );
+    const prevPeriodExpenses = spendingOf(prevPeriodTransactions);
 
     return {
       totalBalance,

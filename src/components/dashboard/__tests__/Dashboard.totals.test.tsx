@@ -24,43 +24,45 @@ describe('Dashboard totals (personal accounts, June 2025)', () => {
 
   it('compares balances with the end of May', () => {
     renderDashboard();
-    // Personal accounts on 31 May: $117,087.87 (today's balances with June's
-    // transactions undone), so the balance is up $5,957.98.
+    // Personal accounts on 31 May: $119,325.97 (today's balances with June's
+    // transactions undone). The balance is up $3,719.88, which is exactly
+    // June's income minus spending: loan payments move money between the
+    // user's own accounts.
     expect(screen.getByTestId('kpi-balance')).toHaveTextContent(
-      '+5.1%(+$5,957.98)'
+      '+3.1%(+$3,719.88)'
     );
-    // Assets were $435,974.93; $318,887.06 was owed, so debt went down.
+    // Assets were $438,213.03; $318,887.06 was owed, so debt went down.
     const [assets, liabilities] = screen.getAllByText(/^Total:/);
-    expect(assets).toHaveTextContent('+1.0% (+$4,318.74)');
+    expect(assets).toHaveTextContent('+0.5% (+$2,080.64)');
     expect(liabilities).toHaveTextContent('-0.5% (-$1,639.24)');
   });
 
   it('shows the savings rate as a percentage', () => {
     renderDashboard();
-    // June: (7,847.90 - 6,366.12) / 7,847.90 = 18.9%. May: 58.2%, so the
+    // June: (7,847.90 - 4,128.02) / 7,847.90 = 47.4%. May: 75.0%, so the
     // change is in percentage points, not dollars.
-    expect(screen.getByTestId('kpi-savings-rate')).toHaveTextContent('18.9%');
     expect(screen.getByTestId('kpi-savings-rate')).toHaveTextContent(
-      '18.9%-39.3 pts vs last month'
+      '47.4%-27.6 pts vs last month'
     );
   });
 
   it("shows this month's income and spending", () => {
     renderDashboard();
-    // 1–15 June: 60 transactions across the personal accounts.
+    // 1–15 June across the personal accounts. Loan payments ($2,238.10)
+    // are transfers from checking, so they aren't spending.
     expect(screen.getByTestId('kpi-income')).toHaveTextContent('$7,847.90');
-    expect(screen.getByTestId('kpi-spending')).toHaveTextContent('$6,366.12');
+    expect(screen.getByTestId('kpi-spending')).toHaveTextContent('$4,128.02');
   });
 
   it('compares against the whole of May', () => {
     renderDashboard();
-    // May: income $13,355.22, spending $5,580.16. Spending includes two
+    // May: income $13,355.22, spending $3,342.11. Spending includes two
     // transactions dated 1 May, which a UTC date parse would drop into April.
     expect(screen.getByTestId('kpi-income')).toHaveTextContent(
       '-41.2%(-$5,507.32)'
     );
     expect(screen.getByTestId('kpi-spending')).toHaveTextContent(
-      '+14.1%(+$785.96)'
+      '+23.5%(+$785.91)'
     );
   });
 

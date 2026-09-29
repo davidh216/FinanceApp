@@ -1,4 +1,8 @@
-import { generateHistoricalTransactions } from '../financial';
+import {
+  generateHistoricalTransactions,
+  LOAN_PAYMENT_ACCOUNT_ID,
+  MOCK_ACCOUNTS,
+} from '../financial';
 import { createRandom } from '../../utils/random';
 import { Transaction } from '../../types/financial';
 
@@ -139,5 +143,45 @@ describe('MOCK_ACCOUNTS', () => {
     const strip = (accounts: any) =>
       accounts.map(({ createdAt, updatedAt, ...rest }: any) => rest);
     expect(strip(second)).toEqual(strip(first));
+  });
+});
+
+describe('loan payments', () => {
+  const byId = (id: string) => MOCK_ACCOUNTS.find((a) => a.id === id);
+  const checking = byId(LOAN_PAYMENT_ACCOUNT_ID)?.transactions || [];
+  const loans = MOCK_ACCOUNTS.filter((a) => a.type === 'LOAN');
+
+  it('are credits to the loan, reducing what is owed', () => {
+    loans.forEach((loan) => {
+      expect(loan.transactions?.length).toBeGreaterThan(0);
+      loan.transactions?.forEach((txn) => {
+        expect(txn.amount).toBeGreaterThan(0);
+        expect(txn.transferAccountId).toBe(LOAN_PAYMENT_ACCOUNT_ID);
+      });
+    });
+  });
+
+  it('each have a matching outflow from checking', () => {
+    loans.forEach((loan) => {
+      loan.transactions?.forEach((payment) => {
+        const outflows = checking.filter(
+          (txn) =>
+            txn.transferAccountId === loan.id &&
+            txn.date === payment.date &&
+            txn.amount === -payment.amount
+        );
+        expect(outflows).toHaveLength(1);
+      });
+    });
+  });
+
+  it('are the only transfers, so transfers net to zero', () => {
+    const transfers = MOCK_ACCOUNTS.flatMap((a) => a.transactions || []).filter(
+      (txn) => txn.transferAccountId !== undefined
+    );
+    const loanPayments = loans.flatMap((loan) => loan.transactions || []);
+    expect(transfers).toHaveLength(loanPayments.length * 2);
+    const total = transfers.reduce((sum, txn) => sum + txn.amount, 0);
+    expect(Math.abs(total)).toBeLessThan(0.005);
   });
 });

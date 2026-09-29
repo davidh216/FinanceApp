@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { parseLocalDate, toLocalDateString } from '../../utils/date';
 import { totalBalanceAsOf } from '../../utils/balances';
+import { incomeOf, isTransfer, spendingOf } from '../../utils/cashflow';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -127,15 +128,9 @@ export const Dashboard: React.FC = () => {
       }
     );
 
-    const periodIncome = periodTransactions
-      .filter((txn: Transaction) => txn.amount > 0)
-      .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+    const periodIncome = incomeOf(periodTransactions);
 
-    const periodExpenses = Math.abs(
-      periodTransactions
-        .filter((txn: Transaction) => txn.amount < 0)
-        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
-    );
+    const periodExpenses = spendingOf(periodTransactions);
 
     const savingsRate =
       periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
@@ -185,15 +180,9 @@ export const Dashboard: React.FC = () => {
       }
     );
 
-    const prevPeriodIncome = prevPeriodTransactions
-      .filter((txn: Transaction) => txn.amount > 0)
-      .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+    const prevPeriodIncome = incomeOf(prevPeriodTransactions);
 
-    const prevPeriodExpenses = Math.abs(
-      prevPeriodTransactions
-        .filter((txn: Transaction) => txn.amount < 0)
-        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
-    );
+    const prevPeriodExpenses = spendingOf(prevPeriodTransactions);
 
     const previousPeriodEndDate = toLocalDateString(prevEndDate);
 
@@ -289,7 +278,10 @@ export const Dashboard: React.FC = () => {
         (txn: Transaction) => {
           const txnDate = parseLocalDate(txn.date);
           return (
-            txnDate >= startDate && txnDate <= targetDate && txn.amount > 0
+            txnDate >= startDate &&
+            txnDate <= targetDate &&
+            !isTransfer(txn) &&
+            txn.amount > 0
           );
         }
       );
@@ -314,7 +306,10 @@ export const Dashboard: React.FC = () => {
         (txn: Transaction) => {
           const txnDate = parseLocalDate(txn.date);
           return (
-            txnDate >= startDate && txnDate <= targetDate && txn.amount < 0
+            txnDate >= startDate &&
+            txnDate <= targetDate &&
+            !isTransfer(txn) &&
+            txn.amount < 0
           );
         }
       );
@@ -344,15 +339,9 @@ export const Dashboard: React.FC = () => {
         }
       );
 
-      const periodIncome = periodTransactions
-        .filter((txn: Transaction) => txn.amount > 0)
-        .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0);
+      const periodIncome = incomeOf(periodTransactions);
 
-      const periodExpenses = Math.abs(
-        periodTransactions
-          .filter((txn: Transaction) => txn.amount < 0)
-          .reduce((sum: number, txn: Transaction) => sum + txn.amount, 0)
-      );
+      const periodExpenses = spendingOf(periodTransactions);
 
       const savingsRate =
         periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;

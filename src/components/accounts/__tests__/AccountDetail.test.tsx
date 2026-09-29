@@ -42,9 +42,11 @@ describe('AccountDetail Component', () => {
       </TestWrapper>
     );
 
-    // 1–15 June 2025 (tests run on a pinned date with seeded mock data).
+    // 1–15 June 2025 (tests run on a pinned date with seeded mock data). The 27
+    // transactions include 3 loan payments, which are transfers rather than
+    // expenses.
     expect(screen.getByTestId('stat-period')).toHaveTextContent(
-      '24 transactions'
+      '27 transactions'
     );
     expect(screen.getByTestId('stat-income')).toHaveTextContent('+$6,399.30');
     expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,618.59');
