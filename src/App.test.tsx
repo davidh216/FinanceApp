@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test.skip('renders FinanceApp with account navigation', () => {
+test('renders FinanceApp with account navigation', () => {
   render(<App />);
 
   // Should render the main dashboard
@@ -10,5 +10,5 @@ test.skip('renders FinanceApp with account navigation', () => {
   expect(element).toBeInTheDocument();
 
   // Should have navigation elements
-  expect(screen.getByText(/Financial Overview/i)).toBeInTheDocument();
+  expect(screen.getByText(/Account Overview/i)).toBeInTheDocument();
 });

@@ -6,7 +6,7 @@ import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Dashboard } from '../../dashboard/Dashboard';
 
 // Complete integration test with real data flow
-describe.skip('AccountDetail Integration Tests', () => {
+describe('AccountDetail Integration Tests', () => {
   const renderDashboardWithAccounts = () => {
     return render(
       <FinancialProvider>
@@ -15,12 +15,25 @@ describe.skip('AccountDetail Integration Tests', () => {
     );
   };
 
+  // Account subsections start collapsed, so expand them before looking
+  // for account cards.
+  const expandAccountSubsections = async (
+    user: ReturnType<typeof userEvent.setup>
+  ) => {
+    for (const button of screen.getAllByRole('button', { name: /Assets/ })) {
+      await act(async () => {
+        await user.click(button);
+      });
+    }
+  };
+
   it('completes full user journey: dashboard → account detail → back', async () => {
     const user = userEvent.setup();
     renderDashboardWithAccounts();
+    await expandAccountSubsections(user);
 
     // 1. Start on dashboard
-    expect(screen.getByText('Financial Overview')).toBeInTheDocument();
+    expect(screen.getByText('Account Overview')).toBeInTheDocument();
 
     // 2. Click on an account to navigate to detail
     const accountCards = screen.getAllByText('Primary Checking');
@@ -46,13 +59,14 @@ describe.skip('AccountDetail Integration Tests', () => {
 
     // 5. Should be back on dashboard
     await waitFor(() => {
-      expect(screen.getByText('Financial Overview')).toBeInTheDocument();
+      expect(screen.getByText('Account Overview')).toBeInTheDocument();
     });
   });
 
   it('filters and tags transactions in account detail', async () => {
     const user = userEvent.setup();
     renderDashboardWithAccounts();
+    await expandAccountSubsections(user);
 
     // Navigate to account detail
     const accountCards = screen.getAllByText('Primary Checking');
@@ -85,6 +99,7 @@ describe.skip('AccountDetail Integration Tests', () => {
   it('sorts transactions correctly', async () => {
     const user = userEvent.setup();
     renderDashboardWithAccounts();
+    await expandAccountSubsections(user);
 
     // Navigate to account detail
     const accountCards = screen.getAllByText('Primary Checking');
@@ -121,6 +136,7 @@ describe.skip('AccountDetail Integration Tests', () => {
   it('displays correct monthly statistics', async () => {
     const user = userEvent.setup();
     renderDashboardWithAccounts();
+    await expandAccountSubsections(user);
 
     // Navigate to account detail
     const accountCards = screen.getAllByText('Primary Checking');
@@ -133,7 +149,9 @@ describe.skip('AccountDetail Integration Tests', () => {
     await waitFor(() => {
       // Check that monthly stats are displayed
       expect(screen.getByText('This Month')).toBeInTheDocument();
-      expect(screen.getAllByText('Income')).toHaveLength(2); // One in stats, one in dropdown
+      expect(
+        screen.getByText('Income', { selector: 'div' })
+      ).toBeInTheDocument();
       expect(screen.getByText('Expenses')).toBeInTheDocument();
       expect(screen.getByText('Net Flow')).toBeInTheDocument();
     });
