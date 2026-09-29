@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Account, Transaction } from '../../types/financial';
 import { DashboardHeader } from './DashboardHeader';
@@ -8,6 +8,7 @@ import { RecentActivity } from './RecentActivity';
 import { AccountDetail } from '../accounts/AccountDetail';
 import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
+import { CsvImportModal } from '../import/CsvImportModal';
 import {
   Building,
   Plus,
@@ -26,6 +27,8 @@ export const Dashboard: React.FC = () => {
     accountFilter,
     changePeriod,
   } = useFinancial();
+
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
@@ -366,6 +369,13 @@ export const Dashboard: React.FC = () => {
     };
   }, [filteredAccounts, state.selectedPeriod]);
 
+  const importModal = (
+    <CsvImportModal
+      isOpen={isImportOpen}
+      onClose={() => setIsImportOpen(false)}
+    />
+  );
+
   // Add routing logic for account-detail screen
   if (state.currentScreen === 'account-detail') {
     return <AccountDetail />;
@@ -399,9 +409,18 @@ export const Dashboard: React.FC = () => {
               management. We'll help you track spending, categorize
               transactions, and gain insights into your financial health.
             </p>
-            <Button onClick={() => alert('Bank connection coming soon!')}>
-              Connect Your First Account
-            </Button>
+            <div className="flex justify-center gap-3">
+              <Button onClick={() => alert('Bank connection coming soon!')}>
+                Connect Your First Account
+              </Button>
+              <Button
+                variant="outline"
+                leftIcon={<Upload className="w-4 h-4" />}
+                onClick={() => setIsImportOpen(true)}
+              >
+                Import from CSV
+              </Button>
+            </div>
           </div>
 
           {/* Feature Preview */}
@@ -446,6 +465,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         </main>
+        {importModal}
       </div>
     );
   }
@@ -580,7 +600,11 @@ export const Dashboard: React.FC = () => {
                   <button
                     key={index}
                     className="group p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all text-left"
-                    onClick={() => alert(`${action.label} coming soon!`)}
+                    onClick={() =>
+                      action.label === 'Import CSV'
+                        ? setIsImportOpen(true)
+                        : alert(`${action.label} coming soon!`)
+                    }
                   >
                     <div
                       className={`w-10 h-10 rounded-lg ${action.color} flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}
@@ -602,6 +626,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </main>
+      {importModal}
     </div>
   );
 };

@@ -179,6 +179,7 @@ export type FinancialAction =
   | { type: 'ADD_TAG'; payload: { transactionId: string; tag: string } }
   | { type: 'REMOVE_TAG'; payload: { transactionId: string; tag: string } }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
+  | { type: 'REMOVE_ACCOUNT'; payload: string }
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'APPLY_FILTERS'; payload: FilterOptions }
   | { type: 'VIEW_ACCOUNT_DETAIL'; payload: Account };
