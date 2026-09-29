@@ -3,10 +3,12 @@ import {
   categorizeMerchant,
   createImportedAccount,
   detectColumnMapping,
+  mergeImportedTransactions,
   parseAmount,
   parseCsv,
   parseCsvRows,
   parseDate,
+  splitDuplicates,
 } from '../csvImport';
 
 const importCsv = (csv: string, flipSigns = false) => {
@@ -223,5 +225,113 @@ describe('createImportedAccount', () => {
       transactions,
     });
     expect(account.balance).toBe(-450);
+  });
+});
+
+describe('splitDuplicates', () => {
+  const build = (csv: string, idPrefix = 'batch') => {
+    const parsed = parseCsv(`Date,Description,Amount\n${csv}`);
+    return buildTransactions(
+      parsed,
+      detectColumnMapping(parsed.headers, parsed.rows),
+      'acc_test',
+      false,
+      idPrefix
+    ).transactions;
+  };
+
+  it('skips transactions that are already in the account', () => {
+    const existing = build(
+      '01/01/2025,COFFEE SHOP,-4.50\n01/02/2025,RENT,-1200.00\n',
+      'first'
+    );
+    const incoming = build(
+      '01/02/2025,RENT,-1200.00\n01/03/2025,GROCERIES,-60.00\n',
+      'second'
+    );
+    const { fresh, duplicates } = splitDuplicates(incoming, existing);
+    expect(fresh.map((t) => t.description)).toEqual(['GROCERIES']);
+    expect(duplicates.map((t) => t.description)).toEqual(['RENT']);
+  });
+
+  it('matches descriptions regardless of case and spacing', () => {
+    const existing = build('01/01/2025,Coffee  Shop,-4.50\n');
+    const incoming = build('01/01/2025,COFFEE SHOP ,-4.50\n');
+    expect(splitDuplicates(incoming, existing).fresh).toEqual([]);
+  });
+
+  it('treats a different date or amount as a new transaction', () => {
+    const existing = build('01/01/2025,COFFEE SHOP,-4.50\n');
+    const incoming = build(
+      '01/02/2025,COFFEE SHOP,-4.50\n01/01/2025,COFFEE SHOP,-5.00\n'
+    );
+    expect(splitDuplicates(incoming, existing).fresh).toHaveLength(2);
+  });
+
+  it('keeps identical transactions beyond the number already imported', () => {
+    // Two identical coffees on the same day; only one was imported before.
+    const existing = build('01/01/2025,COFFEE SHOP,-4.50\n');
+    const incoming = build(
+      '01/01/2025,COFFEE SHOP,-4.50\n01/01/2025,COFFEE SHOP,-4.50\n'
+    );
+    const { fresh, duplicates } = splitDuplicates(incoming, existing);
+    expect(fresh).toHaveLength(1);
+    expect(duplicates).toHaveLength(1);
+  });
+
+  it('gives each batch distinct transaction IDs', () => {
+    const first = build('01/01/2025,A,-1.00\n', 'acc_test_one');
+    const second = build('01/01/2025,A,-1.00\n', 'acc_test_two');
+    expect(first[0].id).not.toBe(second[0].id);
+  });
+});
+
+describe('mergeImportedTransactions', () => {
+  const account = createImportedAccount({
+    id: 'acc_import_1',
+    name: 'Checking',
+    type: 'CHECKING',
+    bankName: 'Chase',
+    balance: 1000,
+    transactions: importCsv(
+      'Date,Description,Amount\n01/05/2025,PAYCHECK,1000.00\n'
+    ).transactions,
+  });
+  const newTransactions = importCsv(
+    'Date,Description,Amount\n' +
+      '01/10/2025,RENT,-600.00\n' +
+      '01/01/2025,REFUND,25.25\n'
+  ).transactions;
+
+  it('adds the new transactions to the balance and keeps dates sorted', () => {
+    const merged = mergeImportedTransactions(
+      account,
+      newTransactions,
+      null,
+      false
+    );
+    expect(merged.balance).toBe(425.25);
+    expect(merged.transactions?.map((t) => t.date)).toEqual([
+      '2025-01-10',
+      '2025-01-05',
+      '2025-01-01',
+    ]);
+  });
+
+  it('uses an entered balance, stored negative for liabilities', () => {
+    expect(
+      mergeImportedTransactions(account, newTransactions, 999, false).balance
+    ).toBe(999);
+    const card = { ...account, type: 'CREDIT' as const };
+    expect(
+      mergeImportedTransactions(card, newTransactions, 300, true).balance
+    ).toBe(-300);
+  });
+
+  it('remembers the sign setting for the next import', () => {
+    expect(account.importSettings).toEqual({ flipSigns: false });
+    expect(
+      mergeImportedTransactions(account, [], null, true).importSettings
+    ).toEqual({ flipSigns: true });
   });
 });
