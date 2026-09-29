@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { parseLocalDate } from '../../utils/date';
 import { formatMoney } from '../../utils/format';
+import { incomeOf, spendingOf } from '../../utils/cashflow';
 
 interface AccountDetailProps {
   accountId?: string;
@@ -164,15 +165,9 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
       return txnDate >= startDate && txnDate <= endDate;
     });
 
-    const periodIncome = periodTransactions
-      .filter((txn) => txn.amount > 0)
-      .reduce((sum, txn) => sum + txn.amount, 0);
+    const periodIncome = incomeOf(periodTransactions);
 
-    const periodExpenses = Math.abs(
-      periodTransactions
-        .filter((txn) => txn.amount < 0)
-        .reduce((sum, txn) => sum + txn.amount, 0)
-    );
+    const periodExpenses = spendingOf(periodTransactions);
 
     const stats = {
       totalTransactions: account.transactions.length,

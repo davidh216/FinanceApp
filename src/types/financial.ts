@@ -57,6 +57,10 @@ export interface Transaction {
   tags: string[];
   pending: boolean;
   cleanMerchant: MerchantInfo;
+  // Set on both halves of a transfer between the user's own accounts (such
+  // as a loan payment from checking): the other account's id. Transfers are
+  // neither income nor spending.
+  transferAccountId?: string;
   notes?: string;
   receiptUrl?: string;
   createdAt: string;

@@ -468,6 +468,9 @@ export const generateHistoricalTransactions = (
   return transactions.sort((a, b) => b.date.localeCompare(a.date));
 };
 
+// Loan payments are transfers from this account.
+export const LOAN_PAYMENT_ACCOUNT_ID = 'acc_checking';
+
 // Generate loan-specific transactions
 const generateLoanTransactions = (
   accountId: string,
@@ -518,9 +521,12 @@ const generateLoanTransactions = (
       id: `txn_${monthSeed(accountId, targetDate)}`,
       accountId,
       description: `Monthly Payment #${Math.floor(monthRandom() * 1000)}`,
-      amount: -Math.round(paymentAmount * 100) / 100, // Negative for payments
+      // A payment received reduces what is owed. The matching outflow from
+      // checking is added in MOCK_ACCOUNTS (see paymentFromChecking).
+      amount: Math.round(paymentAmount * 100) / 100,
       date: toLocalDateString(transactionDate),
       category: 'Loan Payment',
+      transferAccountId: LOAN_PAYMENT_ACCOUNT_ID,
       tags: ['Loan Payment'],
       pending: pendingRoll(monthRandom) && monthOffset === 0, // Only current month can be pending
       cleanMerchant: {
@@ -581,6 +587,35 @@ const getCategoryExpenseAmount = (
   return amountGenerator ? amountGenerator() : 25 + random() * 75;
 };
 
+// The checking side of a loan payment: the same payment as money going out.
+const paymentFromChecking = (loanPayment: Transaction): Transaction => ({
+  ...loanPayment,
+  id: `${loanPayment.id}_from_checking`,
+  accountId: LOAN_PAYMENT_ACCOUNT_ID,
+  amount: -loanPayment.amount,
+  transferAccountId: loanPayment.accountId,
+});
+
+const MORTGAGE_PAYMENTS = generateHistoricalTransactions('acc_mortgage', 15, 1);
+const STUDENT_LOAN_1_PAYMENTS = generateHistoricalTransactions(
+  'acc_student_loan_1',
+  15,
+  1
+);
+const STUDENT_LOAN_2_PAYMENTS = generateHistoricalTransactions(
+  'acc_student_loan_2',
+  15,
+  1
+);
+const CHECKING_TRANSACTIONS = [
+  ...generateHistoricalTransactions('acc_checking', 15, 20),
+  ...[
+    ...MORTGAGE_PAYMENTS,
+    ...STUDENT_LOAN_1_PAYMENTS,
+    ...STUDENT_LOAN_2_PAYMENTS,
+  ].map(paymentFromChecking),
+].sort((a, b) => b.date.localeCompare(a.date));
+
 // Update the MOCK_ACCOUNTS to use historical data
 export const MOCK_ACCOUNTS: Account[] = [
   {
@@ -593,7 +628,8 @@ export const MOCK_ACCOUNTS: Account[] = [
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    transactions: generateHistoricalTransactions('acc_checking', 15, 20), // 15 months, ~20 per month
+    // 15 months, ~20 per month, plus the loan payments made from checking.
+    transactions: CHECKING_TRANSACTIONS,
   },
   {
     id: 'acc_savings',
@@ -654,7 +690,7 @@ export const MOCK_ACCOUNTS: Account[] = [
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    transactions: generateHistoricalTransactions('acc_mortgage', 15, 1), // 15 months, ~1 per month (monthly payments)
+    transactions: MORTGAGE_PAYMENTS, // 15 months of monthly payments
   },
   {
     id: 'acc_student_loan_1',
@@ -666,7 +702,7 @@ export const MOCK_ACCOUNTS: Account[] = [
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    transactions: generateHistoricalTransactions('acc_student_loan_1', 15, 1), // 15 months, ~1 per month (monthly payments)
+    transactions: STUDENT_LOAN_1_PAYMENTS, // 15 months of monthly payments
   },
   {
     id: 'acc_student_loan_2',
@@ -678,7 +714,7 @@ export const MOCK_ACCOUNTS: Account[] = [
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    transactions: generateHistoricalTransactions('acc_student_loan_2', 15, 1), // 15 months, ~1 per month (monthly payments)
+    transactions: STUDENT_LOAN_2_PAYMENTS, // 15 months of monthly payments
   },
 ];
 

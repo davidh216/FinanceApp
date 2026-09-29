@@ -63,20 +63,11 @@ describe('balanceAsOf', () => {
     expect(balanceAsOf(card, '2025-05-31')).toBe(-450);
   });
 
-  it('treats demo loan payments as reducing what is owed', () => {
-    // Demo loans record each payment as money out.
+  it('treats a loan payment received as reducing what is owed', () => {
     const mortgage = account('acc_mortgage', 'LOAN', -100000, [
-      txn('2025-06-03', -2000),
-    ]);
-    expect(balanceAsOf(mortgage, '2025-05-31')).toBe(-102000);
-  });
-
-  it('uses amounts as recorded for imported loans', () => {
-    // A bank's loan export records a payment as a credit to the loan.
-    const imported = account('acc_import_loan', 'LOAN', -100000, [
       txn('2025-06-03', 2000),
     ]);
-    expect(balanceAsOf(imported, '2025-05-31')).toBe(-102000);
+    expect(balanceAsOf(mortgage, '2025-05-31')).toBe(-102000);
   });
 });
 
