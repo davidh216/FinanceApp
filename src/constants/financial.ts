@@ -6,6 +6,7 @@ import {
   Transaction,
 } from '../types/financial';
 import { createRandom, RandomFn } from '../utils/random';
+import { toLocalDateString } from '../utils/date';
 
 export const TAG_CATEGORIES: Record<string, TagCategory> = {
   'Food & Dining': {
@@ -373,16 +374,7 @@ export const LOAN_MERCHANT_PATTERNS: Record<
 const monthSeed = (accountId: string, date: Date) =>
   `${accountId}:${date.getFullYear()}-${date.getMonth() + 1}`;
 
-// Local YYYY-MM-DD. toISOString() converts to UTC first, which moves dates
-// back a day in timezones ahead of UTC.
 const pendingRoll = (random: RandomFn) => random() < 0.1;
-
-const toLocalDateString = (date: Date): string =>
-  [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-');
 
 export const generateHistoricalTransactions = (
   accountId: string,
@@ -473,9 +465,7 @@ export const generateHistoricalTransactions = (
     }
   }
 
-  return transactions.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  return transactions.sort((a, b) => b.date.localeCompare(a.date));
 };
 
 // Generate loan-specific transactions
@@ -545,9 +535,7 @@ const generateLoanTransactions = (
     });
   }
 
-  return transactions.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  return transactions.sort((a, b) => b.date.localeCompare(a.date));
 };
 
 // Seasonal spending multipliers (higher in holiday seasons, etc.)

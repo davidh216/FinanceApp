@@ -14,10 +14,17 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { parseLocalDate } from '../../utils/date';
 
 interface AccountDetailProps {
   accountId?: string;
 }
+
+const formatMoney = (value: number) =>
+  value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
   const {
@@ -81,8 +88,8 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
           bVal = b.cleanMerchant.cleanName.toLowerCase();
           break;
         default: // date
-          aVal = new Date(a.date);
-          bVal = new Date(b.date);
+          aVal = parseLocalDate(a.date);
+          bVal = parseLocalDate(b.date);
       }
 
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -141,8 +148,8 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
         break;
       case 'custom':
         if (state.customDateRange) {
-          startDate = new Date(state.customDateRange.startDate);
-          endDate = new Date(state.customDateRange.endDate);
+          startDate = parseLocalDate(state.customDateRange.startDate);
+          endDate = parseLocalDate(state.customDateRange.endDate);
           periodLabel = state.customDateRange.label || 'Custom Range';
         } else {
           startDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -158,7 +165,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
 
     // Filter transactions for the selected period
     const periodTransactions = account.transactions.filter((txn) => {
-      const txnDate = new Date(txn.date);
+      const txnDate = parseLocalDate(txn.date);
       return txnDate >= startDate && txnDate <= endDate;
     });
 
@@ -316,7 +323,10 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
           {monthlyStats && (
             <div className="mb-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <div
+                  className="bg-gray-50 rounded-lg p-4 text-center"
+                  data-testid="stat-period"
+                >
                   <div className="text-sm text-gray-600">
                     {monthlyStats.periodLabel}
                   </div>
@@ -324,27 +334,36 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     {monthlyStats.periodTransactions} transactions
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <div
+                  className="bg-gray-50 rounded-lg p-4 text-center"
+                  data-testid="stat-income"
+                >
                   <div className="text-sm text-gray-600">Income</div>
                   <div className="text-lg font-semibold text-green-600">
                     {isPrivacyMode ? (
                       <span className="text-gray-400">••••••</span>
                     ) : (
-                      <>+${monthlyStats.periodIncome.toLocaleString()}</>
+                      <>+${formatMoney(monthlyStats.periodIncome)}</>
                     )}
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <div
+                  className="bg-gray-50 rounded-lg p-4 text-center"
+                  data-testid="stat-expenses"
+                >
                   <div className="text-sm text-gray-600">Expenses</div>
                   <div className="text-lg font-semibold text-red-600">
                     {isPrivacyMode ? (
                       <span className="text-gray-400">••••••</span>
                     ) : (
-                      <>-${monthlyStats.periodExpenses.toLocaleString()}</>
+                      <>-${formatMoney(monthlyStats.periodExpenses)}</>
                     )}
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <div
+                  className="bg-gray-50 rounded-lg p-4 text-center"
+                  data-testid="stat-net"
+                >
                   <div className="text-sm text-gray-600">Net Flow</div>
                   <div
                     className={`text-lg font-semibold flex items-center justify-center ${
@@ -361,7 +380,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     {isPrivacyMode ? (
                       <span className="text-gray-400">••••••</span>
                     ) : (
-                      <>${Math.abs(monthlyStats.netFlow).toLocaleString()}</>
+                      <>${formatMoney(Math.abs(monthlyStats.netFlow))}</>
                     )}
                   </div>
                 </div>

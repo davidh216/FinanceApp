@@ -12,6 +12,7 @@ interface KPICardProps {
   color?: 'red' | 'green' | 'blue' | 'purple';
   trendData?: number[];
   period?: string;
+  testId?: string;
 }
 
 export const KPICard: React.FC<KPICardProps> = ({
@@ -24,6 +25,7 @@ export const KPICard: React.FC<KPICardProps> = ({
   color = 'blue',
   trendData = [],
   period = 'month',
+  testId,
 }) => {
   const { isPrivacyMode } = useFinancial();
 
@@ -42,7 +44,10 @@ export const KPICard: React.FC<KPICardProps> = ({
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+    <div
+      className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow"
+      data-testid={testId}
+    >
       <div className="flex items-center justify-between mb-1">
         <h3 className="text-xs font-medium text-gray-600">{title}</h3>
       </div>
