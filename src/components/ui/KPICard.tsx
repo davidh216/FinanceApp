@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
+import { formatMoney, formatSignedMoney } from '../../utils/format';
 
 interface KPICardProps {
   title: string;
@@ -14,6 +15,14 @@ interface KPICardProps {
   period?: string;
   testId?: string;
 }
+
+// Non-currency KPIs are percentages, so their change is in percentage
+// points rather than dollars.
+const formatSignedPoints = (value: number): string => {
+  const rounded = Math.round(value * 10) / 10;
+  const sign = rounded > 0 ? '+' : rounded < 0 ? '-' : '';
+  return `${sign}${Math.abs(rounded).toFixed(1)} pts`;
+};
 
 export const KPICard: React.FC<KPICardProps> = ({
   title,
@@ -56,12 +65,7 @@ export const KPICard: React.FC<KPICardProps> = ({
         {isPrivacyMode ? (
           <span className="text-gray-400">••••••</span>
         ) : (
-          <>
-            {isCurrency ? '$' : ''}
-            {Math.abs(value).toLocaleString('en-US', {
-              minimumFractionDigits: isCurrency ? 2 : 0,
-            })}
-          </>
+          <>{isCurrency ? formatMoney(value) : `${value.toFixed(1)}%`}</>
         )}
       </p>
 
@@ -128,10 +132,10 @@ export const KPICard: React.FC<KPICardProps> = ({
           {change.toFixed(1)}%
           {valueChange !== undefined && (
             <span className="ml-1">
-              ({valueChange >= 0 ? '+' : ''}$
-              {Math.abs(valueChange).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-              })}
+              (
+              {isCurrency
+                ? formatSignedMoney(valueChange)
+                : formatSignedPoints(valueChange)}
               )
             </span>
           )}

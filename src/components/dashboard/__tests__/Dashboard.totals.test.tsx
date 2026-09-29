@@ -22,6 +22,28 @@ describe('Dashboard totals (personal accounts, June 2025)', () => {
     expect(screen.getByTestId('kpi-balance')).toHaveTextContent('$123,045.85');
   });
 
+  it('shows dollar changes with two decimals and a sign', () => {
+    renderDashboard();
+    // The previous balance is a placeholder (95% of the current one), so
+    // the change is $6,152.2925; it used to render as "+$6,152.293".
+    expect(screen.getByTestId('kpi-balance')).toHaveTextContent(
+      '+5.3%(+$6,152.29)'
+    );
+    const [, liabilities] = screen.getAllByText(/^Total:/);
+    // Previously "(15,862.391)" with no minus sign.
+    expect(liabilities).toHaveTextContent('-4.8%(-$15,862.39)');
+  });
+
+  it('shows the savings rate as a percentage', () => {
+    renderDashboard();
+    // June: (7,847.90 - 6,366.12) / 7,847.90 = 18.9%. May: 58.2%, so the
+    // change is in percentage points, not dollars.
+    expect(screen.getByTestId('kpi-savings-rate')).toHaveTextContent('18.9%');
+    expect(screen.getByTestId('kpi-savings-rate')).toHaveTextContent(
+      '(-39.3 pts)'
+    );
+  });
+
   it("shows this month's income and spending", () => {
     renderDashboard();
     // 1–15 June: 60 transactions across the personal accounts.
@@ -34,7 +56,7 @@ describe('Dashboard totals (personal accounts, June 2025)', () => {
     // May: income $13,355.22, spending $5,580.16. Spending includes two
     // transactions dated 1 May, which a UTC date parse would drop into April.
     expect(screen.getByTestId('kpi-income')).toHaveTextContent(
-      '-41.2%($5,507.32)'
+      '-41.2%(-$5,507.32)'
     );
     expect(screen.getByTestId('kpi-spending')).toHaveTextContent(
       '+14.1%(+$785.96)'

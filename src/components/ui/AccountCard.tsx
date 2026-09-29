@@ -2,6 +2,7 @@ import React from 'react';
 import { Account } from '../../types/financial';
 import { CreditCard, ArrowRight } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
+import { formatMoney } from '../../utils/format';
 
 interface AccountCardProps {
   account: Account;
@@ -71,17 +72,12 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             {isPrivacyMode ? (
               <span className="text-gray-400">••••••</span>
             ) : (
-              <>
-                $
-                {Math.abs(account.balance).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                })}
-              </>
+              <>{formatMoney(account.balance)}</>
             )}
           </div>
           {account.limit && !isPrivacyMode && (
             <div className="text-sm text-gray-500">
-              Limit: ${account.limit.toLocaleString()}
+              Limit: {formatMoney(account.limit)}
             </div>
           )}
         </div>

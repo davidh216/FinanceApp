@@ -17,6 +17,7 @@ import {
   parseCsv,
   splitDuplicates,
 } from '../../utils/csvImport';
+import { formatMoney } from '../../utils/format';
 
 interface CsvImportModalProps {
   isOpen: boolean;
@@ -468,11 +469,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                                     : 'text-green-600'
                                 }`}
                               >
-                                {txn.amount < 0 ? '-' : '+'}$
-                                {Math.abs(txn.amount).toLocaleString('en-US', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
+                                {txn.amount < 0 ? '-' : '+'}
+                                {formatMoney(txn.amount)}
                               </td>
                             </tr>
                           ))}

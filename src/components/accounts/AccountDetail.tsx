@@ -15,16 +15,11 @@ import {
   Upload,
 } from 'lucide-react';
 import { parseLocalDate } from '../../utils/date';
+import { formatMoney } from '../../utils/format';
 
 interface AccountDetailProps {
   accountId?: string;
 }
-
-const formatMoney = (value: number) =>
-  value.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
 export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
   const {
@@ -268,12 +263,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 {isPrivacyMode ? (
                   <span className="text-gray-400">••••••</span>
                 ) : (
-                  <>
-                    $
-                    {Math.abs(account.balance).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}
-                  </>
+                  <>{formatMoney(account.balance)}</>
                 )}
               </div>
               {account.limit && !isPrivacyMode && (
@@ -281,7 +271,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                   className="text-sm text-gray-500"
                   data-testid="account-limit"
                 >
-                  Limit: ${account.limit.toLocaleString()}
+                  Limit: {formatMoney(account.limit)}
                 </div>
               )}
               {isImportedAccount(account) && (
@@ -343,7 +333,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     {isPrivacyMode ? (
                       <span className="text-gray-400">••••••</span>
                     ) : (
-                      <>+${formatMoney(monthlyStats.periodIncome)}</>
+                      <>+{formatMoney(monthlyStats.periodIncome)}</>
                     )}
                   </div>
                 </div>
@@ -356,7 +346,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     {isPrivacyMode ? (
                       <span className="text-gray-400">••••••</span>
                     ) : (
-                      <>-${formatMoney(monthlyStats.periodExpenses)}</>
+                      <>-{formatMoney(monthlyStats.periodExpenses)}</>
                     )}
                   </div>
                 </div>
@@ -380,7 +370,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                     {isPrivacyMode ? (
                       <span className="text-gray-400">••••••</span>
                     ) : (
-                      <>${formatMoney(Math.abs(monthlyStats.netFlow))}</>
+                      <>{formatMoney(monthlyStats.netFlow)}</>
                     )}
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { AccountCard } from '../ui/AccountCard';
 import { Button } from '../ui/Button';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { formatMoney, formatSignedMoney } from '../../utils/format';
 
 interface AccountOverviewProps {
   accounts: Account[];
@@ -167,8 +168,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                         <span className="text-gray-400">••••••</span>
                       ) : (
                         <>
-                          $
-                          {Math.abs(
+                          {formatMoney(
                             subsections.Assets.reduce(
                               (sum, acc) => sum + acc.balance,
                               0
@@ -177,9 +177,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                                 (sum, acc) => sum + acc.balance,
                                 0
                               )
-                          ).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                          })}
+                          )}
                         </>
                       )}
                     </span>
@@ -220,15 +218,12 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                                 <span className="text-gray-400">••••••</span>
                               ) : (
                                 <>
-                                  $
-                                  {Math.abs(
+                                  {formatMoney(
                                     subsections.Assets.reduce(
                                       (sum, acc) => sum + acc.balance,
                                       0
                                     )
-                                  ).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                  })}
+                                  )}
                                 </>
                               )}
                             </span>
@@ -237,12 +232,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                                 {assetsChange >= 0 ? '+' : ''}
                                 {assetsChange.toFixed(1)}%
                                 <span className="ml-1">
-                                  ({assetsValueChange >= 0 ? '+' : ''}$
-                                  {Math.abs(assetsValueChange).toLocaleString(
-                                    'en-US',
-                                    { minimumFractionDigits: 2 }
-                                  )}
-                                  )
+                                  ({formatSignedMoney(assetsValueChange)})
                                 </span>
                               </div>
                             )}
@@ -296,15 +286,12 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                                 <span className="text-gray-400">••••••</span>
                               ) : (
                                 <>
-                                  $
-                                  {Math.abs(
+                                  {formatMoney(
                                     subsections.Liabilities.reduce(
                                       (sum, acc) => sum + acc.balance,
                                       0
                                     )
-                                  ).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                  })}
+                                  )}
                                 </>
                               )}
                             </span>
@@ -313,13 +300,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                                 {liabilitiesChange >= 0 ? '+' : ''}
                                 {liabilitiesChange.toFixed(1)}%
                                 <span className="ml-1">
-                                  ({liabilitiesValueChange >= 0 ? '+' : ''}$
-                                  {Math.abs(
-                                    liabilitiesValueChange
-                                  ).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                  })}
-                                  )
+                                  ({formatSignedMoney(liabilitiesValueChange)})
                                 </span>
                               </div>
                             )}
