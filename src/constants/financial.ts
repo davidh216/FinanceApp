@@ -5,6 +5,7 @@ import {
   Account,
   Transaction,
 } from '../types/financial';
+import { createRandom, RandomFn } from '../utils/random';
 
 export const TAG_CATEGORIES: Record<string, TagCategory> = {
   'Food & Dining': {
@@ -366,81 +367,36 @@ export const LOAN_MERCHANT_PATTERNS: Record<
   },
 };
 
-// FIXED: Update the generateMockTransactions function in src/constants/financial.ts
+// Mock data is generated from seeded random numbers, so the same account
+// always gets the same transactions for a given calendar month: reloading
+// shows the same data, and past months don't change as time moves on.
+const monthSeed = (accountId: string, date: Date) =>
+  `${accountId}:${date.getFullYear()}-${date.getMonth() + 1}`;
 
-export const generateMockTransactions = (
-  accountId: string,
-  count: number = 10
-): Transaction[] => {
-  const merchants = Object.keys(MERCHANT_PATTERNS);
-  const transactions: Transaction[] = [];
-  const today = new Date();
+// Local YYYY-MM-DD. toISOString() converts to UTC first, which moves dates
+// back a day in timezones ahead of UTC.
+const pendingRoll = (random: RandomFn) => random() < 0.1;
 
-  for (let i = 0; i < count; i++) {
-    const merchantKey = merchants[Math.floor(Math.random() * merchants.length)];
-    const merchantInfo = MERCHANT_PATTERNS[merchantKey];
-    const isIncome = Math.random() < 0.2; // 20% chance of income
-    const amount = isIncome
-      ? Math.random() * 2000 + 1000 // Income: $1000-$3000
-      : -(Math.random() * 200 + 10); // Expense: $10-$210
+const toLocalDateString = (date: Date): string =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
 
-    // FIX: Better date generation that ensures current month data
-    let transactionDate: Date;
-
-    if (i < count * 0.7) {
-      // 70% of transactions in current month
-      transactionDate = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        Math.floor(Math.random() * today.getDate()) + 1
-      );
-    } else {
-      // 30% of transactions in past months (for historical data)
-      transactionDate = new Date(today);
-      transactionDate.setDate(
-        today.getDate() - Math.floor(Math.random() * 60 + 30)
-      ); // 30-90 days ago
-    }
-
-    transactions.push({
-      id: `txn_${accountId}_${i}`,
-      accountId,
-      description: `${merchantKey} #${Math.floor(Math.random() * 1000)}`,
-      amount: Math.round(amount * 100) / 100,
-      date: transactionDate.toISOString().split('T')[0],
-      category: merchantInfo.suggestedCategory,
-      tags: Math.random() > 0.5 ? [merchantInfo.suggestedCategory] : [],
-      pending: Math.random() < 0.1,
-      cleanMerchant: {
-        ...merchantInfo,
-        original: `${merchantKey} #${Math.floor(Math.random() * 1000)}`,
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  return transactions.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-};
-
-// Enhanced mock data generation in src/constants/financial.ts
-
-// Add this new function for generating historical transactions
 export const generateHistoricalTransactions = (
   accountId: string,
   monthsBack: number = 12,
-  transactionsPerMonth: number = 15
+  transactionsPerMonth: number = 15,
+  today: Date = new Date()
 ): Transaction[] => {
   // Check if this is a loan account
   if (accountId.includes('mortgage') || accountId.includes('student_loan')) {
-    return generateLoanTransactions(accountId, monthsBack);
+    return generateLoanTransactions(accountId, monthsBack, today);
   }
 
   const merchants = Object.keys(MERCHANT_PATTERNS);
   const transactions: Transaction[] = [];
-  const today = new Date();
 
   // Generate transactions for each month going back
   for (let monthOffset = 0; monthOffset < monthsBack; monthOffset++) {
@@ -454,6 +410,9 @@ export const generateHistoricalTransactions = (
       targetDate.getMonth() + 1,
       0
     ).getDate();
+    // Don't create transactions later this month than today.
+    const lastDay = monthOffset === 0 ? today.getDate() : daysInMonth;
+    const random = createRandom(monthSeed(accountId, targetDate));
 
     // Generate seasonal spending patterns
     const seasonalMultiplier = getSeasonalMultiplier(targetDate.getMonth());
@@ -462,29 +421,31 @@ export const generateHistoricalTransactions = (
     );
 
     for (let i = 0; i < monthlyTransactionCount; i++) {
-      const merchantKey =
-        merchants[Math.floor(Math.random() * merchants.length)];
+      const merchantKey = merchants[Math.floor(random() * merchants.length)];
       const merchantInfo = MERCHANT_PATTERNS[merchantKey];
 
       // More realistic income/expense patterns
       let amount: number;
 
-      if (merchantInfo.suggestedCategory === 'Income' || Math.random() < 0.15) {
+      if (merchantInfo.suggestedCategory === 'Income' || random() < 0.15) {
         // Income transactions (salary, freelance, etc.)
         if (merchantKey.includes('PAYROLL')) {
-          amount = 3500 + Math.random() * 1500; // Salary: $3500-$5000
+          amount = 3500 + random() * 1500; // Salary: $3500-$5000
         } else if (merchantKey.includes('FREELANCE')) {
-          amount = 500 + Math.random() * 2000; // Freelance: $500-$2500
+          amount = 500 + random() * 2000; // Freelance: $500-$2500
         } else {
-          amount = 100 + Math.random() * 500; // Other income: $100-$600
+          amount = 100 + random() * 500; // Other income: $100-$600
         }
       } else {
         // Expense transactions with category-based amounts
-        amount = -getCategoryExpenseAmount(merchantInfo.suggestedCategory);
+        amount = -getCategoryExpenseAmount(
+          merchantInfo.suggestedCategory,
+          random
+        );
       }
 
       // Random day in the month
-      const dayOfMonth = Math.floor(Math.random() * daysInMonth) + 1;
+      const dayOfMonth = Math.floor(random() * lastDay) + 1;
       const transactionDate = new Date(
         targetDate.getFullYear(),
         targetDate.getMonth(),
@@ -492,20 +453,22 @@ export const generateHistoricalTransactions = (
       );
 
       transactions.push({
-        id: `txn_${accountId}_${monthOffset}_${i}`,
+        id: `txn_${monthSeed(accountId, targetDate)}_${i}`,
         accountId,
-        description: `${merchantKey} #${Math.floor(Math.random() * 1000)}`,
+        description: `${merchantKey} #${Math.floor(random() * 1000)}`,
         amount: Math.round(amount * 100) / 100,
-        date: transactionDate.toISOString().split('T')[0],
+        date: toLocalDateString(transactionDate),
         category: merchantInfo.suggestedCategory,
-        tags: Math.random() > 0.3 ? [merchantInfo.suggestedCategory] : [], // 70% tagged
-        pending: monthOffset === 0 && Math.random() < 0.1, // Only current month can be pending
+        tags: random() > 0.3 ? [merchantInfo.suggestedCategory] : [], // 70% tagged
+        // Always draw, so a month's sequence doesn't change once it's no longer
+        // the current month.
+        pending: pendingRoll(random) && monthOffset === 0, // Only current month can be pending
         cleanMerchant: {
           ...merchantInfo,
-          original: `${merchantKey} #${Math.floor(Math.random() * 1000)}`,
+          original: `${merchantKey} #${Math.floor(random() * 1000)}`,
         },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: transactionDate.toISOString(),
+        updatedAt: transactionDate.toISOString(),
       });
     }
   }
@@ -518,10 +481,11 @@ export const generateHistoricalTransactions = (
 // Generate loan-specific transactions
 const generateLoanTransactions = (
   accountId: string,
-  monthsBack: number = 12
+  monthsBack: number,
+  today: Date
 ): Transaction[] => {
   const transactions: Transaction[] = [];
-  const today = new Date();
+  const random = createRandom(accountId);
 
   // Determine loan type and payment amount
   let loanMerchant: string;
@@ -529,13 +493,13 @@ const generateLoanTransactions = (
 
   if (accountId.includes('mortgage')) {
     loanMerchant = 'QUICKEN LOANS';
-    monthlyPayment = 1850 + Math.random() * 200; // $1850-$2050 monthly mortgage payment
+    monthlyPayment = 1850 + random() * 200; // $1850-$2050 monthly mortgage payment
   } else if (accountId.includes('student_loan_1')) {
     loanMerchant = 'NELNET';
-    monthlyPayment = 150 + Math.random() * 50; // $150-$200 monthly student loan payment
+    monthlyPayment = 150 + random() * 50; // $150-$200 monthly student loan payment
   } else {
     loanMerchant = 'SALLIE MAE';
-    monthlyPayment = 120 + Math.random() * 40; // $120-$160 monthly student loan payment
+    monthlyPayment = 120 + random() * 40; // $120-$160 monthly student loan payment
   }
 
   // Generate one payment per month
@@ -545,8 +509,12 @@ const generateLoanTransactions = (
       today.getMonth() - monthOffset,
       1
     );
+    const monthRandom = createRandom(monthSeed(accountId, targetDate));
     // Payment is usually made between 1st and 15th of the month
-    const dayOfMonth = Math.floor(Math.random() * 15) + 1;
+    const dayOfMonth = Math.min(
+      Math.floor(monthRandom() * 15) + 1,
+      monthOffset === 0 ? today.getDate() : 15
+    );
     const transactionDate = new Date(
       targetDate.getFullYear(),
       targetDate.getMonth(),
@@ -554,26 +522,26 @@ const generateLoanTransactions = (
     );
 
     // Small variation in payment amount
-    const paymentAmount = monthlyPayment + (Math.random() * 20 - 10); // ±$10 variation
+    const paymentAmount = monthlyPayment + (monthRandom() * 20 - 10); // ±$10 variation
 
     transactions.push({
-      id: `txn_${accountId}_${monthOffset}`,
+      id: `txn_${monthSeed(accountId, targetDate)}`,
       accountId,
-      description: `Monthly Payment #${Math.floor(Math.random() * 1000)}`,
+      description: `Monthly Payment #${Math.floor(monthRandom() * 1000)}`,
       amount: -Math.round(paymentAmount * 100) / 100, // Negative for payments
-      date: transactionDate.toISOString().split('T')[0],
+      date: toLocalDateString(transactionDate),
       category: 'Loan Payment',
       tags: ['Loan Payment'],
-      pending: monthOffset === 0 && Math.random() < 0.1, // Only current month can be pending
+      pending: pendingRoll(monthRandom) && monthOffset === 0, // Only current month can be pending
       cleanMerchant: {
         cleanName: loanMerchant,
         logo: accountId.includes('mortgage') ? '🏠' : '🎓',
         suggestedCategory: 'Loan Payment',
-        original: `Monthly Payment #${Math.floor(Math.random() * 1000)}`,
+        original: `Monthly Payment #${Math.floor(monthRandom() * 1000)}`,
         confidence: 0.95,
       },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: transactionDate.toISOString(),
+      updatedAt: transactionDate.toISOString(),
     });
   }
 
@@ -602,24 +570,27 @@ const getSeasonalMultiplier = (month: number): number => {
 };
 
 // Category-based expense amounts for more realistic spending
-const getCategoryExpenseAmount = (category: string): number => {
+const getCategoryExpenseAmount = (
+  category: string,
+  random: RandomFn
+): number => {
   const categoryAmounts = {
-    'Food & Dining': () => 15 + Math.random() * 85, // $15-$100
-    Groceries: () => 50 + Math.random() * 150, // $50-$200
-    Transportation: () => 25 + Math.random() * 75, // $25-$100
-    Shopping: () => 30 + Math.random() * 270, // $30-$300
-    Entertainment: () => 20 + Math.random() * 80, // $20-$100
-    Utilities: () => 80 + Math.random() * 120, // $80-$200
-    Healthcare: () => 40 + Math.random() * 160, // $40-$200
-    Business: () => 25 + Math.random() * 175, // $25-$200
-    Travel: () => 100 + Math.random() * 400, // $100-$500
-    Subscriptions: () => 10 + Math.random() * 40, // $10-$50
-    Other: () => 20 + Math.random() * 80, // $20-$100
+    'Food & Dining': () => 15 + random() * 85, // $15-$100
+    Groceries: () => 50 + random() * 150, // $50-$200
+    Transportation: () => 25 + random() * 75, // $25-$100
+    Shopping: () => 30 + random() * 270, // $30-$300
+    Entertainment: () => 20 + random() * 80, // $20-$100
+    Utilities: () => 80 + random() * 120, // $80-$200
+    Healthcare: () => 40 + random() * 160, // $40-$200
+    Business: () => 25 + random() * 175, // $25-$200
+    Travel: () => 100 + random() * 400, // $100-$500
+    Subscriptions: () => 10 + random() * 40, // $10-$50
+    Other: () => 20 + random() * 80, // $20-$100
   };
 
   const amountGenerator =
     categoryAmounts[category as keyof typeof categoryAmounts];
-  return amountGenerator ? amountGenerator() : 25 + Math.random() * 75;
+  return amountGenerator ? amountGenerator() : 25 + random() * 75;
 };
 
 // Update the MOCK_ACCOUNTS to use historical data
