@@ -131,6 +131,19 @@ const financialReducer = (
           ...(action.payload.transactions || []),
         ],
       };
+    case 'REPLACE_ACCOUNT':
+      return {
+        ...state,
+        accounts: state.accounts.map((acc) =>
+          acc.id === action.payload.id ? action.payload : acc
+        ),
+        transactions: [
+          ...state.transactions.filter(
+            (txn) => txn.accountId !== action.payload.id
+          ),
+          ...(action.payload.transactions || []),
+        ],
+      };
     case 'REMOVE_ACCOUNT': {
       const isSelected = state.selectedAccount?.id === action.payload;
       return {
@@ -169,6 +182,7 @@ interface FinancialContextType {
   applyFilters: (filters: FilterOptions) => void;
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
+  updateImportedAccount: (account: Account) => void;
   removeAccount: (accountId: string) => void;
   setCustomDateRange: (
     startDate: string,
@@ -408,6 +422,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
   };
 
+  const updateImportedAccount = (account: Account) => {
+    dispatch({ type: 'REPLACE_ACCOUNT', payload: account });
+    dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
+  };
+
   const removeAccount = (accountId: string) => {
     dispatch({ type: 'REMOVE_ACCOUNT', payload: accountId });
   };
@@ -444,6 +463,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     applyFilters,
     viewAccountDetail,
     importAccount,
+    updateImportedAccount,
     removeAccount,
     setCustomDateRange,
     isPrivacyMode,

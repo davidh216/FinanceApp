@@ -11,14 +11,21 @@ import {
   buildTransactions,
   createImportedAccount,
   detectColumnMapping,
+  isImportedAccount,
+  mergeImportedTransactions,
   parseAmount,
   parseCsv,
+  splitDuplicates,
 } from '../../utils/csvImport';
 
 interface CsvImportModalProps {
   isOpen: boolean;
   onClose: () => void;
+  // Imported account to pre-select as the import target.
+  defaultAccountId?: string;
 }
+
+const NEW_ACCOUNT = 'new';
 
 const ACCOUNT_TYPE_OPTIONS: { value: AccountType; label: string }[] = [
   { value: 'CHECKING', label: 'Checking' },
@@ -32,6 +39,9 @@ const ACCOUNT_TYPE_OPTIONS: { value: AccountType; label: string }[] = [
 ];
 
 const PREVIEW_ROWS = 5;
+
+const plural = (count: number, word: string) =>
+  `${count} ${word}${count === 1 ? '' : 's'}`;
 
 const readFileAsText = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -47,8 +57,9 @@ const selectClasses =
 export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   isOpen,
   onClose,
+  defaultAccountId,
 }) => {
-  const { importAccount } = useFinancial();
+  const { state, importAccount, updateImportedAccount } = useFinancial();
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -57,25 +68,42 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   const [accountType, setAccountType] = useState<AccountType>('CHECKING');
   const [balanceInput, setBalanceInput] = useState('');
   const [flipSigns, setFlipSigns] = useState(false);
+  const [targetAccountId, setTargetAccountId] = useState(NEW_ACCOUNT);
 
-  const preview = useMemo(
-    () =>
-      parsed && mapping
-        ? buildTransactions(parsed, mapping, 'preview', flipSigns)
-        : null,
-    [parsed, mapping, flipSigns]
+  // Only imported accounts are offered: the built-in demo accounts are
+  // regenerated on every load, so transactions added to them would be lost.
+  const importableAccounts = state.accounts.filter(isImportedAccount);
+  const targetAccount = importableAccounts.find(
+    (acc) => acc.id === targetAccountId
   );
+
+  const preview = useMemo(() => {
+    if (!parsed || !mapping) return null;
+    const built = buildTransactions(parsed, mapping, 'preview', flipSigns);
+    const { fresh, duplicates } = targetAccount
+      ? splitDuplicates(built.transactions, targetAccount.transactions || [])
+      : { fresh: built.transactions, duplicates: [] };
+    return { ...built, fresh, duplicates };
+  }, [parsed, mapping, flipSigns, targetAccount]);
 
   if (!isOpen) return null;
 
-  const isLiability = LIABILITY_ACCOUNT_TYPES.includes(accountType);
+  const isLiability = LIABILITY_ACCOUNT_TYPES.includes(
+    targetAccount?.type ?? accountType
+  );
   const balance = balanceInput.trim() ? parseAmount(balanceInput) : null;
   const balanceIsInvalid = balanceInput.trim() !== '' && balance === null;
   const canImport =
     !!preview &&
-    preview.transactions.length > 0 &&
-    accountName.trim() !== '' &&
+    preview.fresh.length > 0 &&
+    (!!targetAccount || accountName.trim() !== '') &&
     !balanceIsInvalid;
+
+  const selectTarget = (id: string) => {
+    setTargetAccountId(id);
+    const account = importableAccounts.find((acc) => acc.id === id);
+    setFlipSigns(account?.importSettings?.flipSigns ?? false);
+  };
 
   const reset = () => {
     setParsed(null);
@@ -86,6 +114,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     setAccountType('CHECKING');
     setBalanceInput('');
     setFlipSigns(false);
+    setTargetAccountId(NEW_ACCOUNT);
   };
 
   const handleClose = () => {
@@ -106,6 +135,11 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       setParsed(result);
       setMapping(detectColumnMapping(result.headers, result.rows));
       setAccountName(file.name.replace(/\.csv$/i, ''));
+      selectTarget(
+        importableAccounts.some((acc) => acc.id === defaultAccountId)
+          ? (defaultAccountId as string)
+          : NEW_ACCOUNT
+      );
     } catch {
       setFileError('Could not read this file. Is it a CSV export?');
     }
@@ -118,18 +152,43 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
   const handleImport = () => {
     if (!parsed || !mapping || !canImport) return;
-    const id = `${IMPORTED_ACCOUNT_PREFIX}${Date.now().toString(36)}`;
-    const { transactions } = buildTransactions(parsed, mapping, id, flipSigns);
-    importAccount(
-      createImportedAccount({
-        id,
-        name: accountName,
-        type: accountType,
-        bankName,
-        balance,
+    const batch = Date.now().toString(36);
+
+    if (targetAccount) {
+      const { transactions } = buildTransactions(
+        parsed,
+        mapping,
+        targetAccount.id,
+        flipSigns,
+        `${targetAccount.id}_${batch}`
+      );
+      const { fresh } = splitDuplicates(
         transactions,
-      })
-    );
+        targetAccount.transactions || []
+      );
+      updateImportedAccount(
+        mergeImportedTransactions(targetAccount, fresh, balance, flipSigns)
+      );
+    } else {
+      const id = `${IMPORTED_ACCOUNT_PREFIX}${batch}`;
+      const { transactions } = buildTransactions(
+        parsed,
+        mapping,
+        id,
+        flipSigns
+      );
+      importAccount(
+        createImportedAccount({
+          id,
+          name: accountName,
+          type: accountType,
+          bankName,
+          balance,
+          transactions,
+          flipSigns,
+        })
+      );
+    }
     handleClose();
   };
 
@@ -216,49 +275,74 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   Account
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <label className="block">
-                    <span className="block text-sm font-medium text-gray-700 mb-1">
-                      Account name
-                    </span>
-                    <input
-                      className={selectClasses}
-                      value={accountName}
-                      onChange={(e) => setAccountName(e.target.value)}
-                      data-testid="account-name-input"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="block text-sm font-medium text-gray-700 mb-1">
-                      Bank
-                    </span>
-                    <input
-                      className={selectClasses}
-                      value={bankName}
-                      placeholder="e.g. Chase"
-                      onChange={(e) => setBankName(e.target.value)}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="block text-sm font-medium text-gray-700 mb-1">
-                      Account type
-                    </span>
-                    <select
-                      className={selectClasses}
-                      value={accountType}
-                      onChange={(e) =>
-                        setAccountType(e.target.value as AccountType)
-                      }
-                    >
-                      {ACCOUNT_TYPE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {importableAccounts.length > 0 && (
+                    <label className="block sm:col-span-2">
+                      <span className="block text-sm font-medium text-gray-700 mb-1">
+                        Import into
+                      </span>
+                      <select
+                        className={selectClasses}
+                        value={targetAccountId}
+                        onChange={(e) => selectTarget(e.target.value)}
+                        data-testid="import-target"
+                      >
+                        <option value={NEW_ACCOUNT}>New account</option>
+                        {importableAccounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  {!targetAccount && (
+                    <>
+                      <label className="block">
+                        <span className="block text-sm font-medium text-gray-700 mb-1">
+                          Account name
+                        </span>
+                        <input
+                          className={selectClasses}
+                          value={accountName}
+                          onChange={(e) => setAccountName(e.target.value)}
+                          data-testid="account-name-input"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="block text-sm font-medium text-gray-700 mb-1">
+                          Bank
+                        </span>
+                        <input
+                          className={selectClasses}
+                          value={bankName}
+                          placeholder="e.g. Chase"
+                          onChange={(e) => setBankName(e.target.value)}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="block text-sm font-medium text-gray-700 mb-1">
+                          Account type
+                        </span>
+                        <select
+                          className={selectClasses}
+                          value={accountType}
+                          onChange={(e) =>
+                            setAccountType(e.target.value as AccountType)
+                          }
+                        >
+                          {ACCOUNT_TYPE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  )}
                   <label className="block">
                     <span className="block text-sm font-medium text-gray-700 mb-1">
                       {isLiability ? 'Amount owed' : 'Current balance'}
+                      {targetAccount && ' (optional)'}
                     </span>
                     <input
                       className={selectClasses}
@@ -274,6 +358,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     >
                       {balanceIsInvalid
                         ? 'Enter a number, like 1234.56'
+                        : targetAccount
+                        ? 'Leave blank to add the new transactions to the current balance.'
                         : 'Leave blank to use the total of the imported transactions.'}
                     </span>
                   </label>
@@ -319,19 +405,38 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   <h4 className="text-sm font-semibold text-gray-900 mb-1">
                     Preview
                   </h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    {preview.transactions.length} transactions ready to import
+                  <p
+                    className="text-sm text-gray-600 mb-3"
+                    data-testid="import-summary"
+                  >
+                    {targetAccount
+                      ? preview.fresh.length === 0 &&
+                        preview.duplicates.length > 0
+                        ? `Everything in this file is already in ${targetAccount.name}`
+                        : `${plural(
+                            preview.fresh.length,
+                            'new transaction'
+                          )} to import${
+                            preview.duplicates.length > 0
+                              ? `, ${preview.duplicates.length} already in ${targetAccount.name} will be skipped`
+                              : ''
+                          }`
+                      : `${plural(
+                          preview.fresh.length,
+                          'transaction'
+                        )} ready to import`}
                     {preview.skippedRows.length > 0 &&
-                      `, ${
-                        preview.skippedRows.length
-                      } rows skipped (lines ${preview.skippedRows
+                      `, ${plural(
+                        preview.skippedRows.length,
+                        'row'
+                      )} skipped (lines ${preview.skippedRows
                         .slice(0, 5)
                         .join(', ')}${
                         preview.skippedRows.length > 5 ? ', …' : ''
                       }) because they are missing a date, description or amount`}
                     .
                   </p>
-                  {preview.transactions.length > 0 && (
+                  {preview.fresh.length > 0 && (
                     <div className="overflow-x-auto border rounded-lg">
                       <table className="min-w-full text-sm">
                         <thead className="bg-gray-50 text-left text-gray-600">
@@ -347,35 +452,30 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {preview.transactions
-                            .slice(0, PREVIEW_ROWS)
-                            .map((txn) => (
-                              <tr key={txn.id}>
-                                <td className="px-3 py-2 whitespace-nowrap">
-                                  {txn.date}
-                                </td>
-                                <td className="px-3 py-2">
-                                  {txn.cleanMerchant.cleanName}
-                                </td>
-                                <td className="px-3 py-2">{txn.category}</td>
-                                <td
-                                  className={`px-3 py-2 text-right whitespace-nowrap ${
-                                    txn.amount < 0
-                                      ? 'text-red-600'
-                                      : 'text-green-600'
-                                  }`}
-                                >
-                                  {txn.amount < 0 ? '-' : '+'}$
-                                  {Math.abs(txn.amount).toLocaleString(
-                                    'en-US',
-                                    {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    }
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
+                          {preview.fresh.slice(0, PREVIEW_ROWS).map((txn) => (
+                            <tr key={txn.id}>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                {txn.date}
+                              </td>
+                              <td className="px-3 py-2">
+                                {txn.cleanMerchant.cleanName}
+                              </td>
+                              <td className="px-3 py-2">{txn.category}</td>
+                              <td
+                                className={`px-3 py-2 text-right whitespace-nowrap ${
+                                  txn.amount < 0
+                                    ? 'text-red-600'
+                                    : 'text-green-600'
+                                }`}
+                              >
+                                {txn.amount < 0 ? '-' : '+'}$
+                                {Math.abs(txn.amount).toLocaleString('en-US', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -402,8 +502,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
               data-testid="confirm-import"
             >
               Import{' '}
-              {preview?.transactions.length
-                ? `${preview.transactions.length} transactions`
+              {preview?.fresh.length
+                ? plural(preview.fresh.length, 'transaction')
                 : ''}
             </Button>
           )}

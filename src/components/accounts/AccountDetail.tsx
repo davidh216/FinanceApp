@@ -4,6 +4,7 @@ import { DashboardHeader } from '../dashboard/DashboardHeader';
 import { Button } from '../ui/Button';
 import { TransactionItem } from '../ui/TransactionItem';
 import { isImportedAccount } from '../../utils/csvImport';
+import { CsvImportModal } from '../import/CsvImportModal';
 import {
   ArrowLeft,
   Search,
@@ -11,6 +12,7 @@ import {
   TrendingUp,
   TrendingDown,
   Trash2,
+  Upload,
 } from 'lucide-react';
 
 interface AccountDetailProps {
@@ -30,12 +32,17 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'merchant'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
-  // Get the selected account
+  // Look the account up in state.accounts rather than using
+  // state.selectedAccount directly: that is a snapshot from when the account
+  // was opened, so tags and imports added since would not show.
   const account = useMemo(() => {
-    return accountId
-      ? state.accounts.find((acc) => acc.id === accountId)
-      : state.selectedAccount;
+    const id = accountId ?? state.selectedAccount?.id;
+    return (
+      state.accounts.find((acc) => acc.id === id) ??
+      (accountId ? undefined : state.selectedAccount ?? undefined)
+    );
   }, [accountId, state.accounts, state.selectedAccount]);
 
   // Filter and sort transactions
@@ -275,6 +282,18 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                   variant="ghost"
                   size="sm"
                   className="mt-2"
+                  leftIcon={<Upload className="w-4 h-4" />}
+                  onClick={() => setIsImportOpen(true)}
+                  data-testid="import-more-button"
+                >
+                  Import CSV
+                </Button>
+              )}
+              {isImportedAccount(account) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
                   leftIcon={<Trash2 className="w-4 h-4" />}
                   onClick={() => {
                     if (
@@ -470,6 +489,11 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
           </div>
         </div>
       </main>
+      <CsvImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        defaultAccountId={account.id}
+      />
     </div>
   );
 };

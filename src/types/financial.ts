@@ -31,6 +31,10 @@ export interface Account {
   createdAt: string;
   updatedAt: string;
   transactions?: Transaction[];
+  // Remembered between CSV imports into the same account.
+  importSettings?: {
+    flipSigns: boolean;
+  };
 }
 
 export type AccountType =
@@ -180,6 +184,7 @@ export type FinancialAction =
   | { type: 'REMOVE_TAG'; payload: { transactionId: string; tag: string } }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
   | { type: 'REMOVE_ACCOUNT'; payload: string }
+  | { type: 'REPLACE_ACCOUNT'; payload: Account }
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'APPLY_FILTERS'; payload: FilterOptions }
   | { type: 'VIEW_ACCOUNT_DETAIL'; payload: Account };

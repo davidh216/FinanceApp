@@ -40,6 +40,11 @@ export interface BuildResult {
   skippedRows: number[];
 }
 
+export interface DuplicateSplit {
+  fresh: Transaction[];
+  duplicates: Transaction[];
+}
+
 // RFC 4180-style parser: quoted fields, escaped quotes, CRLF, BOM.
 export const parseCsvRows = (text: string): string[][] => {
   const input = text.replace(/^﻿/, '');
@@ -271,7 +276,10 @@ export const buildTransactions = (
   parsed: ParsedCsv,
   mapping: ColumnMapping,
   accountId: string,
-  flipSigns = false
+  flipSigns = false,
+  // Transactions added to an existing account need IDs that cannot collide
+  // with an earlier import's, so callers pass a per-batch prefix.
+  idPrefix: string = accountId
 ): BuildResult => {
   const transactions: Transaction[] = [];
   const skippedRows: number[] = [];
@@ -305,7 +313,7 @@ export const buildTransactions = (
 
     const cleanMerchant = categorizeMerchant(description, amount);
     transactions.push({
-      id: `txn_${accountId}_${index}`,
+      id: `txn_${idPrefix}_${index}`,
       accountId,
       description,
       amount,
@@ -323,6 +331,12 @@ export const buildTransactions = (
   return { transactions, skippedRows };
 };
 
+const roundCents = (value: number) => Math.round(value * 100) / 100;
+
+// Liabilities are stored as negative balances; users enter the amount owed.
+const normalizeBalance = (type: AccountType, balance: number): number =>
+  LIABILITY_ACCOUNT_TYPES.includes(type) ? -Math.abs(balance) : balance;
+
 export const createImportedAccount = (details: {
   id: string;
   name: string;
@@ -330,32 +344,92 @@ export const createImportedAccount = (details: {
   bankName: string;
   balance: number | null;
   transactions: Transaction[];
+  flipSigns?: boolean;
 }): Account => {
   const now = new Date().toISOString();
-  const transactionTotal =
-    Math.round(
-      details.transactions.reduce((sum, txn) => sum + txn.amount, 0) * 100
-    ) / 100;
-  let balance = details.balance ?? transactionTotal;
-  // Liabilities are stored as negative balances; users enter the amount owed.
-  if (
-    details.balance !== null &&
-    LIABILITY_ACCOUNT_TYPES.includes(details.type)
-  ) {
-    balance = -Math.abs(details.balance);
-  }
+  const transactionTotal = roundCents(
+    details.transactions.reduce((sum, txn) => sum + txn.amount, 0)
+  );
 
   return {
     id: details.id,
     name: details.name.trim(),
     type: details.type,
-    balance,
+    balance:
+      details.balance === null
+        ? transactionTotal
+        : normalizeBalance(details.type, details.balance),
     accountNumber: 'CSV import',
     bankName: details.bankName.trim() || 'Imported',
     isActive: true,
     createdAt: now,
     updatedAt: now,
     transactions: details.transactions,
+    importSettings: { flipSigns: details.flipSigns ?? false },
+  };
+};
+
+const transactionKey = (txn: Transaction): string =>
+  [
+    txn.date,
+    txn.amount.toFixed(2),
+    txn.description.replace(/\s+/g, ' ').trim().toUpperCase(),
+  ].join('|');
+
+// Splits incoming transactions into ones the account doesn't have yet and
+// ones it already does. Matching counts occurrences, so two identical $5
+// coffees on the same day both survive a first import, and re-importing an
+// overlapping export only adds what's new.
+export const splitDuplicates = (
+  incoming: Transaction[],
+  existing: Transaction[]
+): DuplicateSplit => {
+  const remaining = new Map<string, number>();
+  existing.forEach((txn) => {
+    const key = transactionKey(txn);
+    remaining.set(key, (remaining.get(key) || 0) + 1);
+  });
+
+  const fresh: Transaction[] = [];
+  const duplicates: Transaction[] = [];
+  incoming.forEach((txn) => {
+    const key = transactionKey(txn);
+    const count = remaining.get(key) || 0;
+    if (count > 0) {
+      remaining.set(key, count - 1);
+      duplicates.push(txn);
+    } else {
+      fresh.push(txn);
+    }
+  });
+  return { fresh, duplicates };
+};
+
+// Adds new transactions to an existing account. Without an explicit balance,
+// the balance moves by the total of the new transactions.
+export const mergeImportedTransactions = (
+  account: Account,
+  newTransactions: Transaction[],
+  balance: number | null,
+  flipSigns: boolean
+): Account => {
+  const added = roundCents(
+    newTransactions.reduce((sum, txn) => sum + txn.amount, 0)
+  );
+  const transactions = [
+    ...newTransactions,
+    ...(account.transactions || []),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  return {
+    ...account,
+    balance:
+      balance === null
+        ? roundCents(account.balance + added)
+        : normalizeBalance(account.type, balance),
+    transactions,
+    updatedAt: new Date().toISOString(),
+    importSettings: { ...account.importSettings, flipSigns },
   };
 };
 
