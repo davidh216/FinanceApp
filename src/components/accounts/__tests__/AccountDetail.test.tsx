@@ -50,7 +50,49 @@ describe('AccountDetail Component', () => {
     );
     expect(screen.getByTestId('stat-income')).toHaveTextContent('+$6,399.30');
     expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,618.59');
-    expect(screen.getByTestId('stat-net')).toHaveTextContent('$4,780.71');
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('+$2,542.61');
+  });
+
+  it('shows loan payments from checking as transfers', () => {
+    render(
+      <TestWrapper>
+        <AccountDetail accountId="acc_checking" />
+      </TestWrapper>
+    );
+    // Three loan payments in June; not expenses, but they left the account.
+    // Net flow is the account's actual change: 6,399.30 - 1,618.59 -
+    // 2,238.10.
+    expect(screen.getByTestId('stat-transfers')).toHaveTextContent(
+      '-$2,238.10'
+    );
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('+$2,542.61');
+  });
+
+  it('shows the other side of the transfer on the loan', () => {
+    render(
+      <TestWrapper>
+        <AccountDetail accountId="acc_mortgage" />
+      </TestWrapper>
+    );
+    expect(screen.getByTestId('stat-period')).toHaveTextContent(
+      '1 transaction'
+    );
+    expect(screen.getByTestId('stat-income')).toHaveTextContent('+$0.00');
+    expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$0.00');
+    expect(screen.getByTestId('stat-transfers')).toHaveTextContent(
+      '+$1,929.37'
+    );
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('+$1,929.37');
+  });
+
+  it('leaves out the transfers card when there are none', () => {
+    render(
+      <TestWrapper>
+        <AccountDetail accountId="acc_savings" />
+      </TestWrapper>
+    );
+    expect(screen.queryByTestId('stat-transfers')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('-$461.97');
   });
 
   it('filters transactions by search term', async () => {

@@ -155,6 +155,6 @@ describe('AccountDetail Integration Tests', () => {
     });
     expect(screen.getByTestId('stat-income')).toHaveTextContent('+$6,399.30');
     expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,618.59');
-    expect(screen.getByTestId('stat-net')).toHaveTextContent('$4,780.71');
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('+$2,542.61');
   });
 });

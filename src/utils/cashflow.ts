@@ -18,3 +18,7 @@ export const spendingOf = (transactions: Transaction[]): number =>
       .filter((txn) => !isTransfer(txn) && txn.amount < 0)
       .reduce((sum, txn) => sum + txn.amount, 0)
   );
+
+// Net money moved in (positive) or out (negative) by transfers.
+export const transfersOf = (transactions: Transaction[]): number =>
+  transactions.filter(isTransfer).reduce((sum, txn) => sum + txn.amount, 0);
