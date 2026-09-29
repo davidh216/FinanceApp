@@ -4,6 +4,7 @@ import { TransactionItem } from '../ui/TransactionItem';
 import { Button } from '../ui/Button';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Eye, Filter, ArrowUpDown } from 'lucide-react';
+import { parseLocalDate } from '../../utils/date';
 
 interface RecentActivityProps {
   accounts: Account[];
@@ -30,7 +31,9 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
     )
     .sort((a, b) => {
       if (sortBy === 'date') {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+        return (
+          parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()
+        );
       } else {
         return Math.abs(b.amount) - Math.abs(a.amount);
       }

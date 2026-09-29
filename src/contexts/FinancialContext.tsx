@@ -16,6 +16,7 @@ import {
 } from '../types/financial';
 import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
+import { parseLocalDate } from '../utils/date';
 
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 
@@ -280,8 +281,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
         break;
       case 'custom':
         if (state.customDateRange) {
-          startDate = new Date(state.customDateRange.startDate);
-          endDate = new Date(state.customDateRange.endDate);
+          startDate = parseLocalDate(state.customDateRange.startDate);
+          endDate = parseLocalDate(state.customDateRange.endDate);
           periodLabel = state.customDateRange.label || 'custom';
         } else {
           startDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -297,7 +298,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Filter transactions for the selected period
     const periodTransactions = state.transactions.filter((txn) => {
-      const txnDate = new Date(txn.date);
+      const txnDate = parseLocalDate(txn.date);
       return txnDate >= startDate && txnDate <= endDate;
     });
 
@@ -356,7 +357,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     const prevEndDate = new Date(startDate.getTime() - 1); // Day before current period starts
 
     const prevPeriodTransactions = state.transactions.filter((txn) => {
-      const txnDate = new Date(txn.date);
+      const txnDate = parseLocalDate(txn.date);
       return txnDate >= prevStartDate && txnDate <= prevEndDate;
     });
 

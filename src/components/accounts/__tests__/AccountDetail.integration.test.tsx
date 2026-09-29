@@ -146,14 +146,15 @@ describe('AccountDetail Integration Tests', () => {
       });
     }
 
+    // 1–15 June 2025 for Primary Checking (tests run on a pinned date with
+    // seeded mock data; see src/test/clock.ts).
     await waitFor(() => {
-      // Check that monthly stats are displayed
-      expect(screen.getByText('This Month')).toBeInTheDocument();
-      expect(
-        screen.getByText('Income', { selector: 'div' })
-      ).toBeInTheDocument();
-      expect(screen.getByText('Expenses')).toBeInTheDocument();
-      expect(screen.getByText('Net Flow')).toBeInTheDocument();
+      expect(screen.getByTestId('stat-period')).toHaveTextContent(
+        '24 transactions'
+      );
     });
+    expect(screen.getByTestId('stat-income')).toHaveTextContent('+$6,399.30');
+    expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,618.59');
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('$4,780.71');
   });
 });

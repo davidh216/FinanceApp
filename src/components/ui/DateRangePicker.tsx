@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toLocalDateString } from '../../utils/date';
 
 interface DateRangePickerProps {
   isOpen: boolean;
@@ -98,8 +99,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const handleApply = () => {
     if (selectedStartDate && selectedEndDate) {
       onDateRangeSelect(
-        selectedStartDate.toISOString().split('T')[0],
-        selectedEndDate.toISOString().split('T')[0]
+        toLocalDateString(selectedStartDate),
+        toLocalDateString(selectedEndDate)
       );
       onClose();
     }

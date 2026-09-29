@@ -18,6 +18,7 @@ import {
   Upload,
   Download,
 } from 'lucide-react';
+import { parseLocalDate } from '../../utils/date';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -103,7 +104,7 @@ export const Dashboard: React.FC = () => {
         break;
       case 'custom':
         if (state.customDateRange) {
-          startDate = new Date(state.customDateRange.startDate);
+          startDate = parseLocalDate(state.customDateRange.startDate);
           periodLabel = 'custom';
         } else {
           startDate = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -120,7 +121,7 @@ export const Dashboard: React.FC = () => {
     // Filter transactions for the selected period
     const periodTransactions = filteredTransactions.filter(
       (txn: Transaction) => {
-        const txnDate = new Date(txn.date);
+        const txnDate = parseLocalDate(txn.date);
         return txnDate >= startDate && txnDate <= endDate;
       }
     );
@@ -178,7 +179,7 @@ export const Dashboard: React.FC = () => {
     const prevEndDate = new Date(startDate.getTime() - 1);
     const prevPeriodTransactions = filteredTransactions.filter(
       (txn: Transaction) => {
-        const txnDate = new Date(txn.date);
+        const txnDate = parseLocalDate(txn.date);
         return txnDate >= prevStartDate && txnDate <= prevEndDate;
       }
     );
@@ -261,7 +262,7 @@ export const Dashboard: React.FC = () => {
       // Calculate balance up to this point in time
       const transactionsUpToDate = filteredTransactions.filter(
         (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
+          const txnDate = parseLocalDate(txn.date);
           return txnDate <= targetDate;
         }
       );
@@ -289,7 +290,7 @@ export const Dashboard: React.FC = () => {
 
       const periodTransactions = filteredTransactions.filter(
         (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
+          const txnDate = parseLocalDate(txn.date);
           return (
             txnDate >= startDate && txnDate <= targetDate && txn.amount > 0
           );
@@ -314,7 +315,7 @@ export const Dashboard: React.FC = () => {
 
       const periodTransactions = filteredTransactions.filter(
         (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
+          const txnDate = parseLocalDate(txn.date);
           return (
             txnDate >= startDate && txnDate <= targetDate && txn.amount < 0
           );
@@ -341,7 +342,7 @@ export const Dashboard: React.FC = () => {
 
       const periodTransactions = filteredTransactions.filter(
         (txn: Transaction) => {
-          const txnDate = new Date(txn.date);
+          const txnDate = parseLocalDate(txn.date);
           return txnDate >= startDate && txnDate <= targetDate;
         }
       );

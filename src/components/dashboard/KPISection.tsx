@@ -71,6 +71,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Total Balance"
+          testId="kpi-balance"
           value={totalBalance}
           change={calculateTrendChange(totalBalance, prevBalance)}
           valueChange={balanceValueChange}
@@ -82,6 +83,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
 
         <KPICard
           title={`Income (${periodLabel})`}
+          testId="kpi-income"
           value={summary.monthlyIncome}
           change={calculateTrendChange(summary.monthlyIncome, prevIncome)}
           valueChange={incomeValueChange}
@@ -93,6 +95,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
 
         <KPICard
           title={`Spending (${periodLabel})`}
+          testId="kpi-spending"
           value={summary.monthlyExpenses}
           change={calculateTrendChange(summary.monthlyExpenses, prevExpenses)}
           valueChange={expenseValueChange}
@@ -104,6 +107,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
 
         <KPICard
           title="Savings Rate"
+          testId="kpi-savings-rate"
           value={summary.savingsRate * 100}
           change={2.1} // Mock change for now
           valueChange={savingsValueChange}
