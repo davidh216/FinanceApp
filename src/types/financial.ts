@@ -168,6 +168,10 @@ export interface FinancialSummary {
   // ("YYYY-MM-DD"), reconstructed from transactions.
   previousPeriodBalance?: number;
   previousPeriodEndDate?: string;
+  // "YYYY-MM-DD" bounds of the selected period and the one before it.
+  periodStartDate?: string;
+  periodEndDate?: string;
+  previousPeriodStartDate?: string;
   periodLabel?: string;
 }
 
