@@ -30,6 +30,10 @@ import {
   markAsTransfer as markTransfer,
   unlinkTransfer as unlinkTransferIn,
 } from '../utils/transfers';
+import {
+  addTransaction as addTransactionTo,
+  removeTransaction as removeTransactionFrom,
+} from '../utils/manualTransactions';
 
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
@@ -301,6 +305,10 @@ interface FinancialContextType {
   // Records a missed transfer to or from another imported account, or
   // EXTERNAL_ACCOUNT_ID.
   markAsTransfer: (transactionId: string, otherAccountId: string) => void;
+  // Adds a transaction entered by hand to its (imported) account.
+  addManualTransaction: (transaction: Transaction) => void;
+  // Deletes a transaction, undoing any transfer it was part of first.
+  deleteTransaction: (transactionId: string) => void;
   applyFilters: (filters: FilterOptions) => void;
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
@@ -631,6 +639,33 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const addManualTransaction = (transaction: Transaction) => {
+    const account = fullState.accounts.find(
+      (acc) => acc.id === transaction.accountId
+    );
+    if (!account || !isImportedAccount(account)) return;
+    dispatch({
+      type: 'REPLACE_ACCOUNT',
+      payload: addTransactionTo(account, transaction),
+    });
+  };
+
+  const deleteTransaction = (transactionId: string) => {
+    const account = fullState.accounts.find((acc) =>
+      acc.transactions?.some((txn) => txn.id === transactionId)
+    );
+    if (!account || !isImportedAccount(account)) return;
+    const unlinked = unlinkTransferIn(fullState.accounts, transactionId);
+    unlinked
+      .filter((acc) => acc.id !== account.id)
+      .forEach((acc) => dispatch({ type: 'REPLACE_ACCOUNT', payload: acc }));
+    const current = unlinked.find((acc) => acc.id === account.id) ?? account;
+    dispatch({
+      type: 'REPLACE_ACCOUNT',
+      payload: removeTransactionFrom(current, transactionId),
+    });
+  };
+
   const applyFilters = (filters: FilterOptions) => {
     dispatch({ type: 'APPLY_FILTERS', payload: filters });
   };
@@ -696,6 +731,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     setCategoryRules,
     unlinkTransfer,
     markAsTransfer,
+    addManualTransaction,
+    deleteTransaction,
     applyFilters,
     viewAccountDetail,
     importAccount,

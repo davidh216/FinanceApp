@@ -64,6 +64,8 @@ export interface Transaction {
   // Set when the user unlinked a transfer: automatic matching leaves this
   // transaction alone from then on.
   notTransfer?: boolean;
+  // Entered by hand rather than imported; these can be deleted.
+  manual?: boolean;
   notes?: string;
   receiptUrl?: string;
   createdAt: string;
@@ -211,7 +213,6 @@ export type FinancialAction =
   | { type: 'REPLACE_ACCOUNT'; payload: Account }
   // Replaces every imported account with these (restoring a backup).
   | { type: 'RESTORE_IMPORTED_ACCOUNTS'; payload: Account[] }
-  | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'APPLY_FILTERS'; payload: FilterOptions }
   | { type: 'VIEW_ACCOUNT_DETAIL'; payload: Account };
 

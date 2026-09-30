@@ -15,6 +15,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { parseLocalDate } from '../../utils/date';
+import { AddTransactionModal } from '../transactions/AddTransactionModal';
 import { formatMoney, formatSignedMoney } from '../../utils/format';
 import {
   incomeOf,
@@ -41,6 +42,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'merchant'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   // Look the account up in state.accounts rather than using
   // state.selectedAccount directly: that is a snapshot from when the account
@@ -443,7 +445,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
             <Button
               leftIcon={<Plus className="w-4 h-4" />}
               size="sm"
-              onClick={() => alert('Add transaction coming soon!')}
+              onClick={() => setIsAddOpen(true)}
               data-testid="add-transaction-button"
             >
               Add Transaction
@@ -533,6 +535,11 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
           </div>
         </div>
       </main>
+      <AddTransactionModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        defaultAccountId={account.id}
+      />
       <CsvImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
