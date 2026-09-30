@@ -11,6 +11,10 @@ export const DashboardHeader: React.FC = () => {
     togglePrivacyMode,
     accountFilter,
     setAccountFilter,
+    hasImportedAccounts,
+    hasBusinessAccounts,
+    showDemoAccounts,
+    setShowDemoAccounts,
   } = useFinancial();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
@@ -37,17 +41,33 @@ export const DashboardHeader: React.FC = () => {
                 <h1 className="text-xl font-semibold text-gray-900">
                   FinanceApp
                 </h1>
-                <div className="flex items-center">
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                    DEMO
-                  </span>
+                <div className="flex items-center gap-2">
+                  {showDemoAccounts && (
+                    <span
+                      className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded"
+                      data-testid="demo-badge"
+                    >
+                      DEMO
+                    </span>
+                  )}
+                  {hasImportedAccounts && (
+                    <button
+                      onClick={() => setShowDemoAccounts(!showDemoAccounts)}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline"
+                      data-testid="demo-toggle"
+                    >
+                      {showDemoAccounts
+                        ? 'Hide demo accounts'
+                        : 'Show demo accounts'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Account Type Filter - Centered */}
-          {state.accounts.length > 0 && (
+          {hasBusinessAccounts && (
             <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setAccountFilter('personal')}

@@ -20,6 +20,17 @@ import { parseLocalDate } from '../utils/date';
 import { incomeOf, spendingOf } from '../utils/cashflow';
 
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
+const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
+
+const loadShowDemoAccounts = (): boolean => {
+  try {
+    return (
+      window.localStorage.getItem(SHOW_DEMO_ACCOUNTS_STORAGE_KEY) === 'true'
+    );
+  } catch {
+    return false;
+  }
+};
 
 const loadImportedAccounts = (): Account[] => {
   try {
@@ -197,6 +208,13 @@ interface FinancialContextType {
   togglePrivacyMode: () => void;
   accountFilter: 'both' | 'personal' | 'business';
   setAccountFilter: (filter: 'both' | 'personal' | 'business') => void;
+  // True once the user has imported an account of their own.
+  hasImportedAccounts: boolean;
+  hasBusinessAccounts: boolean;
+  // Whether the demo accounts are shown next to imported ones. They are
+  // always shown until something is imported.
+  showDemoAccounts: boolean;
+  setShowDemoAccounts: (show: boolean) => void;
 }
 
 const FinancialContext = createContext<FinancialContextType | null>(null);
@@ -204,10 +222,36 @@ const FinancialContext = createContext<FinancialContextType | null>(null);
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [state, dispatch] = useReducer(
+  const [fullState, dispatch] = useReducer(
     financialReducer,
     initialState,
     createInitialState
+  );
+  const [showDemoPreference, setShowDemoPreference] =
+    useState(loadShowDemoAccounts);
+  const hasImportedAccounts = fullState.accounts.some(isImportedAccount);
+  const showDemoAccounts = !hasImportedAccounts || showDemoPreference;
+
+  // Everything below, and every component, sees only the visible accounts:
+  // once you import your own, the demo accounts drop out of the lists and
+  // every total unless you choose to show them.
+  const state = useMemo((): FinancialState => {
+    if (showDemoAccounts) return fullState;
+    const accounts = fullState.accounts.filter(isImportedAccount);
+    const ids = new Set(accounts.map((account) => account.id));
+    return {
+      ...fullState,
+      accounts,
+      transactions: fullState.transactions.filter((txn) =>
+        ids.has(txn.accountId)
+      ),
+    };
+  }, [fullState, showDemoAccounts]);
+
+  // The Personal / Business switch only applies when there are business
+  // accounts to show; without any, everything counts as personal.
+  const hasBusinessAccounts = state.accounts.some((account) =>
+    account.type.includes('BUSINESS')
   );
   const [isPrivacyMode, setIsPrivacyMode] = useState(false);
   const [accountFilter, setAccountFilter] = useState<
@@ -220,13 +264,22 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       window.localStorage.setItem(
         IMPORTED_ACCOUNTS_STORAGE_KEY,
-        JSON.stringify(state.accounts.filter(isImportedAccount))
+        JSON.stringify(fullState.accounts.filter(isImportedAccount))
       );
     } catch {
       // Storage can be unavailable (private mode, quota); imports still
       // work for the current session.
     }
-  }, [state.accounts]);
+  }, [fullState.accounts]);
+
+  const setShowDemoAccounts = (show: boolean) => {
+    setShowDemoPreference(show);
+    try {
+      window.localStorage.setItem(SHOW_DEMO_ACCOUNTS_STORAGE_KEY, String(show));
+    } catch {
+      // The choice still applies for this session.
+    }
+  };
 
   const totalBalance = useMemo(
     () => state.accounts.reduce((sum, account) => sum + account.balance, 0),
@@ -465,8 +518,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     setCustomDateRange,
     isPrivacyMode,
     togglePrivacyMode,
-    accountFilter,
+    accountFilter: hasBusinessAccounts ? accountFilter : 'personal',
     setAccountFilter,
+    hasImportedAccounts,
+    hasBusinessAccounts,
+    showDemoAccounts,
+    setShowDemoAccounts,
   };
 
   return (
