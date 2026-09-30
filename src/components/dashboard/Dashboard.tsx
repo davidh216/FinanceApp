@@ -15,6 +15,7 @@ import { BudgetsCard } from '../budgets/BudgetsCard';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
 import { DateRangePicker } from '../ui/DateRangePicker';
 import { AddTransactionModal } from '../transactions/AddTransactionModal';
+import { TransactionsPage } from '../transactions/TransactionsPage';
 import { monthOf, spendingByCategory } from '../../utils/budgets';
 import {
   Building,
@@ -456,6 +457,10 @@ export const Dashboard: React.FC = () => {
   // Add routing logic for account-detail screen
   if (state.currentScreen === 'account-detail') {
     return <AccountDetail />;
+  }
+
+  if (state.currentScreen === 'transactions') {
+    return <TransactionsPage accounts={filteredAccounts} />;
   }
 
   // Loading state
