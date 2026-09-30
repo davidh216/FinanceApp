@@ -54,8 +54,13 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   onClose,
   defaultAccountId,
 }) => {
-  const { state, importAccount, updateImportedAccount, replaceAccount } =
-    useFinancial();
+  const {
+    state,
+    importAccount,
+    updateImportedAccount,
+    replaceAccount,
+    categoryRules,
+  } = useFinancial();
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -80,7 +85,14 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
 
   const preview = useMemo(() => {
     if (!parsed || !mapping) return null;
-    const built = buildTransactions(parsed, mapping, 'preview', flipSigns);
+    const built = buildTransactions(
+      parsed,
+      mapping,
+      'preview',
+      flipSigns,
+      undefined,
+      categoryRules
+    );
     const { fresh, duplicates } = targetAccount
       ? splitDuplicates(built.transactions, targetAccount.transactions || [])
       : { fresh: built.transactions, duplicates: [] };
@@ -114,7 +126,14 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     };
     // transferAccounts is derived from state.accounts and targetAccount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsed, mapping, flipSigns, targetAccount, state.accounts]);
+  }, [
+    parsed,
+    mapping,
+    flipSigns,
+    targetAccount,
+    state.accounts,
+    categoryRules,
+  ]);
 
   if (!isOpen) return null;
 
@@ -190,7 +209,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         mapping,
         targetAccount.id,
         flipSigns,
-        `${targetAccount.id}_${batch}`
+        `${targetAccount.id}_${batch}`,
+        categoryRules
       );
       const { fresh } = splitDuplicates(
         transactions,
@@ -217,7 +237,9 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         parsed,
         mapping,
         id,
-        flipSigns
+        flipSigns,
+        undefined,
+        categoryRules
       );
       const linked = linkTransfers(
         transactions,

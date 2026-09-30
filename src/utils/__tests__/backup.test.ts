@@ -87,6 +87,16 @@ describe('backups', () => {
     expect(restored.settings).toEqual({
       showDemoAccounts: true,
       budgets: { Groceries: 400 },
+      categoryRules: {},
+    });
+  });
+
+  it('keeps the categories you chose for merchants', () => {
+    const backup = createBackup([checking], false, {}, new Date(), {
+      starbucks: 'Entertainment',
+    });
+    expect(parseBackup(JSON.stringify(backup)).settings.categoryRules).toEqual({
+      starbucks: 'Entertainment',
     });
   });
 

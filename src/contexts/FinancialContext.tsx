@@ -21,6 +21,12 @@ import { parseLocalDate } from '../utils/date';
 import { incomeOf, spendingOf } from '../utils/cashflow';
 import { Budgets, cleanBudgets } from '../utils/budgets';
 import {
+  CategoryRules,
+  cleanCategoryRules,
+  merchantKey,
+} from '../utils/categoryRules';
+import { isTransfer } from '../utils/cashflow';
+import {
   markAsTransfer as markTransfer,
   unlinkTransfer as unlinkTransferIn,
 } from '../utils/transfers';
@@ -28,6 +34,19 @@ import {
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
 const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
+const CATEGORY_RULES_STORAGE_KEY = 'financeapp.categoryRules';
+
+const loadCategoryRules = (): CategoryRules => {
+  try {
+    return cleanCategoryRules(
+      JSON.parse(
+        window.localStorage.getItem(CATEGORY_RULES_STORAGE_KEY) || '{}'
+      )
+    );
+  } catch {
+    return {};
+  }
+};
 
 const loadBudgets = (): Budgets => {
   try {
@@ -174,6 +193,29 @@ const financialReducer = (
         transactions: state.transactions.map(recategorize),
       };
     }
+    case 'SET_MERCHANT_CATEGORY': {
+      const { category } = action.payload;
+      const recategorize = (txn: Transaction): Transaction =>
+        !isTransfer(txn) &&
+        merchantKey(txn.cleanMerchant) === action.payload.merchantKey
+          ? {
+              ...txn,
+              category,
+              cleanMerchant: {
+                ...txn.cleanMerchant,
+                suggestedCategory: category,
+              },
+            }
+          : txn;
+      return {
+        ...state,
+        accounts: state.accounts.map((account) => ({
+          ...account,
+          transactions: account.transactions?.map(recategorize),
+        })),
+        transactions: state.transactions.map(recategorize),
+      };
+    }
     case 'CONNECT_ACCOUNT':
       return {
         ...state,
@@ -244,7 +286,16 @@ interface FinancialContextType {
   changePeriod: (period: TimePeriod) => void;
   addTag: (transactionId: string, tag: string) => void;
   removeTag: (transactionId: string, tag: string) => void;
-  setCategory: (transactionId: string, category: string) => void;
+  // With applyToMerchant, every transaction from the same merchant gets the
+  // category too, and future imports remember it.
+  setCategory: (
+    transactionId: string,
+    category: string,
+    applyToMerchant?: boolean
+  ) => void;
+  categoryRules: CategoryRules;
+  forgetCategoryRule: (merchantKey: string) => void;
+  setCategoryRules: (rules: CategoryRules) => void;
   // Undoes a wrongly matched transfer, on both sides.
   unlinkTransfer: (transactionId: string) => void;
   // Records a missed transfer to or from another imported account, or
@@ -529,8 +580,43 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'REMOVE_TAG', payload: { transactionId, tag } });
   };
 
-  const setCategory = (transactionId: string, category: string) => {
-    dispatch({ type: 'SET_CATEGORY', payload: { transactionId, category } });
+  const [categoryRules, setCategoryRulesState] =
+    useState<CategoryRules>(loadCategoryRules);
+
+  const setCategoryRules = (rules: CategoryRules) => {
+    const cleaned = cleanCategoryRules(rules);
+    setCategoryRulesState(cleaned);
+    try {
+      window.localStorage.setItem(
+        CATEGORY_RULES_STORAGE_KEY,
+        JSON.stringify(cleaned)
+      );
+    } catch {
+      // The rules still apply for this session.
+    }
+  };
+
+  const setCategory = (
+    transactionId: string,
+    category: string,
+    applyToMerchant = false
+  ) => {
+    const txn = fullState.transactions.find((t) => t.id === transactionId);
+    if (!applyToMerchant || !txn) {
+      dispatch({ type: 'SET_CATEGORY', payload: { transactionId, category } });
+      return;
+    }
+    const key = merchantKey(txn.cleanMerchant);
+    dispatch({
+      type: 'SET_MERCHANT_CATEGORY',
+      payload: { merchantKey: key, category },
+    });
+    setCategoryRules({ ...categoryRules, [key]: category });
+  };
+
+  const forgetCategoryRule = (key: string) => {
+    const { [key]: _forgotten, ...rest } = categoryRules;
+    setCategoryRules(rest);
   };
 
   const unlinkTransfer = (transactionId: string) => {
@@ -605,6 +691,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     addTag,
     removeTag,
     setCategory,
+    categoryRules,
+    forgetCategoryRule,
+    setCategoryRules,
     unlinkTransfer,
     markAsTransfer,
     applyFilters,

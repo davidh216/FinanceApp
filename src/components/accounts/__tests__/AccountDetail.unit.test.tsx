@@ -33,6 +33,9 @@ const mockContextValue = {
   removeTag: jest.fn(),
   applyFilters: jest.fn(),
   viewAccountDetail: jest.fn(),
+  setCategory: jest.fn(),
+  categoryRules: {},
+  forgetCategoryRule: jest.fn(),
 };
 
 jest.mock('../../../contexts/FinancialContext', () => ({

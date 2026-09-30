@@ -38,6 +38,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     restoreImportedAccounts,
     budgets,
     setBudgets,
+    categoryRules,
+    setCategoryRules,
   } = useFinancial();
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
@@ -57,7 +59,13 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     downloadFile(
       `financeapp-backup-${today}.json`,
       JSON.stringify(
-        createBackup(state.accounts, showDemoAccounts, budgets),
+        createBackup(
+          state.accounts,
+          showDemoAccounts,
+          budgets,
+          new Date(),
+          categoryRules
+        ),
         null,
         2
       ),
@@ -97,6 +105,7 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     restoreImportedAccounts(pendingRestore.accounts);
     setShowDemoAccounts(pendingRestore.settings.showDemoAccounts);
     setBudgets(pendingRestore.settings.budgets);
+    setCategoryRules(pendingRestore.settings.categoryRules);
     handleClose();
   };
 
