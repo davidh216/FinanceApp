@@ -12,6 +12,7 @@ import { CsvImportModal } from '../import/CsvImportModal';
 import { DataExportModal } from '../import/DataExportModal';
 import { BudgetModal } from '../budgets/BudgetModal';
 import { BudgetsCard } from '../budgets/BudgetsCard';
+import { SpendingReportModal } from '../reports/SpendingReportModal';
 import { monthOf, spendingByCategory } from '../../utils/budgets';
 import {
   Building,
@@ -38,6 +39,7 @@ export const Dashboard: React.FC = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
@@ -70,6 +72,11 @@ export const Dashboard: React.FC = () => {
         budgetMonth.key
       ),
     [filteredAccounts, budgetMonth]
+  );
+
+  const filteredTransactions = useMemo(
+    () => filteredAccounts.flatMap((acc) => acc.transactions || []),
+    [filteredAccounts]
   );
 
   // Calculate filtered total balance
@@ -224,6 +231,9 @@ export const Dashboard: React.FC = () => {
         previousPeriodEndDate
       ),
       previousPeriodEndDate,
+      periodStartDate: toLocalDateString(startDate),
+      periodEndDate: toLocalDateString(endDate),
+      previousPeriodStartDate: toLocalDateString(prevStartDate),
       periodLabel,
     };
   }, [
@@ -232,6 +242,26 @@ export const Dashboard: React.FC = () => {
     state.customDateRange,
     totalBalance,
   ]);
+
+  // The report covers the same period, and the same comparison, as the
+  // KPI cards.
+  const reportPeriod = useMemo(
+    () => ({
+      start: filteredSummary.periodStartDate,
+      end: filteredSummary.periodEndDate,
+    }),
+    [filteredSummary.periodStartDate, filteredSummary.periodEndDate]
+  );
+  const reportPrevious = useMemo(
+    () => ({
+      start: filteredSummary.previousPeriodStartDate,
+      end: filteredSummary.previousPeriodEndDate,
+    }),
+    [
+      filteredSummary.previousPeriodStartDate,
+      filteredSummary.previousPeriodEndDate,
+    ]
+  );
 
   // Generate actual trend data based on selected period
   const generateTrendData = useMemo(() => {
@@ -619,6 +649,8 @@ export const Dashboard: React.FC = () => {
                         ? setIsExportOpen(true)
                         : action.label === 'Set Budget'
                         ? setIsBudgetOpen(true)
+                        : action.label === 'Generate Report'
+                        ? setIsReportOpen(true)
                         : alert(`${action.label} coming soon!`)
                     }
                   >
@@ -657,6 +689,13 @@ export const Dashboard: React.FC = () => {
         isOpen={isBudgetOpen}
         onClose={() => setIsBudgetOpen(false)}
         spending={monthSpending}
+      />
+      <SpendingReportModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        transactions={filteredTransactions}
+        period={reportPeriod}
+        previous={reportPrevious}
       />
     </div>
   );
