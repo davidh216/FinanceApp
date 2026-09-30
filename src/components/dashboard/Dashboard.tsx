@@ -12,6 +12,8 @@ import { CsvImportModal } from '../import/CsvImportModal';
 import { DataExportModal } from '../import/DataExportModal';
 import { BudgetModal } from '../budgets/BudgetModal';
 import { BudgetsCard } from '../budgets/BudgetsCard';
+import { RecurringCard } from '../recurring/RecurringCard';
+import { findRecurringPayments } from '../../utils/recurring';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
 import { DateRangePicker } from '../ui/DateRangePicker';
 import { AddTransactionModal } from '../transactions/AddTransactionModal';
@@ -87,6 +89,15 @@ export const Dashboard: React.FC = () => {
   const filteredTransactions = useMemo(
     () => filteredAccounts.flatMap((acc) => acc.transactions || []),
     [filteredAccounts]
+  );
+
+  const recurringPayments = useMemo(
+    () =>
+      findRecurringPayments(
+        filteredTransactions,
+        toLocalDateString(new Date())
+      ),
+    [filteredTransactions]
   );
 
   // Calculate filtered total balance
@@ -721,6 +732,8 @@ export const Dashboard: React.FC = () => {
               monthLabel={budgetMonth.label}
               onEdit={() => setIsBudgetOpen(true)}
             />
+
+            <RecurringCard payments={recurringPayments} />
 
             {/* Recent Activity */}
             <RecentActivity accounts={filteredAccounts} limit={5} />
