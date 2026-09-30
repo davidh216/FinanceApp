@@ -38,6 +38,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     markAsTransfer,
     categoryRules,
     forgetCategoryRule,
+    deleteTransaction,
   } = useFinancial();
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
@@ -258,6 +259,28 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               <span className="ml-2 px-1.5 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
                 Pending
               </span>
+            )}
+            {transaction.manual && (
+              <span className="ml-2 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">
+                Manual
+              </span>
+            )}
+            {transaction.manual && showCategory && canFixTransfers && (
+              <button
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Delete "${transaction.description}"? This can't be undone.`
+                    )
+                  ) {
+                    deleteTransaction(transaction.id);
+                  }
+                }}
+                className="ml-2 text-xs text-red-600 hover:text-red-700"
+                aria-label={`Delete ${transaction.description}`}
+              >
+                Delete
+              </button>
             )}
           </div>
         </div>

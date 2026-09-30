@@ -100,6 +100,12 @@ describe('backups', () => {
     });
   });
 
+  it('keeps transactions marked as added by hand', () => {
+    const cash = account({ transactions: [txn({ manual: true })] });
+    const restored = parseBackup(JSON.stringify(createBackup([cash], false)));
+    expect(restored.accounts[0].transactions![0].manual).toBe(true);
+  });
+
   it('keeps transfer links', () => {
     const linked = account({
       transactions: [txn({ transferAccountId: 'acc_import_2' })],

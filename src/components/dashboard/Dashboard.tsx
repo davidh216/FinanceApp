@@ -14,6 +14,7 @@ import { BudgetModal } from '../budgets/BudgetModal';
 import { BudgetsCard } from '../budgets/BudgetsCard';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
 import { DateRangePicker } from '../ui/DateRangePicker';
+import { AddTransactionModal } from '../transactions/AddTransactionModal';
 import { monthOf, spendingByCategory } from '../../utils/budgets';
 import {
   Building,
@@ -47,6 +48,7 @@ export const Dashboard: React.FC = () => {
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
@@ -683,6 +685,8 @@ export const Dashboard: React.FC = () => {
                     onClick={() =>
                       action.label === 'Import CSV'
                         ? setIsImportOpen(true)
+                        : action.label === 'Add Transaction'
+                        ? setIsAddOpen(true)
                         : action.label === 'Export Data'
                         ? setIsExportOpen(true)
                         : action.label === 'Set Budget'
@@ -727,6 +731,10 @@ export const Dashboard: React.FC = () => {
         isOpen={isBudgetOpen}
         onClose={() => setIsBudgetOpen(false)}
         spending={monthSpending}
+      />
+      <AddTransactionModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
       />
       <DateRangePicker
         isOpen={isDatePickerOpen}
