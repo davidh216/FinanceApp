@@ -1,6 +1,11 @@
 // src/utils/transfers.ts
 import { Account, Transaction } from '../types/financial';
 import { isTransfer } from './cashflow';
+import { categorizeMerchant, isImportedAccount } from './csvImport';
+
+// The other side of a transfer to or from an account that isn't in the app,
+// such as a friend's bank account or a card you haven't imported.
+export const EXTERNAL_ACCOUNT_ID = 'external';
 
 // Payments between accounts post a few days apart (a card payment leaves
 // checking on the 3rd and reaches the card on the 5th).
@@ -42,14 +47,14 @@ export const findTransferMatches = (
     .filter((account) => account.id !== accountId)
     .flatMap((account) =>
       (account.transactions || [])
-        .filter((txn) => !isTransfer(txn))
+        .filter((txn) => !isTransfer(txn) && !txn.notTransfer)
         .map((txn) => ({ account, txn }))
     );
   const used = new Set<string>();
   const matches: TransferMatch[] = [];
 
   for (const txn of incoming) {
-    if (isTransfer(txn) || txn.amount === 0) continue;
+    if (isTransfer(txn) || txn.notTransfer || txn.amount === 0) continue;
     let best: { account: Account; txn: Transaction; gap: number } | null = null;
     for (const candidate of candidates) {
       const key = `${candidate.account.id}:${candidate.txn.id}`;
@@ -82,6 +87,7 @@ export const findTransferMatches = (
 
 const asTransfer = (txn: Transaction, otherAccountId: string): Transaction => ({
   ...txn,
+  notTransfer: undefined,
   transferAccountId: otherAccountId,
   category: 'Transfer',
   cleanMerchant: { ...txn.cleanMerchant, suggestedCategory: 'Transfer' },
@@ -119,4 +125,108 @@ export const linkTransfers = (
     });
 
   return { transactions, changedAccounts };
+};
+
+// The transaction in `other` that pairs with `txn`: the opposite amount,
+// linked back to txn's account (or, when `linked` is false, not a transfer
+// yet and within TRANSFER_MATCH_DAYS), with the closest date.
+const findCounterpart = (
+  txn: Transaction,
+  accountId: string,
+  other: Account,
+  linked: boolean
+): Transaction | undefined => {
+  let best: { txn: Transaction; gap: number } | undefined;
+  for (const candidate of other.transactions || []) {
+    const gap = Math.abs(dayNumber(candidate.date) - dayNumber(txn.date));
+    const pairs = linked
+      ? candidate.transferAccountId === accountId
+      : !isTransfer(candidate) && gap <= TRANSFER_MATCH_DAYS;
+    if (!pairs || cents(candidate.amount) !== -cents(txn.amount)) continue;
+    if (!best || gap < best.gap) best = { txn: candidate, gap };
+  }
+  return best?.txn;
+};
+
+const updateTransaction = (
+  account: Account,
+  id: string,
+  update: (txn: Transaction) => Transaction
+): Account => ({
+  ...account,
+  transactions: (account.transactions || []).map((txn) =>
+    txn.id === id ? update(txn) : txn
+  ),
+});
+
+const findTransaction = (accounts: Account[], transactionId: string) => {
+  for (const account of accounts) {
+    const txn = (account.transactions || []).find(
+      (t) => t.id === transactionId
+    );
+    if (txn) return { account, txn };
+  }
+  return undefined;
+};
+
+// Back to ordinary income or spending, categorised from the description
+// again, and never matched automatically after this.
+const asNotTransfer = (txn: Transaction): Transaction => {
+  const { suggestedCategory } = categorizeMerchant(txn.description, txn.amount);
+  return {
+    ...txn,
+    transferAccountId: undefined,
+    notTransfer: true,
+    category: suggestedCategory,
+    cleanMerchant: { ...txn.cleanMerchant, suggestedCategory },
+  };
+};
+
+// Undoes a transfer, on both sides when the other side is in another
+// imported account. Returns the accounts that changed.
+export const unlinkTransfer = (
+  accounts: Account[],
+  transactionId: string
+): Account[] => {
+  const found = findTransaction(accounts, transactionId);
+  if (!found || !isTransfer(found.txn)) return [];
+  const { account, txn } = found;
+  const changed = [updateTransaction(account, txn.id, asNotTransfer)];
+  const other = accounts.find(
+    (a) =>
+      a.id === txn.transferAccountId &&
+      a.id !== account.id &&
+      isImportedAccount(a)
+  );
+  const counterpart = other && findCounterpart(txn, account.id, other, true);
+  if (other && counterpart) {
+    changed.push(updateTransaction(other, counterpart.id, asNotTransfer));
+  }
+  return changed;
+};
+
+// Records a transaction as a transfer to or from `otherAccountId` (another
+// imported account, or EXTERNAL_ACCOUNT_ID). When that account has the
+// matching opposite transaction, both sides are linked. Returns the
+// accounts that changed.
+export const markAsTransfer = (
+  accounts: Account[],
+  transactionId: string,
+  otherAccountId: string
+): Account[] => {
+  const found = findTransaction(accounts, transactionId);
+  if (!found || otherAccountId === found.account.id) return [];
+  const { account, txn } = found;
+  const other = accounts.find((a) => a.id === otherAccountId);
+  if (!other && otherAccountId !== EXTERNAL_ACCOUNT_ID) return [];
+  const changed = [
+    updateTransaction(account, txn.id, (t) => asTransfer(t, otherAccountId)),
+  ];
+  const counterpart = other && findCounterpart(txn, account.id, other, false);
+  if (other && counterpart) {
+    changed.push(
+      updateTransaction(other, counterpart.id, (t) => asTransfer(t, account.id))
+    );
+  }
+  return changed;
 };

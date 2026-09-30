@@ -61,6 +61,9 @@ export interface Transaction {
   // as a loan payment from checking): the other account's id. Transfers are
   // neither income nor spending.
   transferAccountId?: string;
+  // Set when the user unlinked a transfer: automatic matching leaves this
+  // transaction alone from then on.
+  notTransfer?: boolean;
   notes?: string;
   receiptUrl?: string;
   createdAt: string;
@@ -190,6 +193,10 @@ export type FinancialAction =
   | { type: 'SET_CUSTOM_DATE_RANGE'; payload: CustomDateRange }
   | { type: 'ADD_TAG'; payload: { transactionId: string; tag: string } }
   | { type: 'REMOVE_TAG'; payload: { transactionId: string; tag: string } }
+  | {
+      type: 'SET_CATEGORY';
+      payload: { transactionId: string; category: string };
+    }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
   | { type: 'REMOVE_ACCOUNT'; payload: string }
   | { type: 'REPLACE_ACCOUNT'; payload: Account }

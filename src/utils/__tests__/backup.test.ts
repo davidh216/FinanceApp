@@ -96,6 +96,16 @@ describe('backups', () => {
     );
   });
 
+  it('keeps transfers you unlinked unlinked', () => {
+    const unlinked = account({
+      transactions: [txn({ notTransfer: true })],
+    });
+    const restored = parseBackup(
+      JSON.stringify(createBackup([unlinked], false))
+    );
+    expect(restored.accounts[0].transactions![0].notTransfer).toBe(true);
+  });
+
   it('fills in optional fields a hand-edited backup leaves out', () => {
     const minimal = {
       app: 'FinanceApp',
@@ -184,6 +194,21 @@ describe('transactionsToCsv', () => {
     });
     expect(transactionsToCsv([checking, card])).toContain(
       'PAYMENT THANK YOU,Starbucks,Food & Dining,500.00,My Checking,'
+    );
+  });
+
+  it('names a transfer with an account not in the app', () => {
+    const venmo = account({
+      transactions: [
+        txn({
+          description: 'VENMO',
+          amount: 300,
+          transferAccountId: 'external',
+        }),
+      ],
+    });
+    expect(transactionsToCsv([venmo])).toContain(
+      ',300.00,Account not in FinanceApp,'
     );
   });
 
