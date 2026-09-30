@@ -38,12 +38,17 @@ export const KPISection: React.FC<KPISectionProps> = ({
         return 'Yearly';
       case '5year':
         return '5-Year';
+      case 'custom':
+        return 'Custom range';
       default:
         return 'Monthly';
     }
   };
 
   const periodLabel = getPeriodLabel(period);
+  // Cards read "vs last month"; a custom range is compared with the period
+  // of the same length before it.
+  const comparisonPeriod = period === 'custom' ? 'period' : period;
 
   // Percent change, or null when the previous value is zero and a
   // percentage would be meaningless.
@@ -83,7 +88,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
           isPositive={totalBalance >= prevBalance}
           color={totalBalance < 0 ? 'red' : 'green'}
           trendData={balanceTrend}
-          period={period}
+          period={comparisonPeriod}
         />
 
         <KPICard
@@ -95,7 +100,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
           isPositive={summary.monthlyIncome >= prevIncome}
           color="green"
           trendData={incomeTrend}
-          period={period}
+          period={comparisonPeriod}
         />
 
         <KPICard
@@ -107,7 +112,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
           isPositive={summary.monthlyExpenses <= prevExpenses} // Lower spending is better
           color="red"
           trendData={expenseTrend}
-          period={period}
+          period={comparisonPeriod}
         />
 
         <KPICard
@@ -120,7 +125,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
           isCurrency={false}
           color="blue"
           trendData={savingsTrend}
-          period={period}
+          period={comparisonPeriod}
         />
       </div>
     </div>

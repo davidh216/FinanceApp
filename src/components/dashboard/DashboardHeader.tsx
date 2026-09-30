@@ -1,12 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { DateRangePicker } from '../ui/DateRangePicker';
 import { Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
   const {
-    state,
-    setCustomDateRange,
     isPrivacyMode,
     togglePrivacyMode,
     accountFilter,
@@ -16,12 +13,6 @@ export const DashboardHeader: React.FC = () => {
     showDemoAccounts,
     setShowDemoAccounts,
   } = useFinancial();
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
-  const handleDateRangeSelect = (startDate: string, endDate: string) => {
-    setCustomDateRange(startDate, endDate, 'Custom Range');
-  };
-
   const handleRefresh = () => {
     // For now, just show an alert. In a real app, this would refresh the data
     alert('Refreshing data...');
@@ -139,15 +130,6 @@ export const DashboardHeader: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Date Range Picker */}
-      <DateRangePicker
-        isOpen={isDatePickerOpen}
-        onClose={() => setIsDatePickerOpen(false)}
-        onDateRangeSelect={handleDateRangeSelect}
-        currentStartDate={state.customDateRange?.startDate}
-        currentEndDate={state.customDateRange?.endDate}
-      />
     </header>
   );
 };
