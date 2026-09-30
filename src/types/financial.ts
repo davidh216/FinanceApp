@@ -193,6 +193,8 @@ export type FinancialAction =
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
   | { type: 'REMOVE_ACCOUNT'; payload: string }
   | { type: 'REPLACE_ACCOUNT'; payload: Account }
+  // Replaces every imported account with these (restoring a backup).
+  | { type: 'RESTORE_IMPORTED_ACCOUNTS'; payload: Account[] }
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'APPLY_FILTERS'; payload: FilterOptions }
   | { type: 'VIEW_ACCOUNT_DETAIL'; payload: Account };

@@ -169,6 +169,19 @@ const financialReducer = (
         currentScreen: isSelected ? 'dashboard' : state.currentScreen,
       };
     }
+    case 'RESTORE_IMPORTED_ACCOUNTS': {
+      const accounts = [
+        ...state.accounts.filter((acc) => !isImportedAccount(acc)),
+        ...action.payload,
+      ];
+      return {
+        ...state,
+        accounts,
+        transactions: accounts.flatMap((acc) => acc.transactions || []),
+        selectedAccount: null,
+        currentScreen: 'dashboard',
+      };
+    }
     case 'APPLY_FILTERS':
       return { ...state, filters: action.payload };
     case 'SET_CUSTOM_DATE_RANGE':
@@ -199,6 +212,8 @@ interface FinancialContextType {
   // Saves changes to an account without opening it.
   replaceAccount: (account: Account) => void;
   removeAccount: (accountId: string) => void;
+  // Replaces every imported account with a backup's.
+  restoreImportedAccounts: (accounts: Account[]) => void;
   setCustomDateRange: (
     startDate: string,
     endDate: string,
@@ -480,6 +495,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'REMOVE_ACCOUNT', payload: accountId });
   };
 
+  const restoreImportedAccounts = (accounts: Account[]) => {
+    dispatch({ type: 'RESTORE_IMPORTED_ACCOUNTS', payload: accounts });
+  };
+
   const setCustomDateRange = (
     startDate: string,
     endDate: string,
@@ -515,6 +534,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     updateImportedAccount,
     replaceAccount,
     removeAccount,
+    restoreImportedAccounts,
     setCustomDateRange,
     isPrivacyMode,
     togglePrivacyMode,

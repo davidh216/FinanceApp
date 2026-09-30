@@ -9,6 +9,7 @@ import { AccountDetail } from '../accounts/AccountDetail';
 import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
 import { CsvImportModal } from '../import/CsvImportModal';
+import { DataExportModal } from '../import/DataExportModal';
 import {
   Building,
   Plus,
@@ -32,6 +33,7 @@ export const Dashboard: React.FC = () => {
   } = useFinancial();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
@@ -591,6 +593,8 @@ export const Dashboard: React.FC = () => {
                     onClick={() =>
                       action.label === 'Import CSV'
                         ? setIsImportOpen(true)
+                        : action.label === 'Export Data'
+                        ? setIsExportOpen(true)
                         : alert(`${action.label} coming soon!`)
                     }
                   >
@@ -615,6 +619,10 @@ export const Dashboard: React.FC = () => {
         </div>
       </main>
       {importModal}
+      <DataExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+      />
     </div>
   );
 };
