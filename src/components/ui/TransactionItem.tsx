@@ -254,7 +254,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         <div className="min-w-0">
           <div className="text-sm text-gray-900">{transaction.date}</div>
           <div className="text-xs text-gray-500">
-            {showAccountName ? transaction.accountId : ''}
+            {showAccountName ? account?.name ?? transaction.accountId : ''}
             {transaction.pending && (
               <span className="ml-2 px-1.5 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
                 Pending
