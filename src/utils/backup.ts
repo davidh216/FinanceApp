@@ -6,6 +6,7 @@ import {
   Transaction,
 } from '../types/financial';
 import { IMPORTED_ACCOUNT_PREFIX, isImportedAccount } from './csvImport';
+import { EXTERNAL_ACCOUNT_ID } from './transfers';
 
 // Backups hold the imported accounts only: demo accounts are regenerated on
 // every load.
@@ -100,6 +101,7 @@ const readTransaction = (
     ...(isString(raw.transferAccountId)
       ? { transferAccountId: raw.transferAccountId }
       : {}),
+    ...(raw.notTransfer === true ? { notTransfer: true } : {}),
     ...(isString(raw.notes) ? { notes: raw.notes } : {}),
     createdAt: timestamp,
     updatedAt: isString(raw.updatedAt) ? raw.updatedAt : timestamp,
@@ -219,7 +221,9 @@ export const transactionsToCsv = (accounts: Account[]): string => {
         csvCell(txn.category),
         txn.amount.toFixed(2),
         csvCell(
-          txn.transferAccountId
+          txn.transferAccountId === EXTERNAL_ACCOUNT_ID
+            ? 'Account not in FinanceApp'
+            : txn.transferAccountId
             ? names.get(txn.transferAccountId) ?? txn.transferAccountId
             : ''
         ),

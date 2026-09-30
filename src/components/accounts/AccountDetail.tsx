@@ -70,7 +70,9 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
         );
 
       const matchesCategory =
-        !selectedCategory || txn.tags.includes(selectedCategory);
+        !selectedCategory ||
+        txn.category === selectedCategory ||
+        txn.tags.includes(selectedCategory);
 
       return matchesSearch && matchesCategory;
     });
@@ -435,6 +437,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
               <option value="Shopping">Shopping</option>
               <option value="Utilities">Utilities</option>
               <option value="Income">Income</option>
+              <option value="Transfer">Transfers</option>
             </select>
 
             <Button
@@ -523,6 +526,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                   onRemoveTag={removeTag}
                   showAccountName={false}
                   showTagging={true}
+                  showCategory={true}
                 />
               ))
             )}

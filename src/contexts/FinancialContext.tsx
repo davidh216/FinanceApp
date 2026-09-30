@@ -13,11 +13,16 @@ import {
   FilterOptions,
   TimePeriod,
   FinancialSummary,
+  Transaction,
 } from '../types/financial';
 import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
 import { parseLocalDate } from '../utils/date';
 import { incomeOf, spendingOf } from '../utils/cashflow';
+import {
+  markAsTransfer as markTransfer,
+  unlinkTransfer as unlinkTransferIn,
+} from '../utils/transfers';
 
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
@@ -135,6 +140,28 @@ const financialReducer = (
             : txn
         ),
       };
+    case 'SET_CATEGORY': {
+      // The suggestion follows your choice, so the "Suggest" tag matches it.
+      const recategorize = (txn: Transaction): Transaction =>
+        txn.id === action.payload.transactionId
+          ? {
+              ...txn,
+              category: action.payload.category,
+              cleanMerchant: {
+                ...txn.cleanMerchant,
+                suggestedCategory: action.payload.category,
+              },
+            }
+          : txn;
+      return {
+        ...state,
+        accounts: state.accounts.map((account) => ({
+          ...account,
+          transactions: account.transactions?.map(recategorize),
+        })),
+        transactions: state.transactions.map(recategorize),
+      };
+    }
     case 'CONNECT_ACCOUNT':
       return {
         ...state,
@@ -205,6 +232,12 @@ interface FinancialContextType {
   changePeriod: (period: TimePeriod) => void;
   addTag: (transactionId: string, tag: string) => void;
   removeTag: (transactionId: string, tag: string) => void;
+  setCategory: (transactionId: string, category: string) => void;
+  // Undoes a wrongly matched transfer, on both sides.
+  unlinkTransfer: (transactionId: string) => void;
+  // Records a missed transfer to or from another imported account, or
+  // EXTERNAL_ACCOUNT_ID.
+  markAsTransfer: (transactionId: string, otherAccountId: string) => void;
   applyFilters: (filters: FilterOptions) => void;
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
@@ -469,6 +502,22 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'REMOVE_TAG', payload: { transactionId, tag } });
   };
 
+  const setCategory = (transactionId: string, category: string) => {
+    dispatch({ type: 'SET_CATEGORY', payload: { transactionId, category } });
+  };
+
+  const unlinkTransfer = (transactionId: string) => {
+    unlinkTransferIn(fullState.accounts, transactionId).forEach((account) =>
+      dispatch({ type: 'REPLACE_ACCOUNT', payload: account })
+    );
+  };
+
+  const markAsTransfer = (transactionId: string, otherAccountId: string) => {
+    markTransfer(fullState.accounts, transactionId, otherAccountId).forEach(
+      (account) => dispatch({ type: 'REPLACE_ACCOUNT', payload: account })
+    );
+  };
+
   const applyFilters = (filters: FilterOptions) => {
     dispatch({ type: 'APPLY_FILTERS', payload: filters });
   };
@@ -528,6 +577,9 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     changePeriod,
     addTag,
     removeTag,
+    setCategory,
+    unlinkTransfer,
+    markAsTransfer,
     applyFilters,
     viewAccountDetail,
     importAccount,
