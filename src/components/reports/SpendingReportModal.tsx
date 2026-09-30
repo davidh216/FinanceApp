@@ -5,7 +5,7 @@ import { TAG_CATEGORIES } from '../../constants/financial';
 import { Transaction } from '../../types/financial';
 import { DateRange, spendingReport } from '../../utils/spendingReport';
 import { formatMoney, formatSignedMoney } from '../../utils/format';
-import { parseLocalDate } from '../../utils/date';
+import { formatDateRange } from '../../utils/date';
 
 interface SpendingReportModalProps {
   isOpen: boolean;
@@ -16,18 +16,7 @@ interface SpendingReportModalProps {
   previous: DateRange;
 }
 
-// "Jun 1 – Jun 15, 2025"
-const formatRange = ({ start, end }: DateRange) => {
-  const from = parseLocalDate(start);
-  const to = parseLocalDate(end);
-  const day = { month: 'short', day: 'numeric' } as const;
-  const fromText = from.toLocaleDateString('en-US', {
-    ...day,
-    ...(from.getFullYear() !== to.getFullYear() ? { year: 'numeric' } : {}),
-  });
-  const toText = to.toLocaleDateString('en-US', { ...day, year: 'numeric' });
-  return start === end ? toText : `${fromText} – ${toText}`;
-};
+const formatRange = ({ start, end }: DateRange) => formatDateRange(start, end);
 
 const percent = (share: number) => `${Math.round(share * 100)}%`;
 

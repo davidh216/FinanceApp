@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toLocalDateString } from '../../utils/date';
+import { parseLocalDate, toLocalDateString } from '../../utils/date';
 
 interface DateRangePickerProps {
   isOpen: boolean;
@@ -17,13 +17,21 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   currentStartDate,
   currentEndDate,
 }) => {
+  // Parsed as local dates: new Date("YYYY-MM-DD") is UTC midnight, which
+  // west of UTC shows the day before.
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(
-    currentStartDate ? new Date(currentStartDate) : null
+    currentStartDate ? parseLocalDate(currentStartDate) : null
   );
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(
-    currentEndDate ? new Date(currentEndDate) : null
+    currentEndDate ? parseLocalDate(currentEndDate) : null
   );
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  // Opens on the month the current range starts in.
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const shown = currentStartDate
+      ? parseLocalDate(currentStartDate)
+      : new Date();
+    return new Date(shown.getFullYear(), shown.getMonth(), 1);
+  });
   const [isSelectingEnd, setIsSelectingEnd] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -139,10 +147,13 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const days = getDaysInMonth(currentMonth);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
         ref={pickerRef}
-        className="bg-white rounded-lg shadow-xl p-6 w-96 max-w-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Select date range"
+        className="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full text-left"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -152,6 +163,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -179,6 +191,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               )
             }
             className="p-1 hover:bg-gray-100 rounded"
+            aria-label="Previous month"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -198,6 +211,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               )
             }
             className="p-1 hover:bg-gray-100 rounded"
+            aria-label="Next month"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -223,6 +237,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
               <button
                 key={index}
                 onClick={() => handleDateClick(date)}
+                aria-label={formatDate(date)}
+                aria-pressed={!!isDateSelected(date)}
                 className={`
                   p-2 text-sm rounded-md transition-colors
                   ${

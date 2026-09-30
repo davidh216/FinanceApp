@@ -13,6 +13,7 @@ import { DataExportModal } from '../import/DataExportModal';
 import { BudgetModal } from '../budgets/BudgetModal';
 import { BudgetsCard } from '../budgets/BudgetsCard';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
+import { DateRangePicker } from '../ui/DateRangePicker';
 import { monthOf, spendingByCategory } from '../../utils/budgets';
 import {
   Building,
@@ -23,7 +24,11 @@ import {
   Upload,
   Download,
 } from 'lucide-react';
-import { parseLocalDate, toLocalDateString } from '../../utils/date';
+import {
+  formatDateRange,
+  parseLocalDate,
+  toLocalDateString,
+} from '../../utils/date';
 import { totalBalanceAsOf } from '../../utils/balances';
 import { incomeOf, isTransfer, spendingOf } from '../../utils/cashflow';
 
@@ -34,12 +39,14 @@ export const Dashboard: React.FC = () => {
     viewAccountDetail,
     accountFilter,
     changePeriod,
+    setCustomDateRange,
   } = useFinancial();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
@@ -149,7 +156,12 @@ export const Dashboard: React.FC = () => {
         periodLabel = 'monthly';
     }
 
-    const endDate = new Date();
+    // A custom range ends on its own last day; every other period runs to
+    // today.
+    const endDate =
+      state.selectedPeriod === 'custom' && state.customDateRange
+        ? parseLocalDate(state.customDateRange.endDate)
+        : new Date();
 
     // Filter transactions for the selected period
     const periodTransactions = filteredTransactions.filter(
@@ -198,6 +210,28 @@ export const Dashboard: React.FC = () => {
         break;
       case '5year':
         prevStartDate = new Date(today.getFullYear() - 10, 0, 1);
+        break;
+      case 'custom':
+        // The same number of days, straight before the range starts.
+        if (state.customDateRange) {
+          const days =
+            Math.round(
+              (parseLocalDate(state.customDateRange.endDate).getTime() -
+                startDate.getTime()) /
+                86400000
+            ) + 1;
+          prevStartDate = new Date(
+            startDate.getFullYear(),
+            startDate.getMonth(),
+            startDate.getDate() - days
+          );
+        } else {
+          prevStartDate = new Date(
+            today.getFullYear(),
+            today.getMonth() - 1,
+            1
+          );
+        }
         break;
       default:
         prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -549,8 +583,7 @@ export const Dashboard: React.FC = () => {
                 key={period}
                 onClick={() => {
                   if (period === 'custom') {
-                    // Handle custom date picker
-                    alert('Custom date picker coming soon!');
+                    setIsDatePickerOpen(true);
                   } else {
                     changePeriod(period as any);
                   }
@@ -574,7 +607,12 @@ export const Dashboard: React.FC = () => {
                   : period === '5year'
                   ? '5Y'
                   : period === 'custom'
-                  ? 'Custom'
+                  ? state.selectedPeriod === 'custom' && state.customDateRange
+                    ? formatDateRange(
+                        state.customDateRange.startDate,
+                        state.customDateRange.endDate
+                      )
+                    : 'Custom'
                   : period}
               </button>
             ))}
@@ -689,6 +727,13 @@ export const Dashboard: React.FC = () => {
         isOpen={isBudgetOpen}
         onClose={() => setIsBudgetOpen(false)}
         spending={monthSpending}
+      />
+      <DateRangePicker
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        onDateRangeSelect={(start, end) => setCustomDateRange(start, end)}
+        currentStartDate={state.customDateRange?.startDate}
+        currentEndDate={state.customDateRange?.endDate}
       />
       <SpendingReportModal
         isOpen={isReportOpen}

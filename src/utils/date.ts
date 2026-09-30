@@ -19,3 +19,17 @@ export const toLocalDateString = (date: Date): string =>
     String(date.getMonth() + 1).padStart(2, '0'),
     String(date.getDate()).padStart(2, '0'),
   ].join('-');
+
+// "Jun 1 – Jun 15, 2025" for two "YYYY-MM-DD" dates; the year is shown once
+// when both are in the same year.
+export const formatDateRange = (start: string, end: string): string => {
+  const from = parseLocalDate(start);
+  const to = parseLocalDate(end);
+  const day = { month: 'short', day: 'numeric' } as const;
+  const fromText = from.toLocaleDateString('en-US', {
+    ...day,
+    ...(from.getFullYear() !== to.getFullYear() ? { year: 'numeric' } : {}),
+  });
+  const toText = to.toLocaleDateString('en-US', { ...day, year: 'numeric' });
+  return start === end ? toText : `${fromText} – ${toText}`;
+};
