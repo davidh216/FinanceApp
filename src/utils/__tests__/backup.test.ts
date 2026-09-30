@@ -76,6 +76,7 @@ describe('backups', () => {
     const backup = createBackup(
       [demo, checking],
       true,
+      { Groceries: 400 },
       new Date('2025-06-15T16:00:00.000Z')
     );
     expect(backup.accounts.map((a) => a.id)).toEqual(['acc_import_1']);
@@ -83,7 +84,10 @@ describe('backups', () => {
 
     const restored = parseBackup(JSON.stringify(backup));
     expect(restored.accounts).toEqual([checking]);
-    expect(restored.settings).toEqual({ showDemoAccounts: true });
+    expect(restored.settings).toEqual({
+      showDemoAccounts: true,
+      budgets: { Groceries: 400 },
+    });
   });
 
   it('keeps transfer links', () => {

@@ -36,6 +36,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     showDemoAccounts,
     setShowDemoAccounts,
     restoreImportedAccounts,
+    budgets,
+    setBudgets,
   } = useFinancial();
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
@@ -54,7 +56,11 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
   const handleBackup = () => {
     downloadFile(
       `financeapp-backup-${today}.json`,
-      JSON.stringify(createBackup(state.accounts, showDemoAccounts), null, 2),
+      JSON.stringify(
+        createBackup(state.accounts, showDemoAccounts, budgets),
+        null,
+        2
+      ),
       'application/json'
     );
   };
@@ -90,6 +96,7 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     if (!pendingRestore) return;
     restoreImportedAccounts(pendingRestore.accounts);
     setShowDemoAccounts(pendingRestore.settings.showDemoAccounts);
+    setBudgets(pendingRestore.settings.budgets);
     handleClose();
   };
 
@@ -142,7 +149,14 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
                 : `${plural(importedAccounts.length, 'account')}, ${plural(
                     countTransactions(importedAccounts),
                     'transaction'
-                  )}, with their tags and transfer links.`}
+                  )}, with their tags and transfer links${
+                    Object.keys(budgets).length > 0
+                      ? `, and your ${plural(
+                          Object.keys(budgets).length,
+                          'budget'
+                        )}`
+                      : ''
+                  }.`}
             </p>
           </section>
 
