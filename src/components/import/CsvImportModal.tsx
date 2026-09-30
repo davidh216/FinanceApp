@@ -19,6 +19,7 @@ import {
 } from '../../utils/csvImport';
 import { findTransferMatches, linkTransfers } from '../../utils/transfers';
 import { formatMoney } from '../../utils/format';
+import { readFileAsText } from '../../utils/files';
 
 interface CsvImportModalProps {
   isOpen: boolean;
@@ -44,14 +45,6 @@ const PREVIEW_ROWS = 5;
 
 const plural = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? '' : 's'}`;
-
-const readFileAsText = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(file);
-  });
 
 const selectClasses =
   'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
