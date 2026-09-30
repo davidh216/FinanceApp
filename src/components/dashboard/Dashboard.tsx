@@ -10,6 +10,9 @@ import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
 import { CsvImportModal } from '../import/CsvImportModal';
 import { DataExportModal } from '../import/DataExportModal';
+import { BudgetModal } from '../budgets/BudgetModal';
+import { BudgetsCard } from '../budgets/BudgetsCard';
+import { monthOf, spendingByCategory } from '../../utils/budgets';
 import {
   Building,
   Plus,
@@ -34,6 +37,7 @@ export const Dashboard: React.FC = () => {
 
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isBudgetOpen, setIsBudgetOpen] = useState(false);
 
   const hasAccounts = state.accounts.length > 0;
   const isLoading = state.isLoading;
@@ -49,6 +53,24 @@ export const Dashboard: React.FC = () => {
       return true;
     });
   }, [state.accounts, accountFilter]);
+
+  // Budgets always cover the current calendar month, across the accounts
+  // you're viewing.
+  const budgetMonth = useMemo(() => {
+    const today = new Date();
+    return {
+      key: monthOf(today),
+      label: today.toLocaleString('en-US', { month: 'long' }),
+    };
+  }, []);
+  const monthSpending = useMemo(
+    () =>
+      spendingByCategory(
+        filteredAccounts.flatMap((acc) => acc.transactions || []),
+        budgetMonth.key
+      ),
+    [filteredAccounts, budgetMonth]
+  );
 
   // Calculate filtered total balance
   const filteredTotalBalance = useMemo(() => {
@@ -595,6 +617,8 @@ export const Dashboard: React.FC = () => {
                         ? setIsImportOpen(true)
                         : action.label === 'Export Data'
                         ? setIsExportOpen(true)
+                        : action.label === 'Set Budget'
+                        ? setIsBudgetOpen(true)
                         : alert(`${action.label} coming soon!`)
                     }
                   >
@@ -613,6 +637,12 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
+            <BudgetsCard
+              spending={monthSpending}
+              monthLabel={budgetMonth.label}
+              onEdit={() => setIsBudgetOpen(true)}
+            />
+
             {/* Recent Activity */}
             <RecentActivity accounts={filteredAccounts} limit={5} />
           </div>
@@ -622,6 +652,11 @@ export const Dashboard: React.FC = () => {
       <DataExportModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
+      />
+      <BudgetModal
+        isOpen={isBudgetOpen}
+        onClose={() => setIsBudgetOpen(false)}
+        spending={monthSpending}
       />
     </div>
   );

@@ -19,6 +19,7 @@ import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
 import { parseLocalDate } from '../utils/date';
 import { incomeOf, spendingOf } from '../utils/cashflow';
+import { Budgets, cleanBudgets } from '../utils/budgets';
 import {
   markAsTransfer as markTransfer,
   unlinkTransfer as unlinkTransferIn,
@@ -26,6 +27,17 @@ import {
 
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
+const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
+
+const loadBudgets = (): Budgets => {
+  try {
+    return cleanBudgets(
+      JSON.parse(window.localStorage.getItem(BUDGETS_STORAGE_KEY) || '{}')
+    );
+  } catch {
+    return {};
+  }
+};
 
 const loadShowDemoAccounts = (): boolean => {
   try {
@@ -263,6 +275,9 @@ interface FinancialContextType {
   // always shown until something is imported.
   showDemoAccounts: boolean;
   setShowDemoAccounts: (show: boolean) => void;
+  // Monthly spending limits by category.
+  budgets: Budgets;
+  setBudgets: (budgets: Budgets) => void;
 }
 
 const FinancialContext = createContext<FinancialContextType | null>(null);
@@ -319,6 +334,18 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
       // work for the current session.
     }
   }, [fullState.accounts]);
+
+  const [budgets, setBudgetsState] = useState<Budgets>(loadBudgets);
+
+  const setBudgets = (next: Budgets) => {
+    const cleaned = cleanBudgets(next);
+    setBudgetsState(cleaned);
+    try {
+      window.localStorage.setItem(BUDGETS_STORAGE_KEY, JSON.stringify(cleaned));
+    } catch {
+      // The budgets still apply for this session.
+    }
+  };
 
   const setShowDemoAccounts = (show: boolean) => {
     setShowDemoPreference(show);
@@ -596,6 +623,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     hasBusinessAccounts,
     showDemoAccounts,
     setShowDemoAccounts,
+    budgets,
+    setBudgets,
   };
 
   return (
