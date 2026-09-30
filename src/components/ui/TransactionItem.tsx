@@ -6,6 +6,7 @@ import { formatMoney } from '../../utils/format';
 import { isTransfer } from '../../utils/cashflow';
 import { isImportedAccount } from '../../utils/csvImport';
 import { EXTERNAL_ACCOUNT_ID } from '../../utils/transfers';
+import { isSameMerchant, merchantKey } from '../../utils/categoryRules';
 
 const CATEGORY_OPTIONS = Object.keys(TAG_CATEGORIES);
 
@@ -29,8 +30,15 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   showCategory = false,
   className = '',
 }) => {
-  const { isPrivacyMode, state, setCategory, unlinkTransfer, markAsTransfer } =
-    useFinancial();
+  const {
+    isPrivacyMode,
+    state,
+    setCategory,
+    unlinkTransfer,
+    markAsTransfer,
+    categoryRules,
+    forgetCategoryRule,
+  } = useFinancial();
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
 
@@ -49,8 +57,28 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       : state.accounts.find((acc) => acc.id === transaction.transferAccountId)
           ?.name;
 
+  const merchant = transaction.cleanMerchant.cleanName;
+  const ruleKey = merchantKey(transaction.cleanMerchant);
+  const rule = categoryRules[ruleKey];
+  // Other transactions a merchant-wide choice would also change.
+  const sameMerchantCount = showCategoryMenu
+    ? state.transactions.filter(
+        (txn) =>
+          txn.id !== transaction.id &&
+          !isTransfer(txn) &&
+          isSameMerchant(txn, transaction)
+      ).length
+    : 0;
+  const [applyToMerchant, setApplyToMerchant] = useState(false);
+
+  const openCategoryMenu = () => {
+    // Keep using a merchant's rule unless you untick it.
+    setApplyToMerchant(!!rule);
+    setShowCategoryMenu(!showCategoryMenu);
+  };
+
   const chooseCategory = (category: string) => {
-    setCategory(transaction.id, category);
+    setCategory(transaction.id, category, applyToMerchant);
     setShowCategoryMenu(false);
   };
 
@@ -99,7 +127,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   ) : (
     <div className="relative">
       <button
-        onClick={() => setShowCategoryMenu(!showCategoryMenu)}
+        onClick={openCategoryMenu}
         className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-100"
         data-testid="category-button"
       >
@@ -110,9 +138,45 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       </button>
       {showCategoryMenu && (
         <div
-          className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-md shadow-lg z-10 p-2 max-h-64 overflow-y-auto"
+          className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10 p-2 max-h-72 overflow-y-auto"
           role="menu"
         >
+          <label className="flex items-start gap-2 px-2 py-1.5 mb-1 border-b text-xs text-gray-700 text-left cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={applyToMerchant}
+              onChange={(event) => setApplyToMerchant(event.target.checked)}
+              data-testid="apply-to-merchant"
+            />
+            <span>
+              Use for every {merchant} transaction
+              <span className="block text-gray-500">
+                {sameMerchantCount > 0
+                  ? `${sameMerchantCount} other${
+                      sameMerchantCount === 1 ? '' : 's'
+                    }, and future imports`
+                  : 'Including future imports'}
+              </span>
+            </span>
+          </label>
+          {rule && (
+            <div className="flex items-center justify-between px-2 pb-1.5 mb-1 border-b text-xs text-gray-500">
+              <span data-testid="merchant-rule">
+                {merchant} is always {rule}
+              </span>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  forgetCategoryRule(ruleKey);
+                  setShowCategoryMenu(false);
+                }}
+                className="ml-2 text-blue-600 hover:text-blue-700"
+              >
+                Forget
+              </button>
+            </div>
+          )}
           {CATEGORY_OPTIONS.map((category) => (
             <button
               key={category}

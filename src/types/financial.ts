@@ -201,6 +201,11 @@ export type FinancialAction =
       type: 'SET_CATEGORY';
       payload: { transactionId: string; category: string };
     }
+  // Every non-transfer transaction from a merchant (by merchantKey).
+  | {
+      type: 'SET_MERCHANT_CATEGORY';
+      payload: { merchantKey: string; category: string };
+    }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
   | { type: 'REMOVE_ACCOUNT'; payload: string }
   | { type: 'REPLACE_ACCOUNT'; payload: Account }

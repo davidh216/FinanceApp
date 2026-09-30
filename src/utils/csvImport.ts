@@ -10,6 +10,7 @@ import {
   LOAN_MERCHANT_PATTERNS,
   MERCHANT_PATTERNS,
 } from '../constants/financial';
+import { CategoryRules, merchantKey } from './categoryRules';
 
 export const IMPORTED_ACCOUNT_PREFIX = 'acc_import_';
 
@@ -279,7 +280,9 @@ export const buildTransactions = (
   flipSigns = false,
   // Transactions added to an existing account need IDs that cannot collide
   // with an earlier import's, so callers pass a per-batch prefix.
-  idPrefix: string = accountId
+  idPrefix: string = accountId,
+  // Categories you chose for merchants override the guessed ones.
+  rules: CategoryRules = {}
 ): BuildResult => {
   const transactions: Transaction[] = [];
   const skippedRows: number[] = [];
@@ -312,6 +315,8 @@ export const buildTransactions = (
     if (flipSigns) amount = -amount;
 
     const cleanMerchant = categorizeMerchant(description, amount);
+    const rule = rules[merchantKey(cleanMerchant)];
+    if (rule) cleanMerchant.suggestedCategory = rule;
     transactions.push({
       id: `txn_${idPrefix}_${index}`,
       accountId,
