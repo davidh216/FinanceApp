@@ -12,13 +12,10 @@ import {
   FinancialAction,
   Account,
   TimePeriod,
-  FinancialSummary,
   Transaction,
 } from '../types/financial';
 import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
-import { parseLocalDate } from '../utils/date';
-import { incomeOf, spendingOf } from '../utils/cashflow';
 import { Budgets, cleanBudgets } from '../utils/budgets';
 import {
   CategoryRules,
@@ -276,8 +273,6 @@ const financialReducer = (
 interface FinancialContextType {
   state: FinancialState;
   dispatch: React.Dispatch<FinancialAction>;
-  totalBalance: number;
-  summary: FinancialSummary;
   selectAccount: (account: Account | null) => void;
   changeScreen: (screen: 'dashboard' | 'accounts' | 'transactions') => void;
   changePeriod: (period: TimePeriod) => void;
@@ -470,159 +465,6 @@ export const FinancialProvider: React.FC<{
     }
   };
 
-  const totalBalance = useMemo(
-    () => state.accounts.reduce((sum, account) => sum + account.balance, 0),
-    [state.accounts]
-  );
-
-  const summary = useMemo((): FinancialSummary => {
-    const today = new Date();
-    let startDate: Date;
-    let endDate: Date;
-    let periodLabel: string;
-
-    // Calculate period boundaries based on selectedPeriod
-    switch (state.selectedPeriod) {
-      case 'day':
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
-        endDate = new Date(); // Today
-        periodLabel = 'daily';
-        break;
-      case 'week':
-        const dayOfWeek = today.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - daysToSubtract
-        );
-        endDate = new Date(); // Today
-        periodLabel = 'weekly';
-        break;
-      case 'month':
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        endDate = new Date(); // Today
-        periodLabel = 'monthly';
-        break;
-      case 'quarter':
-        const currentQuarter = Math.floor(today.getMonth() / 3);
-        startDate = new Date(today.getFullYear(), currentQuarter * 3, 1);
-        endDate = new Date(); // Today
-        periodLabel = 'quarterly';
-        break;
-      case 'year':
-        startDate = new Date(today.getFullYear(), 0, 1);
-        endDate = new Date(); // Today
-        periodLabel = 'yearly';
-        break;
-      case '5year':
-        startDate = new Date(today.getFullYear() - 5, 0, 1);
-        endDate = new Date(); // Today
-        periodLabel = '5-year';
-        break;
-      case 'custom':
-        if (state.customDateRange) {
-          startDate = parseLocalDate(state.customDateRange.startDate);
-          endDate = parseLocalDate(state.customDateRange.endDate);
-          periodLabel = state.customDateRange.label || 'custom';
-        } else {
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-          endDate = new Date(); // Today
-          periodLabel = 'monthly';
-        }
-        break;
-      default:
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        endDate = new Date(); // Today
-        periodLabel = 'monthly';
-    }
-
-    // Filter transactions for the selected period
-    const periodTransactions = state.transactions.filter((txn) => {
-      const txnDate = parseLocalDate(txn.date);
-      return txnDate >= startDate && txnDate <= endDate;
-    });
-
-    const periodIncome = incomeOf(periodTransactions);
-
-    const periodExpenses = spendingOf(periodTransactions);
-
-    const savingsRate =
-      periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
-
-    // Calculate previous period for comparison
-    let prevStartDate: Date;
-    switch (state.selectedPeriod) {
-      case 'day':
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - 1
-        );
-        break;
-      case 'week':
-        const prevWeekDaysToSubtract =
-          (today.getDay() === 0 ? 6 : today.getDay() - 1) + 7;
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - prevWeekDaysToSubtract
-        );
-        break;
-      case 'month':
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        break;
-      case 'quarter':
-        const prevQuarter = Math.floor(today.getMonth() / 3) - 1;
-        prevStartDate =
-          prevQuarter >= 0
-            ? new Date(today.getFullYear(), prevQuarter * 3, 1)
-            : new Date(today.getFullYear() - 1, 9, 1); // Q4 of previous year
-        break;
-      case 'year':
-        prevStartDate = new Date(today.getFullYear() - 1, 0, 1);
-        break;
-      case '5year':
-        prevStartDate = new Date(today.getFullYear() - 10, 0, 1);
-        break;
-      default:
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    }
-
-    const prevEndDate = new Date(startDate.getTime() - 1); // Day before current period starts
-
-    const prevPeriodTransactions = state.transactions.filter((txn) => {
-      const txnDate = parseLocalDate(txn.date);
-      return txnDate >= prevStartDate && txnDate <= prevEndDate;
-    });
-
-    const prevPeriodIncome = incomeOf(prevPeriodTransactions);
-
-    const prevPeriodExpenses = spendingOf(prevPeriodTransactions);
-
-    return {
-      totalBalance,
-      monthlyIncome: Math.round(periodIncome * 100) / 100,
-      monthlyExpenses: Math.round(periodExpenses * 100) / 100,
-      netWorth: totalBalance,
-      debtToIncomeRatio: periodIncome > 0 ? periodExpenses / periodIncome : 0,
-      savingsRate: Math.max(0, savingsRate),
-      // Add comparison data for trends
-      previousPeriodIncome: prevPeriodIncome,
-      previousPeriodExpenses: prevPeriodExpenses,
-      periodLabel,
-    };
-  }, [
-    state.transactions,
-    totalBalance,
-    state.selectedPeriod,
-    state.customDateRange,
-  ]);
-
   const selectAccount = (account: Account | null) => {
     dispatch({ type: 'SELECT_ACCOUNT', payload: account });
   };
@@ -805,8 +647,6 @@ export const FinancialProvider: React.FC<{
   const value: FinancialContextType = {
     state,
     dispatch,
-    totalBalance,
-    summary,
     selectAccount,
     changeScreen,
     changePeriod,
