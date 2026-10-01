@@ -16,7 +16,11 @@ import { BudgetsCard } from '../budgets/BudgetsCard';
 import { GoalsCard } from '../goals/GoalsCard';
 import { RecurringCard } from '../recurring/RecurringCard';
 import { UpcomingCard } from '../recurring/UpcomingCard';
-import { forecastBalances, upcomingEvents } from '../../utils/forecast';
+import {
+  FORECAST_DAYS,
+  forecastBalances,
+  upcomingEvents,
+} from '../../utils/forecast';
 import { findRecurringPayments } from '../../utils/recurring';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
 import { CashflowChart } from './CashflowChart';
@@ -115,7 +119,22 @@ export const Dashboard: React.FC = () => {
     const events = upcomingEvents(
       recurringPayments,
       findRecurringPayments(filteredTransactions, today, 'in'),
-      today
+      today,
+      FORECAST_DAYS,
+      {
+        out: findRecurringPayments(
+          filteredTransactions,
+          today,
+          'out',
+          'transfers'
+        ),
+        in: findRecurringPayments(
+          filteredTransactions,
+          today,
+          'in',
+          'transfers'
+        ),
+      }
     );
     return {
       events,

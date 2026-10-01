@@ -14,7 +14,9 @@ export interface UpcomingEvent {
   accountId: string;
   // The effect on the account: negative for a bill.
   amount: number;
-  kind: 'bill' | 'income';
+  // A transfer moves money between your own accounts (a loan payment from
+  // checking): it changes balances but isn't a bill or income.
+  kind: 'bill' | 'income' | 'transfer';
   // Its expected date has passed without it appearing yet.
   late: boolean;
 }
@@ -46,11 +48,19 @@ export const upcomingEvents = (
   bills: RecurringPayment[],
   income: RecurringPayment[],
   today: string,
-  days: number = FORECAST_DAYS
+  days: number = FORECAST_DAYS,
+  transfers: { out: RecurringPayment[]; in: RecurringPayment[] } = {
+    out: [],
+    in: [],
+  }
 ): UpcomingEvent[] => {
   const horizon = addDays(today, days);
   const events: UpcomingEvent[] = [];
-  const project = (payment: RecurringPayment, kind: UpcomingEvent['kind']) => {
+  const project = (
+    payment: RecurringPayment,
+    kind: UpcomingEvent['kind'],
+    sign: 1 | -1
+  ) => {
     let date = payment.nextDate;
     let late = false;
     if (date < today) {
@@ -63,7 +73,7 @@ export const upcomingEvents = (
         date,
         merchant: payment.merchant,
         accountId: payment.accountId,
-        amount: kind === 'bill' ? -payment.amount : payment.amount,
+        amount: sign * payment.amount,
         kind,
         late,
       });
@@ -75,8 +85,10 @@ export const upcomingEvents = (
       late = false;
     }
   };
-  bills.forEach((bill) => project(bill, 'bill'));
-  income.forEach((pay) => project(pay, 'income'));
+  bills.forEach((bill) => project(bill, 'bill', -1));
+  income.forEach((pay) => project(pay, 'income', 1));
+  transfers.out.forEach((t) => project(t, 'transfer', -1));
+  transfers.in.forEach((t) => project(t, 'transfer', 1));
   return events.sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||

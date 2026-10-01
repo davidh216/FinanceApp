@@ -1,6 +1,6 @@
 // src/utils/recurring.ts
 import { Transaction } from '../types/financial';
-import { isCashflow } from './cashflow';
+import { isAdjustment, isCashflow, isTransfer } from './cashflow';
 import { merchantKey } from './categoryRules';
 import { parseLocalDate, toLocalDateString } from './date';
 
@@ -84,17 +84,23 @@ export const addCadence = (date: string, cadence: Cadence): string => {
 // Finds payments made to the same merchant on a regular schedule for about
 // the same amount, and still going as of `today` ("YYYY-MM-DD"). Money out
 // by default, or money in (a paycheck) with `direction` 'in'; transfers
-// between your own accounts don't count. Amounts are positive either way.
-// Largest first.
+// between your own accounts don't count, unless `kind` is 'transfers' (a
+// monthly loan payment, say), which looks only at those. Amounts are
+// positive either way. Largest first.
 export const findRecurringPayments = (
   transactions: Transaction[],
   today: string,
-  direction: 'out' | 'in' = 'out'
+  direction: 'out' | 'in' = 'out',
+  kind: 'cashflow' | 'transfers' = 'cashflow'
 ): RecurringPayment[] => {
   const sign = direction === 'out' ? -1 : 1;
+  const counts = (txn: Transaction) =>
+    kind === 'cashflow'
+      ? isCashflow(txn)
+      : isTransfer(txn) && !isAdjustment(txn);
   const groups = new Map<string, Transaction[]>();
   for (const txn of transactions) {
-    if (txn.amount * sign <= 0 || !isCashflow(txn) || txn.pending) continue;
+    if (txn.amount * sign <= 0 || !counts(txn) || txn.pending) continue;
     const key = merchantKey(txn.cleanMerchant);
     groups.set(key, [...(groups.get(key) || []), txn]);
   }

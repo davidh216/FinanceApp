@@ -96,11 +96,16 @@ export const UpcomingCard: React.FC<UpcomingCardProps> = ({
               <div className="text-xs text-gray-500">
                 {e.late ? 'Due now' : formatDay(e.date)} ·{' '}
                 {accountName(e.accountId)}
+                {e.kind === 'transfer' && ' · ↔ Transfer'}
               </div>
             </div>
             <div
               className={`text-sm font-medium tabular-nums shrink-0 ${
-                e.amount > 0 ? 'text-green-600' : 'text-gray-900'
+                e.kind === 'income'
+                  ? 'text-green-600'
+                  : e.kind === 'transfer'
+                  ? 'text-gray-500'
+                  : 'text-gray-900'
               }`}
             >
               {signed(e.amount)}

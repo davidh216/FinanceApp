@@ -103,6 +103,34 @@ describe('forecastBalances', () => {
   });
 });
 
+describe('transfers in the forecast', () => {
+  it('move both balances but are neither bills nor income', () => {
+    const loanPayment = recurring({
+      merchant: 'Quicken Loans',
+      amount: 1900,
+      nextDate: '2025-06-20',
+    });
+    const events = upcomingEvents([], [], TODAY, 30, {
+      out: [loanPayment],
+      in: [{ ...loanPayment, accountId: 'acc_import_loan' }],
+    });
+    expect(events.map((e) => [e.kind, e.accountId, e.amount])).toEqual([
+      ['transfer', 'acc_import_loan', 1900],
+      ['transfer', 'acc_import_chk', -1900],
+    ]);
+    const [checking, loan] = forecastBalances(
+      [
+        account({ balance: 2500 }),
+        account({ id: 'acc_import_loan', type: 'LOAN', balance: -150000 }),
+      ],
+      events,
+      TODAY
+    );
+    expect(checking).toMatchObject({ end: 600, goesNegative: false });
+    expect(loan.end).toBe(-148100);
+  });
+});
+
 describe('findRecurringPayments for money in', () => {
   it('finds a regular paycheck and the account it lands in', () => {
     const pay = (date: string): Transaction => ({
@@ -136,5 +164,40 @@ describe('findRecurringPayments for money in', () => {
         nextDate: '2025-06-27',
       }),
     ]);
+  });
+});
+
+describe('findRecurringPayments for transfers', () => {
+  const payment = (date: string, transfer: boolean): Transaction => ({
+    id: `${date}_${transfer}`,
+    accountId: 'acc_import_chk',
+    description: 'QUICKEN LOANS',
+    amount: -1900,
+    date,
+    category: 'Loan Payment',
+    tags: [],
+    pending: false,
+    cleanMerchant: {
+      cleanName: 'Quicken Loans',
+      logo: '',
+      suggestedCategory: 'Loan Payment',
+      original: '',
+    },
+    ...(transfer ? { transferAccountId: 'acc_import_loan' } : {}),
+    createdAt: '',
+    updatedAt: '',
+  });
+  const dates = ['2025-03-03', '2025-04-03', '2025-05-03', '2025-06-03'];
+
+  it('finds them only when asked, and never spending as a transfer', () => {
+    const transfers = dates.map((d) => payment(d, true));
+    expect(findRecurringPayments(transfers, TODAY)).toEqual([]);
+    expect(findRecurringPayments(transfers, TODAY, 'out', 'transfers')).toEqual(
+      [expect.objectContaining({ merchant: 'Quicken Loans', amount: 1900 })]
+    );
+    const spending = dates.map((d) => payment(d, false));
+    expect(findRecurringPayments(spending, TODAY, 'out', 'transfers')).toEqual(
+      []
+    );
   });
 });
