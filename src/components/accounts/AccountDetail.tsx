@@ -457,11 +457,11 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
         <div className="bg-white rounded-lg shadow-sm border">
           {/* Table Header */}
           <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 whitespace-nowrap">
                 Transactions ({filteredTransactions.length})
               </h2>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 whitespace-nowrap">
                 <button
                   onClick={() => handleSort('date')}
                   className={`px-3 py-1 text-sm rounded transition-colors ${

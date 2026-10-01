@@ -239,7 +239,9 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       className={`p-2 hover:bg-gray-50 transition-colors ${className}`}
       data-testid={`transaction-${transaction.id}`}
     >
-      <div className="grid grid-cols-4 gap-4 items-center">
+      {/* Phones: merchant and amount, then date and account, then category
+          and tags. Wider screens: four columns. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 items-center sm:grid-cols-4 sm:gap-4">
         {/* Column 1: Merchant Name - Left aligned */}
         <div className="min-w-0 text-left">
           <div className="font-medium text-gray-900 truncate text-sm">
@@ -251,7 +253,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         </div>
 
         {/* Column 2: Date and Account */}
-        <div className="min-w-0">
+        <div className="min-w-0 order-3 col-span-2 flex flex-wrap items-baseline gap-x-2 sm:order-none sm:col-span-1 sm:block">
           <div className="text-sm text-gray-900">{transaction.date}</div>
           <div className="text-xs text-gray-500">
             {showAccountName ? account?.name ?? transaction.accountId : ''}
@@ -287,7 +289,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
         {/* Column 3: Tags */}
         {(showTagging || showCategory) && (
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="order-4 col-span-2 flex items-center gap-1 flex-wrap sm:order-none sm:col-span-1">
             {categoryControl}
             {showTagging && (
               <>
@@ -382,7 +384,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         )}
 
         {/* Column 4: Amount */}
-        <div className="text-right">
+        <div className="order-2 text-right sm:order-none">
           <div
             className={`text-sm font-semibold ${
               transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
