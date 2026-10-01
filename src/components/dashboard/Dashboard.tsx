@@ -15,6 +15,8 @@ import { BudgetModal } from '../budgets/BudgetModal';
 import { BudgetsCard } from '../budgets/BudgetsCard';
 import { GoalsCard } from '../goals/GoalsCard';
 import { RecurringCard } from '../recurring/RecurringCard';
+import { UpcomingCard } from '../recurring/UpcomingCard';
+import { forecastBalances, upcomingEvents } from '../../utils/forecast';
 import { findRecurringPayments } from '../../utils/recurring';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
 import { CashflowChart } from './CashflowChart';
@@ -107,6 +109,19 @@ export const Dashboard: React.FC = () => {
       ),
     [filteredTransactions]
   );
+  // Bills and paychecks expected in the next 30 days.
+  const upcoming = useMemo(() => {
+    const today = toLocalDateString(new Date());
+    const events = upcomingEvents(
+      recurringPayments,
+      findRecurringPayments(filteredTransactions, today, 'in'),
+      today
+    );
+    return {
+      events,
+      forecasts: forecastBalances(filteredAccounts, events, today),
+    };
+  }, [recurringPayments, filteredTransactions, filteredAccounts]);
 
   const cashflowMonths = useMemo(
     () => monthlyCashflow(filteredTransactions, budgetMonth.key),
@@ -424,6 +439,12 @@ export const Dashboard: React.FC = () => {
               spending={monthSpending}
               monthLabel={budgetMonth.label}
               onEdit={() => setIsBudgetOpen(true)}
+            />
+
+            <UpcomingCard
+              events={upcoming.events}
+              forecasts={upcoming.forecasts}
+              accounts={filteredAccounts}
             />
 
             <RecurringCard payments={recurringPayments} />

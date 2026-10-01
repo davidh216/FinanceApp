@@ -40,6 +40,7 @@ describe('findRecurringPayments', () => {
     ]);
     expect(netflix).toEqual({
       merchant: 'Netflix',
+      accountId: 'chk',
       merchantKey: 'netflix',
       category: 'Subscriptions',
       cadence: 'monthly',

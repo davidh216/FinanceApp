@@ -30,6 +30,8 @@ const MIN_PAYMENTS = 3;
 
 export interface RecurringPayment {
   merchant: string;
+  // The account the latest payment was in.
+  accountId: string;
   merchantKey: string;
   category: string;
   cadence: Cadence;
@@ -55,7 +57,7 @@ const median = (values: number[]): number => {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
 
-const addCadence = (date: string, cadence: Cadence): string => {
+export const addCadence = (date: string, cadence: Cadence): string => {
   const d = parseLocalDate(date);
   const next =
     cadence === 'weekly'
@@ -80,16 +82,19 @@ const addCadence = (date: string, cadence: Cadence): string => {
 };
 
 // Finds payments made to the same merchant on a regular schedule for about
-// the same amount, and still going as of `today` ("YYYY-MM-DD"). Only money
-// out counts; transfers between your own accounts don't. Most expensive
-// first.
+// the same amount, and still going as of `today` ("YYYY-MM-DD"). Money out
+// by default, or money in (a paycheck) with `direction` 'in'; transfers
+// between your own accounts don't count. Amounts are positive either way.
+// Largest first.
 export const findRecurringPayments = (
   transactions: Transaction[],
-  today: string
+  today: string,
+  direction: 'out' | 'in' = 'out'
 ): RecurringPayment[] => {
+  const sign = direction === 'out' ? -1 : 1;
   const groups = new Map<string, Transaction[]>();
   for (const txn of transactions) {
-    if (txn.amount >= 0 || !isCashflow(txn) || txn.pending) continue;
+    if (txn.amount * sign <= 0 || !isCashflow(txn) || txn.pending) continue;
     const key = merchantKey(txn.cleanMerchant);
     groups.set(key, [...(groups.get(key) || []), txn]);
   }
@@ -112,7 +117,7 @@ export const findRecurringPayments = (
     ).length;
     if (offSchedule > 1) return;
 
-    const amounts = sorted.map((txn) => -txn.amount);
+    const amounts = sorted.map((txn) => txn.amount * sign);
     const usual = median(amounts);
     const offPrice = amounts.filter(
       (amount) => Math.abs(amount - usual) > usual * AMOUNT_TOLERANCE
@@ -128,10 +133,11 @@ export const findRecurringPayments = (
       return;
     }
 
-    const amount = round(-last.amount);
-    const previous = round(-sorted[sorted.length - 2].amount);
+    const amount = round(last.amount * sign);
+    const previous = round(sorted[sorted.length - 2].amount * sign);
     found.push({
       merchant: last.cleanMerchant.cleanName,
+      accountId: last.accountId,
       merchantKey: key,
       category: last.category,
       cadence: match.cadence,
