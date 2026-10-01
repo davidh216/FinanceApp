@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Eye, EyeOff } from 'lucide-react';
+import { AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { FileSyncIndicator } from './FileSyncIndicator';
 import { DataExportModal } from '../import/DataExportModal';
 
@@ -14,6 +14,7 @@ export const DashboardHeader: React.FC = () => {
     hasBusinessAccounts,
     showDemoAccounts,
     setShowDemoAccounts,
+    storageError,
   } = useFinancial();
   // Opened from the auto-save status when it needs attention.
   const [isDataOpen, setIsDataOpen] = useState(false);
@@ -120,6 +121,26 @@ export const DashboardHeader: React.FC = () => {
           </div>
         </div>
       </div>
+      {storageError && (
+        <div
+          className="bg-red-50 border-t border-red-200"
+          role="alert"
+          data-testid="storage-error"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-red-800">
+            <span className="flex items-center gap-2 text-left">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              {storageError}
+            </span>
+            <button
+              onClick={() => setIsDataOpen(true)}
+              className="font-medium underline hover:text-red-900"
+            >
+              Back up now
+            </button>
+          </div>
+        </div>
+      )}
       <DataExportModal
         isOpen={isDataOpen}
         onClose={() => setIsDataOpen(false)}

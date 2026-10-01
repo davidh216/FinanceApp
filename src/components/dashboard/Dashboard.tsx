@@ -338,6 +338,14 @@ export const Dashboard: React.FC = () => {
       (acc: Account) => acc.transactions || []
     );
     const today = new Date();
+    // Each date is parsed once: the trend loops below compare every
+    // transaction against every point, which is slow with years of data.
+    const txnTimes = new Map(
+      filteredTransactions.map((txn) => [
+        txn,
+        parseLocalDate(txn.date).getTime(),
+      ])
+    );
 
     // Determine number of data points based on period
     let dataPoints: number;
@@ -399,10 +407,10 @@ export const Dashboard: React.FC = () => {
 
       const periodTransactions = filteredTransactions.filter(
         (txn: Transaction) => {
-          const txnDate = parseLocalDate(txn.date);
+          const txnTime = txnTimes.get(txn)!;
           return (
-            txnDate >= startDate &&
-            txnDate <= targetDate &&
+            txnTime >= startDate.getTime() &&
+            txnTime <= targetDate.getTime() &&
             !isTransfer(txn) &&
             txn.amount > 0
           );
@@ -427,10 +435,10 @@ export const Dashboard: React.FC = () => {
 
       const periodTransactions = filteredTransactions.filter(
         (txn: Transaction) => {
-          const txnDate = parseLocalDate(txn.date);
+          const txnTime = txnTimes.get(txn)!;
           return (
-            txnDate >= startDate &&
-            txnDate <= targetDate &&
+            txnTime >= startDate.getTime() &&
+            txnTime <= targetDate.getTime() &&
             !isTransfer(txn) &&
             txn.amount < 0
           );
@@ -457,8 +465,10 @@ export const Dashboard: React.FC = () => {
 
       const periodTransactions = filteredTransactions.filter(
         (txn: Transaction) => {
-          const txnDate = parseLocalDate(txn.date);
-          return txnDate >= startDate && txnDate <= targetDate;
+          const txnTime = txnTimes.get(txn)!;
+          return (
+            txnTime >= startDate.getTime() && txnTime <= targetDate.getTime()
+          );
         }
       );
 

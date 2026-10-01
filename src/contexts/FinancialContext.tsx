@@ -1,4 +1,5 @@
 import React, {
+  useRef,
   createContext,
   useContext,
   useReducer,
@@ -38,8 +39,13 @@ import {
   TransactionEdit,
   editTransaction as editTransactionIn,
 } from '../utils/editTransaction';
+import {
+  AccountStore,
+  defaultAccountStore,
+  loadAccounts,
+  loadLegacyAccounts,
+} from '../utils/accountStore';
 
-const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
 const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
 const CATEGORY_RULES_STORAGE_KEY = 'financeapp.categoryRules';
@@ -76,20 +82,9 @@ const loadShowDemoAccounts = (): boolean => {
   }
 };
 
-const loadImportedAccounts = (): Account[] => {
-  try {
-    const stored = window.localStorage.getItem(IMPORTED_ACCOUNTS_STORAGE_KEY);
-    const parsed = stored ? JSON.parse(stored) : [];
-    return Array.isArray(parsed)
-      ? parsed.filter(
-          (account) =>
-            typeof account?.id === 'string' && isImportedAccount(account)
-        )
-      : [];
-  } catch {
-    return [];
-  }
-};
+// Read straight away so a browser without IndexedDB starts with its data;
+// with IndexedDB, the provider replaces these once it has loaded.
+const loadImportedAccounts = (): Account[] => loadLegacyAccounts() ?? [];
 
 const initialState: FinancialState = {
   accounts: MOCK_ACCOUNTS,
@@ -337,6 +332,8 @@ interface FinancialContextType {
   // True once the user has imported an account of their own.
   hasImportedAccounts: boolean;
   hasBusinessAccounts: boolean;
+  // Why your accounts aren't being saved, when they aren't.
+  storageError: string | null;
   // Whether the demo accounts are shown next to imported ones. They are
   // always shown until something is imported.
   showDemoAccounts: boolean;
@@ -348,9 +345,11 @@ interface FinancialContextType {
 
 const FinancialContext = createContext<FinancialContextType | null>(null);
 
-export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const FinancialProvider: React.FC<{
+  children: React.ReactNode;
+  // Where imported accounts are kept; IndexedDB when the browser has it.
+  accountStore?: AccountStore;
+}> = ({ children, accountStore }) => {
   const [fullState, dispatch] = useReducer(
     financialReducer,
     initialState,
@@ -388,18 +387,64 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
   >('personal');
 
   // Imported accounts are the only user data that must survive a reload;
-  // mock accounts are regenerated on every load.
+  // mock accounts are regenerated on every load. Nothing is saved until the
+  // stored accounts have loaded, so a slow load can't be overwritten.
+  const [store] = useState(() => accountStore ?? defaultAccountStore());
+  const [isLoaded, setIsLoaded] = useState(store.kind === 'localStorage');
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const canSave = useRef(true);
+
   useEffect(() => {
-    try {
-      window.localStorage.setItem(
-        IMPORTED_ACCOUNTS_STORAGE_KEY,
-        JSON.stringify(fullState.accounts.filter(isImportedAccount))
-      );
-    } catch {
-      // Storage can be unavailable (private mode, quota); imports still
-      // work for the current session.
+    if (store.kind === 'localStorage') return;
+    let cancelled = false;
+    loadAccounts(store)
+      .then((accounts) => {
+        if (cancelled) return;
+        dispatch({ type: 'RESTORE_IMPORTED_ACCOUNTS', payload: accounts });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Saving now could overwrite the data that didn't load.
+        canSave.current = false;
+        setStorageError(
+          "Your saved accounts couldn't be loaded, so changes won't be saved. Reload the page to try again."
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [store]);
+
+  // Saves run one at a time; only the newest waiting save is kept.
+  const nextSave = useRef<Account[] | null>(null);
+  const isSaving = useRef(false);
+  const runSaves = async () => {
+    isSaving.current = true;
+    while (nextSave.current) {
+      const accounts = nextSave.current;
+      nextSave.current = null;
+      try {
+        await store.save(accounts);
+        setStorageError(null);
+      } catch {
+        setStorageError(
+          "Your latest changes couldn't be saved in this browser. Download a backup or turn on auto-save to a file so you don't lose them."
+        );
+      }
     }
-  }, [fullState.accounts]);
+    isSaving.current = false;
+  };
+
+  useEffect(() => {
+    if (!isLoaded || !canSave.current) return;
+    nextSave.current = fullState.accounts.filter(isImportedAccount);
+    if (!isSaving.current) runSaves();
+    // runSaves only reads refs and the store.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullState.accounts, isLoaded]);
 
   const [budgets, setBudgetsState] = useState<Budgets>(loadBudgets);
 
@@ -765,6 +810,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     accountFilter: hasBusinessAccounts ? accountFilter : 'personal',
     setAccountFilter,
     hasImportedAccounts,
+    storageError,
     hasBusinessAccounts,
     showDemoAccounts,
     setShowDemoAccounts,
@@ -774,7 +820,16 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <FinancialContext.Provider value={value}>
-      {children}
+      {isLoaded ? (
+        children
+      ) : (
+        <div
+          className="min-h-screen flex items-center justify-center bg-gray-50 text-sm text-gray-500"
+          role="status"
+        >
+          Loading your data…
+        </div>
+      )}
     </FinancialContext.Provider>
   );
 };
