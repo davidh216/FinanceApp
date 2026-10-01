@@ -21,7 +21,8 @@ export const DashboardHeader: React.FC = () => {
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        {/* On phones the Personal / Business switch wraps onto its own row. */}
+        <div className="flex flex-wrap items-center justify-between gap-y-2 py-3 sm:flex-nowrap sm:py-0 sm:h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
@@ -59,42 +60,44 @@ export const DashboardHeader: React.FC = () => {
 
           {/* Account Type Filter - Centered */}
           {hasBusinessAccounts && (
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setAccountFilter('personal')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  accountFilter === 'personal'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Personal
-              </button>
-              <button
-                onClick={() => setAccountFilter('business')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  accountFilter === 'business'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Business
-              </button>
-              <button
-                onClick={() => setAccountFilter('both')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  accountFilter === 'both'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Both
-              </button>
+            <div className="order-last w-full flex justify-center sm:order-none sm:w-auto">
+              <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setAccountFilter('personal')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    accountFilter === 'personal'
+                      ? 'bg-white shadow-sm text-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Personal
+                </button>
+                <button
+                  onClick={() => setAccountFilter('business')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    accountFilter === 'business'
+                      ? 'bg-white shadow-sm text-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Business
+                </button>
+                <button
+                  onClick={() => setAccountFilter('both')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    accountFilter === 'both'
+                      ? 'bg-white shadow-sm text-blue-600'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Both
+                </button>
+              </div>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1 sm:space-x-4">
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}
