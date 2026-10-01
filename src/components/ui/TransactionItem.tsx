@@ -3,7 +3,7 @@ import { Transaction } from '../../types/financial';
 import { TAG_CATEGORIES } from '../../constants/financial';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { formatMoney } from '../../utils/format';
-import { isTransfer } from '../../utils/cashflow';
+import { isAdjustment, isCashflow, isTransfer } from '../../utils/cashflow';
 import { isImportedAccount } from '../../utils/csvImport';
 import { EXTERNAL_ACCOUNT_ID } from '../../utils/transfers';
 import { isSameMerchant, merchantKey } from '../../utils/categoryRules';
@@ -68,7 +68,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     ? state.transactions.filter(
         (txn) =>
           txn.id !== transaction.id &&
-          !isTransfer(txn) &&
+          isCashflow(txn) &&
           isSameMerchant(txn, transaction)
       ).length
     : 0;
@@ -93,7 +93,15 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   const categoryMenuItem =
     'w-full flex items-center px-2 py-1.5 text-xs rounded hover:bg-gray-50 text-left text-gray-700';
 
-  const categoryControl = !showCategory ? null : isTransfer(transaction) ? (
+  const categoryControl = !showCategory ? null : isAdjustment(transaction) ? (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium border border-gray-200 text-gray-600"
+      data-testid="category-button"
+      title="A balance you entered. It isn't income or spending."
+    >
+      ⚖️ Balance update
+    </span>
+  ) : isTransfer(transaction) ? (
     <div className="relative">
       <button
         onClick={() => setShowCategoryMenu(!showCategoryMenu)}
@@ -273,12 +281,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                 Pending
               </span>
             )}
-            {transaction.manual && (
+            {transaction.manual && !isAdjustment(transaction) && (
               <span className="ml-2 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">
                 Manual
               </span>
             )}
-            {showCategory && canFixTransfers && (
+            {showCategory && canFixTransfers && !isAdjustment(transaction) && (
               <button
                 onClick={() => setIsEditing(true)}
                 className="ml-2 text-xs text-blue-600 hover:text-blue-700"
@@ -378,7 +386,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
                 {/* Auto-suggest tag if untagged */}
                 {transaction.tags.length === 0 &&
-                  !isTransfer(transaction) &&
+                  isCashflow(transaction) &&
                   transaction.cleanMerchant.suggestedCategory !== 'Other' && (
                     <button
                       onClick={() =>

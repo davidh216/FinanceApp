@@ -1,7 +1,7 @@
 // src/utils/categoryRules.ts
 import { MerchantInfo, Transaction } from '../types/financial';
 import { TAG_CATEGORIES } from '../constants/financial';
-import { isTransfer } from './cashflow';
+import { isCashflow } from './cashflow';
 
 // The category you chose for a merchant, keyed by merchantKey.
 export type CategoryRules = Record<string, string>;
@@ -21,7 +21,7 @@ export const applyCategoryRule = (
   rules: CategoryRules
 ): Transaction => {
   const category = rules[merchantKey(txn.cleanMerchant)];
-  if (!category || isTransfer(txn) || category === txn.category) return txn;
+  if (!category || !isCashflow(txn) || category === txn.category) return txn;
   return {
     ...txn,
     category,

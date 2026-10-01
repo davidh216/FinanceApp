@@ -1,6 +1,6 @@
 // src/utils/recurring.ts
 import { Transaction } from '../types/financial';
-import { isTransfer } from './cashflow';
+import { isCashflow } from './cashflow';
 import { merchantKey } from './categoryRules';
 import { parseLocalDate, toLocalDateString } from './date';
 
@@ -89,7 +89,7 @@ export const findRecurringPayments = (
 ): RecurringPayment[] => {
   const groups = new Map<string, Transaction[]>();
   for (const txn of transactions) {
-    if (txn.amount >= 0 || isTransfer(txn) || txn.pending) continue;
+    if (txn.amount >= 0 || !isCashflow(txn) || txn.pending) continue;
     const key = merchantKey(txn.cleanMerchant);
     groups.set(key, [...(groups.get(key) || []), txn]);
   }

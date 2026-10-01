@@ -1,6 +1,6 @@
 // src/utils/transactionFilters.ts
 import { Transaction } from '../types/financial';
-import { isTransfer } from './cashflow';
+import { isCashflow, isTransfer } from './cashflow';
 
 export interface TransactionFilters {
   // Matches the merchant, description, category, a tag or the note.
@@ -36,7 +36,7 @@ export const filterTransactions = (
       const matches =
         filters.category === 'Transfer'
           ? isTransfer(txn)
-          : !isTransfer(txn) && txn.category === filters.category;
+          : isCashflow(txn) && txn.category === filters.category;
       if (!matches) return false;
     }
     // Dates compare as strings, so there's no timezone conversion.

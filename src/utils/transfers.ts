@@ -1,6 +1,6 @@
 // src/utils/transfers.ts
 import { Account, Transaction } from '../types/financial';
-import { isTransfer } from './cashflow';
+import { isCashflow, isTransfer } from './cashflow';
 import { categorizeMerchant, isImportedAccount } from './csvImport';
 
 // The other side of a transfer to or from an account that isn't in the app,
@@ -47,14 +47,14 @@ export const findTransferMatches = (
     .filter((account) => account.id !== accountId)
     .flatMap((account) =>
       (account.transactions || [])
-        .filter((txn) => !isTransfer(txn) && !txn.notTransfer)
+        .filter((txn) => isCashflow(txn) && !txn.notTransfer)
         .map((txn) => ({ account, txn }))
     );
   const used = new Set<string>();
   const matches: TransferMatch[] = [];
 
   for (const txn of incoming) {
-    if (isTransfer(txn) || txn.notTransfer || txn.amount === 0) continue;
+    if (!isCashflow(txn) || txn.notTransfer || txn.amount === 0) continue;
     let best: { account: Account; txn: Transaction; gap: number } | null = null;
     for (const candidate of candidates) {
       const key = `${candidate.account.id}:${candidate.txn.id}`;
@@ -141,7 +141,7 @@ const findCounterpart = (
     const gap = Math.abs(dayNumber(candidate.date) - dayNumber(txn.date));
     const pairs = linked
       ? candidate.transferAccountId === accountId
-      : !isTransfer(candidate) && gap <= TRANSFER_MATCH_DAYS;
+      : isCashflow(candidate) && gap <= TRANSFER_MATCH_DAYS;
     if (!pairs || cents(candidate.amount) !== -cents(txn.amount)) continue;
     if (!best || gap < best.gap) best = { txn: candidate, gap };
   }

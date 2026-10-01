@@ -189,6 +189,24 @@ describe('backups', () => {
   });
 });
 
+describe('accounts entered by hand', () => {
+  it('keep being manual, with their balance updates, through a backup', () => {
+    const home = account({
+      id: 'acc_import_manual_home',
+      manual: true,
+      transactions: [txn({ id: 'adj', adjustment: true, manual: true })],
+    });
+    const [restored] = parseBackup(
+      JSON.stringify(createBackup([home], false))
+    ).accounts;
+    expect(restored.manual).toBe(true);
+    expect(restored.transactions![0]).toMatchObject({
+      adjustment: true,
+      manual: true,
+    });
+  });
+});
+
 describe('transactionsToCsv', () => {
   it('writes one row per transaction, oldest first', () => {
     expect(transactionsToCsv([checking]).split('\n')).toEqual([

@@ -6,16 +6,25 @@ import { Transaction } from '../types/financial';
 export const isTransfer = (txn: Transaction): boolean =>
   txn.transferAccountId !== undefined;
 
+// A balance update you entered, recorded as the change it made.
+export const isAdjustment = (txn: Transaction): boolean =>
+  txn.adjustment === true;
+
+// Counts as income or spending: not money moving between your accounts,
+// and not a balance correction.
+export const isCashflow = (txn: Transaction): boolean =>
+  !isTransfer(txn) && !isAdjustment(txn);
+
 export const incomeOf = (transactions: Transaction[]): number =>
   transactions
-    .filter((txn) => !isTransfer(txn) && txn.amount > 0)
+    .filter((txn) => isCashflow(txn) && txn.amount > 0)
     .reduce((sum, txn) => sum + txn.amount, 0);
 
 // Returned as a positive number.
 export const spendingOf = (transactions: Transaction[]): number =>
   Math.abs(
     transactions
-      .filter((txn) => !isTransfer(txn) && txn.amount < 0)
+      .filter((txn) => isCashflow(txn) && txn.amount < 0)
       .reduce((sum, txn) => sum + txn.amount, 0)
   );
 

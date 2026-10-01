@@ -9,6 +9,7 @@ import { AccountDetail } from '../accounts/AccountDetail';
 import { DEFAULT_PERIODS } from '../../constants/financial';
 import { Button } from '../ui/Button';
 import { CsvImportModal } from '../import/CsvImportModal';
+import { AddAccountModal } from '../accounts/AddAccountModal';
 import { DataExportModal } from '../import/DataExportModal';
 import { BudgetModal } from '../budgets/BudgetModal';
 import { BudgetsCard } from '../budgets/BudgetsCard';
@@ -42,7 +43,7 @@ import {
   toLocalDateString,
 } from '../../utils/date';
 import { totalBalanceAsOf } from '../../utils/balances';
-import { incomeOf, isTransfer, spendingOf } from '../../utils/cashflow';
+import { incomeOf, isCashflow, spendingOf } from '../../utils/cashflow';
 
 export const Dashboard: React.FC = () => {
   const {
@@ -56,6 +57,7 @@ export const Dashboard: React.FC = () => {
   } = useFinancial();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -410,7 +412,7 @@ export const Dashboard: React.FC = () => {
           return (
             txnTime >= startDate.getTime() &&
             txnTime <= targetDate.getTime() &&
-            !isTransfer(txn) &&
+            isCashflow(txn) &&
             txn.amount > 0
           );
         }
@@ -438,7 +440,7 @@ export const Dashboard: React.FC = () => {
           return (
             txnTime >= startDate.getTime() &&
             txnTime <= targetDate.getTime() &&
-            !isTransfer(txn) &&
+            isCashflow(txn) &&
             txn.amount < 0
           );
         }
@@ -489,10 +491,17 @@ export const Dashboard: React.FC = () => {
   }, [filteredAccounts, state.selectedPeriod]);
 
   const importModal = (
-    <CsvImportModal
-      isOpen={isImportOpen}
-      onClose={() => setIsImportOpen(false)}
-    />
+    <>
+      <CsvImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+      />
+      <AddAccountModal
+        isOpen={isAddAccountOpen}
+        onClose={() => setIsAddAccountOpen(false)}
+        onImportCsv={() => setIsImportOpen(true)}
+      />
+    </>
   );
 
   // Add routing logic for account-detail screen
@@ -526,6 +535,12 @@ export const Dashboard: React.FC = () => {
                 onClick={() => setIsImportOpen(true)}
               >
                 Import your first account
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddAccountOpen(true)}
+              >
+                Enter one by hand
               </Button>
             </div>
           </div>
@@ -672,7 +687,7 @@ export const Dashboard: React.FC = () => {
                 }}
                 accountFilter={accountFilter}
                 comparisonDate={filteredSummary.previousPeriodEndDate}
-                onAddAccount={() => setIsImportOpen(true)}
+                onAddAccount={() => setIsAddAccountOpen(true)}
               />
             </div>
           </div>

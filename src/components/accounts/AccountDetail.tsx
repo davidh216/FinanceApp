@@ -11,9 +11,11 @@ import {
   Plus,
   TrendingUp,
   TrendingDown,
+  Scale,
   Trash2,
   Upload,
 } from 'lucide-react';
+import { UpdateBalanceModal } from './UpdateBalanceModal';
 import { parseLocalDate } from '../../utils/date';
 import { AddTransactionModal } from '../transactions/AddTransactionModal';
 import { formatMoney, formatSignedMoney } from '../../utils/format';
@@ -43,6 +45,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isBalanceOpen, setIsBalanceOpen] = useState(false);
 
   // Look the account up in state.accounts rather than using
   // state.selectedAccount directly: that is a snapshot from when the account
@@ -242,18 +245,20 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
+          {/* Phones: name above balance. Wider screens: side by side. */}
+          <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center min-w-0 text-left">
               <button
                 onClick={() => changeScreen('dashboard')}
-                className="mr-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                className="mr-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+                aria-label="Back to dashboard"
                 data-testid="back-button"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <div>
+              <div className="min-w-0">
                 <h1
-                  className="text-2xl font-bold text-gray-900"
+                  className="text-2xl font-bold text-gray-900 break-words"
                   data-testid="account-name"
                 >
                   {account.name}
@@ -264,7 +269,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
               </div>
             </div>
 
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <div
                 className={`text-3xl font-bold ${
                   account.balance < 0 ? 'text-red-600' : 'text-green-600'
@@ -290,6 +295,19 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                   variant="ghost"
                   size="sm"
                   className="mt-2"
+                  leftIcon={<Scale className="w-4 h-4" />}
+                  onClick={() => setIsBalanceOpen(true)}
+                  data-testid="update-balance-button"
+                >
+                  Update balance
+                </Button>
+              )}
+              {/* Accounts entered by hand have no statements to import. */}
+              {isImportedAccount(account) && !account.manual && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
                   leftIcon={<Upload className="w-4 h-4" />}
                   onClick={() => setIsImportOpen(true)}
                   data-testid="import-more-button"
@@ -306,7 +324,9 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                   onClick={() => {
                     if (
                       window.confirm(
-                        `Remove ${account.name} and its imported transactions?`
+                        account.manual
+                          ? `Remove ${account.name}?`
+                          : `Remove ${account.name} and its imported transactions?`
                       )
                     ) {
                       removeAccount(account.id);
@@ -541,6 +561,12 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
         onClose={() => setIsAddOpen(false)}
         defaultAccountId={account.id}
       />
+      {isBalanceOpen && (
+        <UpdateBalanceModal
+          account={account}
+          onClose={() => setIsBalanceOpen(false)}
+        />
+      )}
       <CsvImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}

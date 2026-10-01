@@ -53,11 +53,15 @@ describe('Dashboard actions', () => {
     ).toBeInTheDocument();
   });
 
-  it('Add Account opens the CSV import, which is how accounts are added', async () => {
+  it('Add Account offers a CSV import or entering one by hand', async () => {
     const user = userEvent.setup();
     renderDashboard();
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /Add Account/ }));
+    });
+    expect(screen.getByRole('dialog')).toHaveTextContent('Add an account');
+    await act(async () => {
+      await user.click(screen.getByTestId('add-account-csv'));
     });
     expect(screen.getByRole('dialog')).toHaveTextContent(
       'Import transactions from CSV'

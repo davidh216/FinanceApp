@@ -35,6 +35,9 @@ export interface Account {
   importSettings?: {
     flipSigns: boolean;
   };
+  // Entered by hand rather than imported (a house, a car, cash); its
+  // balance changes through balance updates.
+  manual?: boolean;
 }
 
 export type AccountType =
@@ -66,6 +69,9 @@ export interface Transaction {
   notTransfer?: boolean;
   // Entered by hand rather than imported; these can be deleted.
   manual?: boolean;
+  // Records a balance update: the difference between the balance you
+  // entered and the one before. Neither income nor spending.
+  adjustment?: boolean;
   notes?: string;
   receiptUrl?: string;
   createdAt: string;
