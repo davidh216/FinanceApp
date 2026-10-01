@@ -22,7 +22,7 @@ import { monthOf, spendingByCategory } from '../../utils/budgets';
 import {
   Building,
   Plus,
-  Calculator,
+  List,
   Target,
   PieChart,
   Upload,
@@ -44,6 +44,7 @@ export const Dashboard: React.FC = () => {
     accountFilter,
     changePeriod,
     setCustomDateRange,
+    changeScreen,
   } = useFinancial();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -498,20 +499,16 @@ export const Dashboard: React.FC = () => {
               Welcome to FinanceApp
             </h2>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Connect your bank accounts to get started with smart financial
-              management. We'll help you track spending, categorize
+              Import a CSV export from your bank to get started with smart
+              financial management. We'll help you track spending, categorize
               transactions, and gain insights into your financial health.
             </p>
             <div className="flex justify-center gap-3">
-              <Button onClick={() => alert('Bank connection coming soon!')}>
-                Connect Your First Account
-              </Button>
               <Button
-                variant="outline"
                 leftIcon={<Upload className="w-4 h-4" />}
                 onClick={() => setIsImportOpen(true)}
               >
-                Import from CSV
+                Import your first account
               </Button>
             </div>
           </div>
@@ -662,6 +659,7 @@ export const Dashboard: React.FC = () => {
                 }}
                 accountFilter={accountFilter}
                 comparisonDate={filteredSummary.previousPeriodEndDate}
+                onAddAccount={() => setIsImportOpen(true)}
               />
             </div>
           </div>
@@ -676,41 +674,43 @@ export const Dashboard: React.FC = () => {
                     icon: Plus,
                     label: 'Add Transaction',
                     color: 'bg-blue-500',
+                    onClick: () => setIsAddOpen(true),
                   },
-                  { icon: Upload, label: 'Import CSV', color: 'bg-green-500' },
-                  { icon: Target, label: 'Set Budget', color: 'bg-purple-500' },
                   {
-                    icon: Calculator,
-                    label: 'Calculator',
+                    icon: Upload,
+                    label: 'Import CSV',
+                    color: 'bg-green-500',
+                    onClick: () => setIsImportOpen(true),
+                  },
+                  {
+                    icon: Target,
+                    label: 'Set Budget',
+                    color: 'bg-purple-500',
+                    onClick: () => setIsBudgetOpen(true),
+                  },
+                  {
+                    icon: List,
+                    label: 'All Transactions',
                     color: 'bg-orange-500',
+                    onClick: () => changeScreen('transactions'),
                   },
                   {
                     icon: PieChart,
                     label: 'Generate Report',
                     color: 'bg-pink-500',
+                    onClick: () => setIsReportOpen(true),
                   },
                   {
                     icon: Download,
                     label: 'Export Data',
                     color: 'bg-gray-500',
+                    onClick: () => setIsExportOpen(true),
                   },
                 ].map((action, index) => (
                   <button
                     key={index}
                     className="group p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all text-left"
-                    onClick={() =>
-                      action.label === 'Import CSV'
-                        ? setIsImportOpen(true)
-                        : action.label === 'Add Transaction'
-                        ? setIsAddOpen(true)
-                        : action.label === 'Export Data'
-                        ? setIsExportOpen(true)
-                        : action.label === 'Set Budget'
-                        ? setIsBudgetOpen(true)
-                        : action.label === 'Generate Report'
-                        ? setIsReportOpen(true)
-                        : alert(`${action.label} coming soon!`)
-                    }
+                    onClick={action.onClick}
                   >
                     <div
                       className={`w-10 h-10 rounded-lg ${action.color} flex items-center justify-center mb-3 group-hover:scale-105 transition-transform`}

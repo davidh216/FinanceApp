@@ -13,6 +13,8 @@ interface AccountOverviewProps {
   accountFilter?: 'both' | 'personal' | 'business';
   // End of the previous period ("YYYY-MM-DD"), for the change lines.
   comparisonDate?: string;
+  // Accounts are added by importing a CSV.
+  onAddAccount?: () => void;
 }
 
 export const AccountOverview: React.FC<AccountOverviewProps> = ({
@@ -20,6 +22,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   onAccountSelect,
   accountFilter = 'both',
   comparisonDate,
+  onAddAccount,
 }) => {
   const { isPrivacyMode } = useFinancial();
   const [expandedSections, setExpandedSections] = useState<
@@ -121,7 +124,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
             leftIcon={<Plus className="w-4 h-4" />}
             size="sm"
             variant="outline"
-            onClick={() => alert('Add account coming soon!')}
+            onClick={onAddAccount}
           >
             Add Account
           </Button>
@@ -313,22 +316,6 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
               )}
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Footer Actions */}
-      <div className="p-4 bg-gray-50 border-t mt-auto">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center text-gray-500">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-            Last updated: just now
-          </div>
-          <button
-            className="text-blue-600 hover:text-blue-800 font-medium"
-            onClick={() => alert('Refresh coming soon!')}
-          >
-            Refresh All
-          </button>
         </div>
       </div>
     </div>
