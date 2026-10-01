@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { Eye, EyeOff } from 'lucide-react';
+import { FileSyncIndicator } from './FileSyncIndicator';
+import { DataExportModal } from '../import/DataExportModal';
 
 export const DashboardHeader: React.FC = () => {
   const {
@@ -13,6 +15,8 @@ export const DashboardHeader: React.FC = () => {
     showDemoAccounts,
     setShowDemoAccounts,
   } = useFinancial();
+  // Opened from the auto-save status when it needs attention.
+  const [isDataOpen, setIsDataOpen] = useState(false);
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-40">
@@ -94,6 +98,8 @@ export const DashboardHeader: React.FC = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
+            <FileSyncIndicator onOpenSettings={() => setIsDataOpen(true)} />
+
             {/* Privacy Toggle */}
             <button
               onClick={togglePrivacyMode}
@@ -114,6 +120,10 @@ export const DashboardHeader: React.FC = () => {
           </div>
         </div>
       </div>
+      <DataExportModal
+        isOpen={isDataOpen}
+        onClose={() => setIsDataOpen(false)}
+      />
     </header>
   );
 };

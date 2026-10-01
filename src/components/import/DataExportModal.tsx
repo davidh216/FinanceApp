@@ -12,6 +12,7 @@ import {
 } from '../../utils/backup';
 import { toLocalDateString } from '../../utils/date';
 import { downloadFile, readFileAsText } from '../../utils/files';
+import { FileSyncPanel } from './FileSyncPanel';
 
 interface DataExportModalProps {
   isOpen: boolean;
@@ -134,12 +135,13 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
         </div>
 
         <div className="p-6 space-y-6">
+          <FileSyncPanel />
+
           <section>
             <h4 className="text-sm font-semibold text-gray-900 mb-1">Backup</h4>
             <p className="text-sm text-gray-600 mb-3">
-              Your imported accounts are stored only in this browser. Clearing
-              site data or switching browser loses them, so keep a backup file
-              somewhere safe.
+              A copy of your imported accounts and settings to keep somewhere
+              safe, or to restore in another browser.
             </p>
             <Button
               leftIcon={<Download className="w-4 h-4" />}
