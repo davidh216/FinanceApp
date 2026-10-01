@@ -16,6 +16,8 @@ import { RecurringCard } from '../recurring/RecurringCard';
 import { findRecurringPayments } from '../../utils/recurring';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
 import { CashflowChart } from './CashflowChart';
+import { NetWorthChart } from './NetWorthChart';
+import { netWorthHistory } from '../../utils/netWorthHistory';
 import {
   monthBounds,
   monthlyCashflow,
@@ -113,6 +115,10 @@ export const Dashboard: React.FC = () => {
   const cashflowMonths = useMemo(
     () => monthlyCashflow(filteredTransactions, budgetMonth.key),
     [filteredTransactions, budgetMonth]
+  );
+  const netWorthMonths = useMemo(
+    () => netWorthHistory(filteredAccounts, toLocalDateString(new Date())),
+    [filteredAccounts]
   );
 
   // Calculate filtered total balance
@@ -668,6 +674,18 @@ export const Dashboard: React.FC = () => {
             onSelectMonth={setReportMonth}
           />
         </div>
+
+        {filteredAccounts.length > 0 && (
+          <div className="mb-8">
+            <NetWorthChart
+              months={netWorthMonths}
+              onOpenAccount={(id) => {
+                const account = filteredAccounts.find((acc) => acc.id === id);
+                if (account) viewAccountDetail(account);
+              }}
+            />
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
