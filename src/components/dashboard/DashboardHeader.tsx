@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Bell, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
   const {
@@ -13,10 +13,6 @@ export const DashboardHeader: React.FC = () => {
     showDemoAccounts,
     setShowDemoAccounts,
   } = useFinancial();
-  const handleRefresh = () => {
-    // For now, just show an alert. In a real app, this would refresh the data
-    alert('Refreshing data...');
-  };
 
   return (
     <header className="bg-white shadow-sm border-b sticky top-0 z-40">
@@ -98,15 +94,6 @@ export const DashboardHeader: React.FC = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
-            {/* Refresh Button */}
-            <button
-              onClick={handleRefresh}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-              title="Refresh data"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
-
             {/* Privacy Toggle */}
             <button
               onClick={togglePrivacyMode}
@@ -118,12 +105,6 @@ export const DashboardHeader: React.FC = () => {
               ) : (
                 <Eye className="w-5 h-5" />
               )}
-            </button>
-
-            {/* Notifications */}
-            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
 
             {/* User Avatar */}
