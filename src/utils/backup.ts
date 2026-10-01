@@ -208,6 +208,7 @@ export const TRANSACTIONS_CSV_HEADER = [
   'Amount',
   'Transfer account',
   'Tags',
+  'Notes',
 ];
 
 // One row per transaction, oldest first. Amounts are the effect on the
@@ -239,6 +240,7 @@ export const transactionsToCsv = (accounts: Account[]): string => {
             : ''
         ),
         csvCell(txn.tags.join('; ')),
+        csvCell(txn.notes ?? ''),
       ].join(',')
     );
   return [TRANSACTIONS_CSV_HEADER.join(','), ...rows].join('\n') + '\n';

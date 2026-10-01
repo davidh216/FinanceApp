@@ -34,6 +34,7 @@ const TXNS = [
     description: 'STARBUCKS STORE 1234',
     category: 'Food & Dining',
     date: '2025-06-01',
+    notes: 'Meeting with Sam',
   }),
   txn('groceries', {
     merchant: 'Whole Foods',
@@ -60,11 +61,12 @@ describe('filterTransactions', () => {
     expect(hasFilters(NO_FILTERS)).toBe(false);
   });
 
-  it('searches merchant, description, category and tags, ignoring case', () => {
+  it('searches merchant, description, category, tags and notes, ignoring case', () => {
     expect(ids({ search: 'starbucks' })).toEqual(['coffee']);
     expect(ids({ search: 'store 1234' })).toEqual(['coffee']);
     expect(ids({ search: 'GROCERIES' })).toEqual(['groceries']);
     expect(ids({ search: 'weekly' })).toEqual(['groceries']);
+    expect(ids({ search: 'with sam' })).toEqual(['coffee']);
     expect(ids({ search: '  ' })).toHaveLength(3);
   });
 

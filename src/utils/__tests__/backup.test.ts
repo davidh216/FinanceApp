@@ -192,9 +192,9 @@ describe('backups', () => {
 describe('transactionsToCsv', () => {
   it('writes one row per transaction, oldest first', () => {
     expect(transactionsToCsv([checking]).split('\n')).toEqual([
-      'Date,Account,Description,Merchant,Category,Amount,Transfer account,Tags',
-      '2025-06-02,My Checking,PAYROLL DEPOSIT,Salary,Income,2500.00,,',
-      '2025-06-03,My Checking,STARBUCKS STORE 1234,Starbucks,Food & Dining,-5.75,,Coffee',
+      'Date,Account,Description,Merchant,Category,Amount,Transfer account,Tags,Notes',
+      '2025-06-02,My Checking,PAYROLL DEPOSIT,Salary,Income,2500.00,,,',
+      '2025-06-03,My Checking,STARBUCKS STORE 1234,Starbucks,Food & Dining,-5.75,,Coffee,',
       '',
     ]);
   });
@@ -250,7 +250,15 @@ describe('transactionsToCsv', () => {
     });
     const [, row] = transactionsToCsv([tricky]).split('\n');
     expect(row).toBe(
-      '2025-06-03,"Joint, ""Main""","\'=HYPERLINK(""http://x"")",\'+Shop,Food & Dining,-5.75,,a; b'
+      '2025-06-03,"Joint, ""Main""","\'=HYPERLINK(""http://x"")",\'+Shop,Food & Dining,-5.75,,a; b,'
     );
+  });
+
+  it('includes your notes', () => {
+    const noted = account({
+      transactions: [txn({ notes: 'Lunch with Sam, split 50/50' })],
+    });
+    const [, row] = transactionsToCsv([noted]).split('\n');
+    expect(row).toMatch(/-5\.75,,,"Lunch with Sam, split 50\/50"$/);
   });
 });
