@@ -34,6 +34,10 @@ import {
   addTransaction as addTransactionTo,
   removeTransaction as removeTransactionFrom,
 } from '../utils/manualTransactions';
+import {
+  TransactionEdit,
+  editTransaction as editTransactionIn,
+} from '../utils/editTransaction';
 
 const IMPORTED_ACCOUNTS_STORAGE_KEY = 'financeapp.importedAccounts';
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
@@ -309,6 +313,9 @@ interface FinancialContextType {
   addManualTransaction: (transaction: Transaction) => void;
   // Deletes a transaction, undoing any transfer it was part of first.
   deleteTransaction: (transactionId: string) => void;
+  // Renames a transaction or changes its note; for one added by hand, also
+  // its date, description and amount.
+  editTransaction: (transactionId: string, edit: TransactionEdit) => void;
   applyFilters: (filters: FilterOptions) => void;
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
@@ -666,6 +673,17 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
+  const editTransaction = (transactionId: string, edit: TransactionEdit) => {
+    const account = fullState.accounts.find((acc) =>
+      acc.transactions?.some((txn) => txn.id === transactionId)
+    );
+    if (!account || !isImportedAccount(account)) return;
+    dispatch({
+      type: 'REPLACE_ACCOUNT',
+      payload: editTransactionIn(account, transactionId, edit),
+    });
+  };
+
   const applyFilters = (filters: FilterOptions) => {
     dispatch({ type: 'APPLY_FILTERS', payload: filters });
   };
@@ -733,6 +751,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({
     markAsTransfer,
     addManualTransaction,
     deleteTransaction,
+    editTransaction,
     applyFilters,
     viewAccountDetail,
     importAccount,

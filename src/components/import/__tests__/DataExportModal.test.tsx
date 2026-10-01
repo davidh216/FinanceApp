@@ -179,9 +179,9 @@ describe('Export and backup', () => {
     expect(type).toBe('text/csv');
     // Demo accounts are hidden, so only your own transactions.
     expect(contents.trim().split('\n')).toEqual([
-      'Date,Account,Description,Merchant,Category,Amount,Transfer account,Tags',
-      '2025-06-02,My Checking,PAYROLL DEPOSIT,Salary,Income,2500.00,,',
-      '2025-06-03,My Checking,STARBUCKS STORE 1234,Starbucks,Food & Dining,-5.75,,',
+      'Date,Account,Description,Merchant,Category,Amount,Transfer account,Tags,Notes',
+      '2025-06-02,My Checking,PAYROLL DEPOSIT,Salary,Income,2500.00,,,',
+      '2025-06-03,My Checking,STARBUCKS STORE 1234,Starbucks,Food & Dining,-5.75,,,',
     ]);
   });
 });

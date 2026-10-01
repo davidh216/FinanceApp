@@ -67,6 +67,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         txn.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (txn.notes ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         txn.tags.some((tag) =>
           tag.toLowerCase().includes(searchTerm.toLowerCase())
         );

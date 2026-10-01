@@ -3,7 +3,7 @@ import { Transaction } from '../types/financial';
 import { isTransfer } from './cashflow';
 
 export interface TransactionFilters {
-  // Matches the merchant, description, category or a tag.
+  // Matches the merchant, description, category, a tag or the note.
   search: string;
   // '' for every account.
   accountId: string;
@@ -48,6 +48,7 @@ export const filterTransactions = (
         txn.description,
         txn.category,
         ...txn.tags,
+        txn.notes ?? '',
       ]
         .join(' ')
         .toLowerCase();

@@ -7,6 +7,7 @@ import { isTransfer } from '../../utils/cashflow';
 import { isImportedAccount } from '../../utils/csvImport';
 import { EXTERNAL_ACCOUNT_ID } from '../../utils/transfers';
 import { isSameMerchant, merchantKey } from '../../utils/categoryRules';
+import { EditTransactionModal } from '../transactions/EditTransactionModal';
 
 const CATEGORY_OPTIONS = Object.keys(TAG_CATEGORIES);
 
@@ -42,6 +43,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   } = useFinancial();
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const account = state.accounts.find(
     (acc) => acc.id === transaction.accountId
@@ -250,6 +252,15 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           <div className="text-xs text-gray-500 truncate">
             {transaction.cleanMerchant.original}
           </div>
+          {transaction.notes && (
+            <div
+              className="text-xs text-gray-600 italic truncate"
+              title={transaction.notes}
+              data-testid="transaction-note"
+            >
+              {transaction.notes}
+            </div>
+          )}
         </div>
 
         {/* Column 2: Date and Account */}
@@ -266,6 +277,15 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               <span className="ml-2 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">
                 Manual
               </span>
+            )}
+            {showCategory && canFixTransfers && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="ml-2 text-xs text-blue-600 hover:text-blue-700"
+                aria-label={`Edit ${transaction.cleanMerchant.cleanName}`}
+              >
+                Edit
+              </button>
             )}
             {transaction.manual && showCategory && canFixTransfers && (
               <button
@@ -401,6 +421,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           </div>
         </div>
       </div>
+      {isEditing && (
+        <EditTransactionModal
+          transaction={transaction}
+          onClose={() => setIsEditing(false)}
+        />
+      )}
     </div>
   );
 };
