@@ -15,6 +15,12 @@ import { BudgetsCard } from '../budgets/BudgetsCard';
 import { RecurringCard } from '../recurring/RecurringCard';
 import { findRecurringPayments } from '../../utils/recurring';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
+import { CashflowChart } from './CashflowChart';
+import {
+  monthBounds,
+  monthlyCashflow,
+  shiftMonth,
+} from '../../utils/cashflowHistory';
 import { DateRangePicker } from '../ui/DateRangePicker';
 import { AddTransactionModal } from '../transactions/AddTransactionModal';
 import { TransactionsPage } from '../transactions/TransactionsPage';
@@ -51,6 +57,9 @@ export const Dashboard: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  // A month picked on the cash flow chart; the report shows it, compared
+  // with the month before, instead of the selected period.
+  const [reportMonth, setReportMonth] = useState<string | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -99,6 +108,11 @@ export const Dashboard: React.FC = () => {
         toLocalDateString(new Date())
       ),
     [filteredTransactions]
+  );
+
+  const cashflowMonths = useMemo(
+    () => monthlyCashflow(filteredTransactions, budgetMonth.key),
+    [filteredTransactions, budgetMonth]
   );
 
   // Calculate filtered total balance
@@ -647,6 +661,14 @@ export const Dashboard: React.FC = () => {
           />
         </div>
 
+        <div className="mb-8">
+          <CashflowChart
+            months={cashflowMonths}
+            currentMonth={budgetMonth.key}
+            onSelectMonth={setReportMonth}
+          />
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Left Column - Account Overview */}
@@ -762,11 +784,18 @@ export const Dashboard: React.FC = () => {
         currentEndDate={state.customDateRange?.endDate}
       />
       <SpendingReportModal
-        isOpen={isReportOpen}
-        onClose={() => setIsReportOpen(false)}
+        isOpen={isReportOpen || reportMonth !== null}
+        onClose={() => {
+          setIsReportOpen(false);
+          setReportMonth(null);
+        }}
         transactions={filteredTransactions}
-        period={reportPeriod}
-        previous={reportPrevious}
+        period={reportMonth ? monthBounds(reportMonth) : reportPeriod}
+        previous={
+          reportMonth
+            ? monthBounds(shiftMonth(reportMonth, -1))
+            : reportPrevious
+        }
       />
     </div>
   );
