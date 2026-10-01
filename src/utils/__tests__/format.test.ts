@@ -1,4 +1,4 @@
-import { formatMoney, formatSignedMoney } from '../format';
+import { formatBalance, formatMoney, formatSignedMoney } from '../format';
 
 describe('formatMoney', () => {
   it.each([
@@ -9,6 +9,16 @@ describe('formatMoney', () => {
     [-15862.391, '$15,862.39'],
   ])('formats %p as %s', (value, expected) => {
     expect(formatMoney(value)).toBe(expected);
+  });
+});
+
+describe('formatBalance', () => {
+  it('shows a minus below zero but never a plus', () => {
+    expect(formatBalance(1234.5)).toBe('$1,234.50');
+    expect(formatBalance(-1234.5)).toBe('-$1,234.50');
+    expect(formatBalance(0)).toBe('$0.00');
+    // Rounds to zero: no "-$0.00".
+    expect(formatBalance(-0.001)).toBe('$0.00');
   });
 });
 

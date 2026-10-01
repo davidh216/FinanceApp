@@ -8,7 +8,11 @@ import {
   UpcomingEvent,
 } from '../../utils/forecast';
 import { formatDateRange } from '../../utils/date';
-import { formatMoney, formatSignedMoney } from '../../utils/format';
+import {
+  formatBalance,
+  formatMoney,
+  formatSignedMoney,
+} from '../../utils/format';
 
 interface UpcomingCardProps {
   events: UpcomingEvent[];
@@ -37,9 +41,8 @@ export const UpcomingCard: React.FC<UpcomingCardProps> = ({
     isPrivacyMode ? '••••' : formatMoney(amount);
   const signed = (amount: number) =>
     isPrivacyMode ? '••••' : formatSignedMoney(amount);
-  // A balance: no plus sign, but a minus when it's below zero.
   const balance = (amount: number) =>
-    amount < 0 ? signed(amount) : money(amount);
+    isPrivacyMode ? '••••' : formatBalance(amount);
   const accountName = (id: string) =>
     accounts.find((acc) => acc.id === id)?.name ?? '';
 

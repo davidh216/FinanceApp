@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { MonthWorth } from '../../utils/netWorthHistory';
-import { formatMoney, formatSignedMoney } from '../../utils/format';
+import { formatBalance, formatMoney } from '../../utils/format';
 
 interface NetWorthChartProps {
   months: MonthWorth[];
@@ -49,8 +49,9 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
 
   const money = (amount: number) =>
     isPrivacyMode ? '••••' : formatMoney(amount);
-  const signedMoney = (amount: number) =>
-    isPrivacyMode ? '••••' : formatSignedMoney(amount);
+  // Net worth can be below zero.
+  const balance = (amount: number) =>
+    isPrivacyMode ? '••••' : formatBalance(amount);
 
   const nets = months.map((m) => m.net);
   const top = niceCeil(Math.max(0, ...nets)) || 100;
@@ -77,7 +78,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
           className="text-2xl font-bold text-gray-900 tabular-nums"
           data-testid="net-worth-total"
         >
-          {money(current.net)}
+          {balance(current.net)}
         </span>
       </div>
       <p className="text-sm text-gray-600 mb-4" data-testid="net-worth-summary">
@@ -159,7 +160,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
               m.month === current.month
                 ? 'today'
                 : `at the end of ${monthName(m.month, 'long')}`
-            }: ${money(m.net)}`}
+            }: ${balance(m.net)}`}
             className={`flex-1 text-center text-[10px] sm:text-xs rounded ${
               m.month === selected
                 ? 'font-semibold text-gray-900'
@@ -185,7 +186,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
           <span className="text-sm text-gray-600">
             Own {money(shown.assets)} · Owe {money(shown.debts)} ·{' '}
             <span className="font-semibold text-gray-900 whitespace-nowrap">
-              Net {money(shown.net)}
+              Net {balance(shown.net)}
             </span>
           </span>
         </div>
@@ -208,9 +209,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
                   account.balance < 0 ? 'text-red-600' : 'text-gray-900'
                 }`}
               >
-                {account.balance < 0
-                  ? signedMoney(account.balance)
-                  : money(account.balance)}
+                {balance(account.balance)}
               </span>
             </li>
           ))}
