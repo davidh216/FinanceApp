@@ -12,10 +12,13 @@ import {
   TrendingUp,
   TrendingDown,
   Scale,
+  Settings,
   Trash2,
   Upload,
 } from 'lucide-react';
 import { UpdateBalanceModal } from './UpdateBalanceModal';
+import { AccountSettingsModal } from './AccountSettingsModal';
+import { isClosed } from '../../utils/accountSettings';
 import { parseLocalDate } from '../../utils/date';
 import { AddTransactionModal } from '../transactions/AddTransactionModal';
 import { formatMoney, formatSignedMoney } from '../../utils/format';
@@ -46,6 +49,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isBalanceOpen, setIsBalanceOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Look the account up in state.accounts rather than using
   // state.selectedAccount directly: that is a snapshot from when the account
@@ -265,6 +269,11 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 </h1>
                 <p className="text-gray-600" data-testid="account-info">
                   {account.bankName} • {account.accountNumber}
+                  {isClosed(account) && (
+                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">
+                      Closed
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -289,6 +298,18 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
                 >
                   Limit: {formatMoney(account.limit)}
                 </div>
+              )}
+              {isImportedAccount(account) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  leftIcon={<Settings className="w-4 h-4" />}
+                  onClick={() => setIsSettingsOpen(true)}
+                  data-testid="account-settings-button"
+                >
+                  Settings
+                </Button>
               )}
               {isImportedAccount(account) && (
                 <Button
@@ -561,6 +582,12 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
         onClose={() => setIsAddOpen(false)}
         defaultAccountId={account.id}
       />
+      {isSettingsOpen && (
+        <AccountSettingsModal
+          account={account}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
       {isBalanceOpen && (
         <UpdateBalanceModal
           account={account}
