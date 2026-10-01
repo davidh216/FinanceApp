@@ -9,6 +9,7 @@ import { IMPORTED_ACCOUNT_PREFIX, isImportedAccount } from './csvImport';
 import { EXTERNAL_ACCOUNT_ID } from './transfers';
 import { Budgets, cleanBudgets } from './budgets';
 import { CategoryRules, cleanCategoryRules } from './categoryRules';
+import { Goal, cleanGoals } from './goals';
 
 // Backups hold the imported accounts only: demo accounts are regenerated on
 // every load.
@@ -24,6 +25,7 @@ export interface Backup {
     showDemoAccounts: boolean;
     budgets: Budgets;
     categoryRules: CategoryRules;
+    goals: Goal[];
   };
 }
 
@@ -32,13 +34,14 @@ export const createBackup = (
   showDemoAccounts: boolean,
   budgets: Budgets = {},
   now: Date = new Date(),
-  categoryRules: CategoryRules = {}
+  categoryRules: CategoryRules = {},
+  goals: Goal[] = []
 ): Backup => ({
   app: BACKUP_APP,
   version: BACKUP_VERSION,
   exportedAt: now.toISOString(),
   accounts: accounts.filter(isImportedAccount),
-  settings: { showDemoAccounts, budgets, categoryRules },
+  settings: { showDemoAccounts, budgets, categoryRules, goals },
 });
 
 const ACCOUNT_TYPES: AccountType[] = [
@@ -188,6 +191,7 @@ export const parseBackup = (text: string): Backup => {
       showDemoAccounts: data.settings?.showDemoAccounts === true,
       budgets: cleanBudgets(data.settings?.budgets),
       categoryRules: cleanCategoryRules(data.settings?.categoryRules),
+      goals: cleanGoals(data.settings?.goals),
     },
   };
 };

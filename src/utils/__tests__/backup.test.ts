@@ -88,6 +88,7 @@ describe('backups', () => {
       showDemoAccounts: true,
       budgets: { Groceries: 400 },
       categoryRules: {},
+      goals: [],
     });
   });
 
