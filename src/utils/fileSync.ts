@@ -1,4 +1,5 @@
 // src/utils/fileSync.ts
+import { STORES, idbRequest, isIndexedDbAvailable } from './idb';
 // Auto-saving to a file on your computer, through the browser's File System
 // Access API (Chrome and Edge). Nothing is uploaded: the browser reads and
 // writes the file you pick.
@@ -127,31 +128,12 @@ const isCancel = (error: unknown) =>
   error instanceof DOMException && error.name === 'AbortError';
 
 // File handles can't go in localStorage, but IndexedDB keeps them.
-const DB_NAME = 'financeapp';
-const STORE = 'fileSync';
 const HANDLE_KEY = 'file';
 
 const withStore = <T>(
   mode: IDBTransactionMode,
   use: (store: IDBObjectStore) => IDBRequest
-): Promise<T> =>
-  new Promise((resolve, reject) => {
-    const open = window.indexedDB.open(DB_NAME, 1);
-    open.onupgradeneeded = () => open.result.createObjectStore(STORE);
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const db = open.result;
-      const request = use(db.transaction(STORE, mode).objectStore(STORE));
-      request.onsuccess = () => {
-        db.close();
-        resolve(request.result as T);
-      };
-      request.onerror = () => {
-        db.close();
-        reject(request.error);
-      };
-    };
-  });
+): Promise<T> => idbRequest<T>(STORES.fileSync, mode, use);
 
 const picker = (window as any) || {};
 
@@ -159,7 +141,7 @@ export const browserFileAccess: FileAccess = {
   supported:
     typeof window !== 'undefined' &&
     typeof picker.showSaveFilePicker === 'function' &&
-    typeof window.indexedDB !== 'undefined',
+    isIndexedDbAvailable(),
 
   pickNewFile: async () => {
     try {
