@@ -106,6 +106,7 @@ export const DashboardHeader: React.FC = () => {
               onClick={togglePrivacyMode}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
               title={isPrivacyMode ? 'Show amounts' : 'Hide amounts'}
+              aria-label={isPrivacyMode ? 'Show amounts' : 'Hide amounts'}
             >
               {isPrivacyMode ? (
                 <EyeOff className="w-5 h-5" />
@@ -113,11 +114,6 @@ export const DashboardHeader: React.FC = () => {
                 <Eye className="w-5 h-5" />
               )}
             </button>
-
-            {/* User Avatar */}
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-medium">JD</span>
-            </div>
           </div>
         </div>
       </div>

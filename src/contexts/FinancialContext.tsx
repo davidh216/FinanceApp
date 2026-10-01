@@ -11,7 +11,6 @@ import {
   FinancialState,
   FinancialAction,
   Account,
-  FilterOptions,
   TimePeriod,
   FinancialSummary,
   Transaction,
@@ -92,10 +91,6 @@ const initialState: FinancialState = {
   selectedAccount: null,
   currentScreen: 'dashboard',
   selectedPeriod: 'month',
-  isLoading: false,
-  error: null,
-  filters: {},
-  sortBy: 'date-desc',
 };
 
 const createInitialState = (state: FinancialState): FinancialState => {
@@ -118,10 +113,6 @@ const financialReducer = (
         selectedAccount: action.payload,
         currentScreen: 'account-detail',
       };
-    case 'SET_LOADING':
-      return { ...state, isLoading: action.payload };
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
     case 'SELECT_ACCOUNT':
       return { ...state, selectedAccount: action.payload };
     case 'CHANGE_SCREEN':
@@ -266,8 +257,6 @@ const financialReducer = (
         currentScreen: 'dashboard',
       };
     }
-    case 'APPLY_FILTERS':
-      return { ...state, filters: action.payload };
     case 'SET_CUSTOM_DATE_RANGE':
       return {
         ...state,
@@ -311,7 +300,6 @@ interface FinancialContextType {
   // Renames a transaction or changes its note; for one added by hand, also
   // its date, description and amount.
   editTransaction: (transactionId: string, edit: TransactionEdit) => void;
-  applyFilters: (filters: FilterOptions) => void;
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
   updateImportedAccount: (account: Account) => void;
@@ -729,10 +717,6 @@ export const FinancialProvider: React.FC<{
     });
   };
 
-  const applyFilters = (filters: FilterOptions) => {
-    dispatch({ type: 'APPLY_FILTERS', payload: filters });
-  };
-
   const viewAccountDetail = (account: Account) => {
     dispatch({ type: 'VIEW_ACCOUNT_DETAIL', payload: account });
   };
@@ -797,7 +781,6 @@ export const FinancialProvider: React.FC<{
     addManualTransaction,
     deleteTransaction,
     editTransaction,
-    applyFilters,
     viewAccountDetail,
     importAccount,
     updateImportedAccount,

@@ -121,28 +121,6 @@ export interface CustomDateRange {
   label: string;
 }
 
-export interface FilterOptions {
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-  amountRange?: {
-    min: number;
-    max: number;
-  };
-  categories?: string[];
-  tags?: string[];
-  accountIds?: string[];
-  transactionTypes?: ('income' | 'expense')[];
-  status?: ('pending' | 'cleared')[];
-  searchTerm?: string;
-}
-
-export interface SortOption {
-  field: 'date' | 'amount' | 'description' | 'category';
-  direction: 'asc' | 'desc';
-}
-
 export interface FinancialState {
   accounts: Account[];
   transactions: Transaction[];
@@ -150,10 +128,6 @@ export interface FinancialState {
   currentScreen: 'dashboard' | 'accounts' | 'transactions' | 'account-detail';
   selectedPeriod: TimePeriod;
   customDateRange?: CustomDateRange;
-  isLoading: boolean;
-  error: string | null;
-  filters: FilterOptions;
-  sortBy: string;
 }
 
 export interface FinancialSummary {
@@ -188,8 +162,6 @@ export interface BudgetGoal {
 }
 
 export type FinancialAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SELECT_ACCOUNT'; payload: Account | null }
   | {
       type: 'CHANGE_SCREEN';
@@ -213,7 +185,6 @@ export type FinancialAction =
   | { type: 'REPLACE_ACCOUNT'; payload: Account }
   // Replaces every imported account with these (restoring a backup).
   | { type: 'RESTORE_IMPORTED_ACCOUNTS'; payload: Account[] }
-  | { type: 'APPLY_FILTERS'; payload: FilterOptions }
   | { type: 'VIEW_ACCOUNT_DETAIL'; payload: Account };
 
 export class FinancialError extends Error {
