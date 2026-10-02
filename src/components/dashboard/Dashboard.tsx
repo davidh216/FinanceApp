@@ -23,6 +23,7 @@ import {
 } from '../../utils/forecast';
 import { findRecurringPayments } from '../../utils/recurring';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
+import { YearReviewModal } from '../reports/YearReviewModal';
 import { CashflowChart } from './CashflowChart';
 import { NetWorthChart } from './NetWorthChart';
 import { netWorthHistory } from '../../utils/netWorthHistory';
@@ -66,6 +67,7 @@ export const Dashboard: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isYearReviewOpen, setIsYearReviewOpen] = useState(false);
   // A month picked on the cash flow chart; the report shows it, compared
   // with the month before, instead of the selected period.
   const [reportMonth, setReportMonth] = useState<string | null>(null);
@@ -402,6 +404,7 @@ export const Dashboard: React.FC = () => {
             months={cashflowMonths}
             currentMonth={budgetMonth.key}
             onSelectMonth={setReportMonth}
+            onOpenYearReview={() => setIsYearReviewOpen(true)}
           />
         </div>
 
@@ -539,6 +542,14 @@ export const Dashboard: React.FC = () => {
         currentStartDate={state.customDateRange?.startDate}
         currentEndDate={state.customDateRange?.endDate}
       />
+      {isYearReviewOpen && (
+        <YearReviewModal
+          isOpen
+          onClose={() => setIsYearReviewOpen(false)}
+          accounts={filteredAccounts}
+          today={toLocalDateString(new Date())}
+        />
+      )}
       <SpendingReportModal
         isOpen={isReportOpen || reportMonth !== null}
         onClose={() => {
