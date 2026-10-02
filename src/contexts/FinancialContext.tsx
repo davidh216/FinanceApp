@@ -25,7 +25,7 @@ import {
   cleanCategoryRules,
   merchantKey,
 } from '../utils/categoryRules';
-import { isTransfer } from '../utils/cashflow';
+import { isCashflow } from '../utils/cashflow';
 import {
   markAsTransfer as markTransfer,
   unlinkTransfer as unlinkTransferIn,
@@ -44,6 +44,7 @@ import {
   loadAccounts,
   loadLegacyAccounts,
 } from '../utils/accountStore';
+import { updateBalance } from '../utils/manualAccounts';
 
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
 const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
@@ -190,7 +191,7 @@ const financialReducer = (
     case 'SET_MERCHANT_CATEGORY': {
       const { category } = action.payload;
       const recategorize = (txn: Transaction): Transaction =>
-        !isTransfer(txn) &&
+        isCashflow(txn) &&
         merchantKey(txn.cleanMerchant) === action.payload.merchantKey
           ? {
               ...txn,
@@ -300,6 +301,13 @@ interface FinancialContextType {
   // Renames a transaction or changes its note; for one added by hand, also
   // its date, description and amount.
   editTransaction: (transactionId: string, edit: TransactionEdit) => void;
+  // Sets an imported or hand-entered account's balance at the end of `date`
+  // (today unless given), recording the change as a balance update.
+  updateAccountBalance: (
+    accountId: string,
+    balance: number,
+    date: string
+  ) => void;
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
   updateImportedAccount: (account: Account) => void;
@@ -706,6 +714,19 @@ export const FinancialProvider: React.FC<{
     });
   };
 
+  const updateAccountBalance = (
+    accountId: string,
+    balance: number,
+    date: string
+  ) => {
+    const account = fullState.accounts.find((acc) => acc.id === accountId);
+    if (!account || !isImportedAccount(account)) return;
+    dispatch({
+      type: 'REPLACE_ACCOUNT',
+      payload: updateBalance(account, balance, date),
+    });
+  };
+
   const editTransaction = (transactionId: string, edit: TransactionEdit) => {
     const account = fullState.accounts.find((acc) =>
       acc.transactions?.some((txn) => txn.id === transactionId)
@@ -781,6 +802,7 @@ export const FinancialProvider: React.FC<{
     addManualTransaction,
     deleteTransaction,
     editTransaction,
+    updateAccountBalance,
     viewAccountDetail,
     importAccount,
     updateImportedAccount,

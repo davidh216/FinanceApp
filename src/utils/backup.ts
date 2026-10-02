@@ -111,6 +111,7 @@ const readTransaction = (
       : {}),
     ...(raw.notTransfer === true ? { notTransfer: true } : {}),
     ...(raw.manual === true ? { manual: true } : {}),
+    ...(raw.adjustment === true ? { adjustment: true } : {}),
     ...(isString(raw.notes) ? { notes: raw.notes } : {}),
     createdAt: timestamp,
     updatedAt: isString(raw.updatedAt) ? raw.updatedAt : timestamp,
@@ -149,6 +150,7 @@ const readAccount = (raw: unknown, index: number): Account => {
     importSettings: {
       flipSigns: raw.importSettings?.flipSigns === true,
     },
+    ...(raw.manual === true ? { manual: true } : {}),
   };
 };
 

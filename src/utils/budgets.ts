@@ -1,6 +1,6 @@
 // src/utils/budgets.ts
 import { Transaction } from '../types/financial';
-import { isTransfer } from './cashflow';
+import { isCashflow } from './cashflow';
 
 // Monthly spending limits by category, in dollars.
 export type Budgets = Record<string, number>;
@@ -24,7 +24,7 @@ export const spendingByCategory = (
 ): Record<string, number> => {
   const totals: Record<string, number> = {};
   for (const txn of transactions) {
-    if (txn.amount >= 0 || isTransfer(txn) || !txn.date.startsWith(month)) {
+    if (txn.amount >= 0 || !isCashflow(txn) || !txn.date.startsWith(month)) {
       continue;
     }
     totals[txn.category] = (totals[txn.category] || 0) - txn.amount;

@@ -1,6 +1,6 @@
 // src/utils/spendingReport.ts
 import { Transaction } from '../types/financial';
-import { isTransfer } from './cashflow';
+import { isCashflow } from './cashflow';
 
 // Inclusive "YYYY-MM-DD" bounds.
 export interface DateRange {
@@ -37,7 +37,7 @@ const totalsFor = (
   for (const txn of transactions) {
     if (
       txn.amount >= 0 ||
-      isTransfer(txn) ||
+      !isCashflow(txn) ||
       txn.date < range.start ||
       txn.date > range.end
     ) {
