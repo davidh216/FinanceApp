@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { FileSyncIndicator } from './FileSyncIndicator';
+import { AppInstall } from './AppInstall';
 import { DataExportModal } from '../import/DataExportModal';
 
 export const DashboardHeader: React.FC = () => {
@@ -99,6 +100,7 @@ export const DashboardHeader: React.FC = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-1 sm:space-x-4">
+            <AppInstall />
             <FileSyncIndicator onOpenSettings={() => setIsDataOpen(true)} />
 
             {/* Privacy Toggle */}
