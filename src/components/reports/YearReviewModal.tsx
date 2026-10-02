@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
+import { useCategories } from '../../hooks/useCategories';
 import { Account } from '../../types/financial';
 import { reviewYears, yearReview } from '../../utils/yearReview';
 import {
@@ -39,9 +39,6 @@ const comparedText = (now: number, before: number | null) => {
   return `${percent(Math.abs(change))} ${change > 0 ? 'more' : 'less'} than`;
 };
 
-const categoryLabel = (category: string) =>
-  `${TAG_CATEGORIES[category]?.icon ?? ''} ${category}`.trim();
-
 export const YearReviewModal: React.FC<YearReviewModalProps> = ({
   isOpen,
   onClose,
@@ -49,6 +46,7 @@ export const YearReviewModal: React.FC<YearReviewModalProps> = ({
   today,
 }) => {
   const { isPrivacyMode } = useFinancial();
+  const categories = useCategories();
   const years = useMemo(
     () =>
       reviewYears(
@@ -255,7 +253,7 @@ export const YearReviewModal: React.FC<YearReviewModalProps> = ({
                     <li key={c.category} className="text-sm">
                       <div className="flex justify-between gap-2">
                         <span className="truncate text-gray-700">
-                          {categoryLabel(c.category)}
+                          {categories.label(c.category)}
                         </span>
                         <span className="tabular-nums text-gray-900">
                           {money(c.amount)}{' '}
