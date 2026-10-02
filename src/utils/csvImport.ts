@@ -3,6 +3,7 @@ import {
   Account,
   AccountType,
   MerchantInfo,
+  SavedColumns,
   Transaction,
 } from '../types/financial';
 import {
@@ -182,6 +183,64 @@ const findHeader = (headers: string[], patterns: RegExp[]): number => {
   return -1;
 };
 
+const SAVED_FIELDS = [
+  'date',
+  'description',
+  'amount',
+  'debit',
+  'credit',
+] as const;
+
+const sameHeader = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+// The columns chosen for an import, by header name, to use next time.
+export const columnsToSave = (
+  headers: string[],
+  mapping: ColumnMapping
+): SavedColumns => {
+  const saved: SavedColumns = {};
+  SAVED_FIELDS.forEach((field) => {
+    const index = mapping[field];
+    if (index >= 0 && headers[index]) saved[field] = headers[index];
+  });
+  return saved;
+};
+
+// The columns chosen last time, if this file has every one of them; null
+// when the bank's format has changed.
+export const applySavedColumns = (
+  headers: string[],
+  saved: SavedColumns | undefined
+): ColumnMapping | null => {
+  if (!saved || Object.keys(saved).length === 0) return null;
+  const mapping: ColumnMapping = {
+    date: -1,
+    description: -1,
+    amount: -1,
+    debit: -1,
+    credit: -1,
+  };
+  for (const field of SAVED_FIELDS) {
+    const name = saved[field];
+    if (!name) continue;
+    const index = headers.findIndex((header) => sameHeader(header, name));
+    if (index === -1) return null;
+    mapping[field] = index;
+  }
+  return mapping;
+};
+
+export const cleanSavedColumns = (value: unknown): SavedColumns | undefined => {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const saved: SavedColumns = {};
+  SAVED_FIELDS.forEach((field) => {
+    const name = (value as Record<string, unknown>)[field];
+    if (typeof name === 'string' && name.trim()) saved[field] = name;
+  });
+  return Object.keys(saved).length > 0 ? saved : undefined;
+};
+
 export const detectColumnMapping = (
   headers: string[],
   rows: string[][] = []
@@ -357,6 +416,7 @@ export const createImportedAccount = (details: {
   balance: number | null;
   transactions: Transaction[];
   flipSigns?: boolean;
+  columns?: SavedColumns;
 }): Account => {
   const now = new Date().toISOString();
   const transactionTotal = roundCents(
@@ -377,7 +437,10 @@ export const createImportedAccount = (details: {
     createdAt: now,
     updatedAt: now,
     transactions: details.transactions,
-    importSettings: { flipSigns: details.flipSigns ?? false },
+    importSettings: {
+      flipSigns: details.flipSigns ?? false,
+      ...(details.columns ? { columns: details.columns } : {}),
+    },
   };
 };
 
@@ -441,7 +504,9 @@ export const mergeImportedTransactions = (
   account: Account,
   newTransactions: Transaction[],
   balance: number | null,
-  flipSigns: boolean
+  flipSigns: boolean,
+  // Leaves the remembered columns alone when absent (an OFX import).
+  columns?: SavedColumns
 ): Account => {
   const added = roundCents(
     newTransactions.reduce((sum, txn) => sum + txn.amount, 0)
@@ -459,7 +524,11 @@ export const mergeImportedTransactions = (
         : normalizeBalance(account.type, balance),
     transactions,
     updatedAt: new Date().toISOString(),
-    importSettings: { ...account.importSettings, flipSigns },
+    importSettings: {
+      ...account.importSettings,
+      flipSigns,
+      ...(columns ? { columns } : {}),
+    },
   };
 };
 

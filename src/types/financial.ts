@@ -34,11 +34,18 @@ export interface Account {
   // Remembered between CSV imports into the same account.
   importSettings?: {
     flipSigns: boolean;
+    // The CSV columns chosen last time, by header name.
+    columns?: SavedColumns;
   };
   // Entered by hand rather than imported (a house, a car, cash); its
   // balance changes through balance updates.
   manual?: boolean;
 }
+
+// Column headers by role ("Posting Date" for the date, say).
+export type SavedColumns = Partial<
+  Record<'date' | 'description' | 'amount' | 'debit' | 'credit', string>
+>;
 
 export type AccountType =
   | 'CHECKING'

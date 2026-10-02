@@ -17,6 +17,8 @@ import {
   parseAmount,
   parseCsv,
   splitDuplicates,
+  applySavedColumns,
+  columnsToSave,
 } from '../../utils/csvImport';
 import { findTransferMatches, linkTransfers } from '../../utils/transfers';
 import { formatMoney } from '../../utils/format';
@@ -62,6 +64,12 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   const [flipSigns, setFlipSigns] = useState(false);
   // OFX statements have their columns and signs set by the bank.
   const [isOfxFile, setIsOfxFile] = useState(false);
+  // The columns guessed from the file, and whether an account's remembered
+  // columns are used instead.
+  const [detectedMapping, setDetectedMapping] = useState<ColumnMapping | null>(
+    null
+  );
+  const [usingSavedColumns, setUsingSavedColumns] = useState(false);
   const [targetAccountId, setTargetAccountId] = useState(NEW_ACCOUNT);
 
   // Only imported accounts are offered: the built-in demo accounts are
@@ -142,10 +150,25 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     (!!targetAccount || accountName.trim() !== '') &&
     !balanceIsInvalid;
 
-  const selectTarget = (id: string) => {
+  const selectTarget = (
+    id: string,
+    file: { headers: string[]; detected: ColumnMapping | null } = {
+      headers: parsed?.headers ?? [],
+      detected: detectedMapping,
+    }
+  ) => {
     setTargetAccountId(id);
     const account = importableAccounts.find((acc) => acc.id === id);
     setFlipSigns(account?.importSettings?.flipSigns ?? false);
+    if (isOfxFile) return;
+    // The same bank's file again: use the columns chosen last time.
+    const saved = applySavedColumns(
+      file.headers,
+      account?.importSettings?.columns
+    );
+    setUsingSavedColumns(!!saved);
+    if (saved) setMapping(saved);
+    else if (file.detected) setMapping(file.detected);
   };
 
   // What's remembered for the account's next import: an OFX file's signs
@@ -166,6 +189,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     setBalanceInput('');
     setFlipSigns(false);
     setIsOfxFile(false);
+    setDetectedMapping(null);
+    setUsingSavedColumns(false);
     setTargetAccountId(NEW_ACCOUNT);
   };
 
@@ -189,24 +214,31 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       setFileError(null);
       setParsed(result);
       setIsOfxFile(ofx);
-      setMapping(
-        statement
-          ? {
-              date: 0,
-              description: 1,
-              amount: 2,
-              debit: -1,
-              credit: -1,
-              bankId: 3,
-            }
-          : detectColumnMapping(result.headers, result.rows)
-      );
+      const detected: ColumnMapping = statement
+        ? {
+            date: 0,
+            description: 1,
+            amount: 2,
+            debit: -1,
+            credit: -1,
+            bankId: 3,
+          }
+        : detectColumnMapping(result.headers, result.rows);
+      setDetectedMapping(detected);
+      setMapping(detected);
       setAccountName(file.name.replace(/\.(csv|ofx|qfx)$/i, ''));
-      selectTarget(
-        importableAccounts.some((acc) => acc.id === defaultAccountId)
-          ? (defaultAccountId as string)
-          : NEW_ACCOUNT
-      );
+      const target = importableAccounts.some(
+        (acc) => acc.id === defaultAccountId
+      )
+        ? (defaultAccountId as string)
+        : NEW_ACCOUNT;
+      if (statement) {
+        setTargetAccountId(target);
+        const account = importableAccounts.find((acc) => acc.id === target);
+        setFlipSigns(account?.importSettings?.flipSigns ?? false);
+      } else {
+        selectTarget(target, { headers: result.headers, detected });
+      }
       if (statement?.accountType) setAccountType(statement.accountType);
       if (statement && statement.balance !== null) {
         // What's owed is entered as a positive amount.
@@ -229,6 +261,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   const updateMapping = (field: keyof ColumnMapping, value: string) => {
     if (!mapping) return;
     setMapping({ ...mapping, [field]: Number(value) });
+    setUsingSavedColumns(false);
   };
 
   const handleImport = () => {
@@ -260,7 +293,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           targetAccount,
           linked.transactions,
           balance,
-          rememberedFlip
+          rememberedFlip,
+          isOfxFile ? undefined : columnsToSave(parsed.headers, mapping)
         )
       );
     } else {
@@ -289,6 +323,9 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           balance,
           transactions: linked.transactions,
           flipSigns: rememberedFlip,
+          ...(isOfxFile
+            ? {}
+            : { columns: columnsToSave(parsed.headers, mapping) }),
         })
       );
     }
@@ -483,9 +520,19 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 </p>
               ) : (
                 <section>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1">
                     Columns
                   </h4>
+                  <p
+                    className="text-sm text-gray-500 mb-3"
+                    data-testid="columns-note"
+                  >
+                    {usingSavedColumns && targetAccount
+                      ? `The columns you chose for ${targetAccount.name} last time.`
+                      : targetAccount
+                      ? `Your choices are remembered for ${targetAccount.name}'s next import.`
+                      : "Your choices are remembered for this account's next import."}
+                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {columnSelect('date', 'Date')}
                     {columnSelect('description', 'Description')}
