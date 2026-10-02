@@ -45,6 +45,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     setBudgetRollover,
     categoryRules,
     setCategoryRules,
+    customCategories,
+    setCustomCategories,
   } = useFinancial();
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
@@ -71,7 +73,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
           new Date(),
           categoryRules,
           goals,
-          budgetRollover
+          budgetRollover,
+          customCategories
         ),
         null,
         2
@@ -114,6 +117,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     setBudgets(pendingRestore.settings.budgets);
     setGoals(pendingRestore.settings.goals);
     setBudgetRollover(pendingRestore.settings.budgetRollover);
+    // Before the rules, which may use them.
+    setCustomCategories(pendingRestore.settings.customCategories);
     setCategoryRules(pendingRestore.settings.categoryRules);
     handleClose();
   };

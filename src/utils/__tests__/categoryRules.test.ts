@@ -71,6 +71,9 @@ describe('cleanCategoryRules', () => {
         '  ': 'Travel',
       })
     ).toEqual({ starbucks: 'Entertainment' });
+    expect(
+      cleanCategoryRules({ amazon: 'Made Up', shell: 'Car' }, ['Made Up'])
+    ).toEqual({ amazon: 'Made Up' });
     expect(cleanCategoryRules(null)).toEqual({});
     expect(cleanCategoryRules(['x'])).toEqual({});
   });

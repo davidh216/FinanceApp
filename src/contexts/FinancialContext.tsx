@@ -28,6 +28,12 @@ import {
 } from '../utils/categoryRules';
 import { isCashflow } from '../utils/cashflow';
 import {
+  CustomCategory,
+  categoryNameError,
+  cleanCustomCategories,
+  newCustomCategory,
+} from '../utils/categories';
+import {
   markAsTransfer as markTransfer,
   unlinkTransfer as unlinkTransferIn,
 } from '../utils/transfers';
@@ -56,13 +62,27 @@ const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
 const GOALS_STORAGE_KEY = 'financeapp.goals';
 const ROLLOVER_STORAGE_KEY = 'financeapp.budgetRollover';
 const CATEGORY_RULES_STORAGE_KEY = 'financeapp.categoryRules';
+const CUSTOM_CATEGORIES_STORAGE_KEY = 'financeapp.customCategories';
 
-const loadCategoryRules = (): CategoryRules => {
+const loadCustomCategories = (): CustomCategory[] => {
+  try {
+    return cleanCustomCategories(
+      JSON.parse(
+        window.localStorage.getItem(CUSTOM_CATEGORIES_STORAGE_KEY) || '[]'
+      )
+    );
+  } catch {
+    return [];
+  }
+};
+
+const loadCategoryRules = (customNames: string[]): CategoryRules => {
   try {
     return cleanCategoryRules(
       JSON.parse(
         window.localStorage.getItem(CATEGORY_RULES_STORAGE_KEY) || '{}'
-      )
+      ),
+      customNames
     );
   } catch {
     return {};
@@ -345,6 +365,13 @@ interface FinancialContextType {
   // The transactions a keyword rule would recategorise now.
   keywordMatches: (keyword: string, category: string) => Transaction[];
   setCategoryRules: (rules: CategoryRules) => void;
+  // Categories you added, alongside the built-in ones.
+  customCategories: CustomCategory[];
+  // Returns why it couldn't be added (a clashing name), or null.
+  addCustomCategory: (name: string, icon: string) => string | null;
+  // Its transactions become "Other"; its budget and rules go.
+  removeCustomCategory: (name: string) => void;
+  setCustomCategories: (categories: CustomCategory[]) => void;
   // Undoes a wrongly matched transfer, on both sides.
   unlinkTransfer: (transactionId: string) => void;
   // Records a missed transfer to or from another imported account, or
@@ -576,11 +603,35 @@ export const FinancialProvider: React.FC<{
     dispatch({ type: 'REMOVE_TAG', payload: { transactionId, tag } });
   };
 
-  const [categoryRules, setCategoryRulesState] =
-    useState<CategoryRules>(loadCategoryRules);
+  const [customCategories, setCustomCategoriesState] =
+    useState<CustomCategory[]>(loadCustomCategories);
+  // The latest, so rules restored straight after categories (from a backup)
+  // are checked against the new ones.
+  const customRef = useRef(customCategories);
+
+  const setCustomCategories = (next: CustomCategory[]) => {
+    const cleaned = cleanCustomCategories(next);
+    customRef.current = cleaned;
+    setCustomCategoriesState(cleaned);
+    try {
+      window.localStorage.setItem(
+        CUSTOM_CATEGORIES_STORAGE_KEY,
+        JSON.stringify(cleaned)
+      );
+    } catch {
+      // The categories still apply for this session.
+    }
+  };
+
+  const [categoryRules, setCategoryRulesState] = useState<CategoryRules>(() =>
+    loadCategoryRules(customRef.current.map((c) => c.name))
+  );
 
   const setCategoryRules = (rules: CategoryRules) => {
-    const cleaned = cleanCategoryRules(rules);
+    const cleaned = cleanCategoryRules(
+      rules,
+      customRef.current.map((c) => c.name)
+    );
     setCategoryRulesState(cleaned);
     try {
       window.localStorage.setItem(
@@ -645,6 +696,39 @@ export const FinancialProvider: React.FC<{
   const forgetCategoryRule = (key: string) => {
     const { [key]: _forgotten, ...rest } = categoryRules;
     setCategoryRules(rest);
+  };
+
+  const addCustomCategory = (name: string, icon: string) => {
+    const error = categoryNameError(name, customRef.current);
+    if (error) return error;
+    setCustomCategories([...customRef.current, newCustomCategory(name, icon)]);
+    return null;
+  };
+
+  const removeCustomCategory = (name: string) => {
+    if (!customRef.current.some((c) => c.name === name)) return;
+    const ids = fullState.transactions
+      .filter((txn) => txn.category === name)
+      .map((txn) => txn.id);
+    if (ids.length > 0) {
+      dispatch({
+        type: 'RECATEGORIZE',
+        payload: { transactionIds: ids, category: 'Other' },
+      });
+    }
+    if (budgets[name] !== undefined) {
+      const { [name]: _removed, ...rest } = budgets;
+      setBudgets(rest);
+    }
+    if (budgetRollover.includes(name)) {
+      setBudgetRollover(budgetRollover.filter((c) => c !== name));
+    }
+    setCustomCategories(customRef.current.filter((c) => c.name !== name));
+    setCategoryRules(
+      Object.fromEntries(
+        Object.entries(categoryRules).filter(([, cat]) => cat !== name)
+      )
+    );
   };
 
   const unlinkTransfer = (transactionId: string) => {
@@ -781,6 +865,10 @@ export const FinancialProvider: React.FC<{
     addKeywordRule,
     keywordMatches,
     setCategoryRules,
+    customCategories,
+    addCustomCategory,
+    removeCustomCategory,
+    setCustomCategories,
     unlinkTransfer,
     markAsTransfer,
     addManualTransaction,
