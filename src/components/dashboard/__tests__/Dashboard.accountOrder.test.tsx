@@ -19,6 +19,9 @@ const assetOrder = () =>
       button.getAttribute('aria-label')!.replace(/^Move | up$/g, '')
     );
 
+// Renders the full demo dashboard twice.
+jest.setTimeout(15000);
+
 describe('Reordering accounts', () => {
   beforeEach(() => {
     window.localStorage.clear();
