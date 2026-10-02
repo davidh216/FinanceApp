@@ -8,6 +8,7 @@ interface CashflowChartProps {
   // The current month, which is still in progress.
   currentMonth: string;
   onSelectMonth: (month: string) => void;
+  onOpenYearReview?: () => void;
 }
 
 // Categorical slots 1 and 2 of the reference palette: validated as an
@@ -42,6 +43,7 @@ export const CashflowChart: React.FC<CashflowChartProps> = ({
   months,
   currentMonth,
   onSelectMonth,
+  onOpenYearReview,
 }) => {
   const { isPrivacyMode } = useFinancial();
   const [active, setActive] = useState<string | null>(null);
@@ -205,12 +207,22 @@ export const CashflowChart: React.FC<CashflowChartProps> = ({
         ))}
       </div>
 
-      <button
-        onClick={() => setShowTable(!showTable)}
-        className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
-      >
-        {showTable ? 'Hide table' : 'Show as a table'}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        <button
+          onClick={() => setShowTable(!showTable)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
+          {showTable ? 'Hide table' : 'Show as a table'}
+        </button>
+        {onOpenYearReview && (
+          <button
+            onClick={onOpenYearReview}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            Year in review
+          </button>
+        )}
+      </div>
       {showTable && (
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-sm" data-testid="cashflow-table">
