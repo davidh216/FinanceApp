@@ -13,6 +13,15 @@ import {
 import { toLocalDateString } from '../../utils/date';
 import { downloadFile, readFileAsText } from '../../utils/files';
 import { FileSyncPanel } from './FileSyncPanel';
+import { NewPasswordForm, UnlockForm } from './PasswordForms';
+import {
+  WrongPasswordError,
+  NO_ENCRYPTION_MESSAGE,
+  decryptText,
+  encryptText,
+  encryptionAvailable,
+  isEncrypted,
+} from '../../utils/encryption';
 
 interface DataExportModalProps {
   isOpen: boolean;
@@ -36,6 +45,9 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     useFinancial();
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  // A password-protected backup waiting for its password.
+  const [lockedRestore, setLockedRestore] = useState<string | null>(null);
+  const [protectBackup, setProtectBackup] = useState(false);
 
   if (!isOpen) return null;
 
@@ -45,15 +57,23 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
   const handleClose = () => {
     setPendingRestore(null);
     setRestoreError(null);
+    setLockedRestore(null);
+    setProtectBackup(false);
     onClose();
   };
 
-  const handleBackup = () => {
+  const handleBackup = async (password?: string) => {
+    const json = JSON.stringify(
+      createBackup(state.accounts, settings),
+      null,
+      2
+    );
     downloadFile(
       `financeapp-backup-${today}.json`,
-      JSON.stringify(createBackup(state.accounts, settings), null, 2),
+      password ? await encryptText(json, password) : json,
       'application/json'
     );
+    setProtectBackup(false);
   };
 
   const handleCsv = () => {
@@ -72,14 +92,39 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     if (!file) return;
     setPendingRestore(null);
     setRestoreError(null);
+    setLockedRestore(null);
     try {
-      setPendingRestore(parseBackup(await readFileAsText(file)));
+      const text = await readFileAsText(file);
+      if (isEncrypted(text)) {
+        setLockedRestore(text);
+        return;
+      }
+      setPendingRestore(parseBackup(text));
     } catch (error) {
       setRestoreError(
         error instanceof BackupError
           ? error.message
           : "This file couldn't be read."
       );
+    }
+  };
+
+  const handleUnlock = async (password: string) => {
+    if (!lockedRestore) return false;
+    try {
+      setPendingRestore(
+        parseBackup(await decryptText(lockedRestore, password))
+      );
+      setLockedRestore(null);
+      setRestoreError(null);
+      return true;
+    } catch (error) {
+      setRestoreError(
+        error instanceof WrongPasswordError || error instanceof BackupError
+          ? error.message
+          : "This file couldn't be read."
+      );
+      return false;
     }
   };
 
@@ -125,12 +170,31 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
             </p>
             <Button
               leftIcon={<Download className="w-4 h-4" />}
-              onClick={handleBackup}
-              disabled={importedAccounts.length === 0}
+              onClick={() => handleBackup()}
+              disabled={importedAccounts.length === 0 || protectBackup}
               data-testid="download-backup"
             >
               Download backup
             </Button>
+            {importedAccounts.length > 0 && encryptionAvailable() && (
+              <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={protectBackup}
+                  onChange={(event) => setProtectBackup(event.target.checked)}
+                  data-testid="protect-backup"
+                />
+                Protect the backup with a password
+              </label>
+            )}
+            {protectBackup && (
+              <div className="mt-2">
+                <NewPasswordForm
+                  submitLabel="Download protected backup"
+                  onSubmit={handleBackup}
+                />
+              </div>
+            )}
             <p
               className="mt-2 text-xs text-gray-500"
               data-testid="backup-summary"
@@ -184,6 +248,17 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
                 data-testid="backup-file-input"
               />
             </label>
+            {lockedRestore && (
+              <div className="mt-3" data-testid="restore-locked">
+                {encryptionAvailable() ? (
+                  <UnlockForm label="Backup password" onUnlock={handleUnlock} />
+                ) : (
+                  <p className="text-sm text-red-600">
+                    {NO_ENCRYPTION_MESSAGE}
+                  </p>
+                )}
+              </div>
+            )}
             {restoreError && (
               <p className="mt-3 text-sm text-red-600" role="alert">
                 {restoreError}
