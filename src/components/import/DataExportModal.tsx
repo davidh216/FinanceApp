@@ -39,6 +39,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     restoreImportedAccounts,
     budgets,
     setBudgets,
+    goals,
+    setGoals,
     categoryRules,
     setCategoryRules,
   } = useFinancial();
@@ -65,7 +67,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
           showDemoAccounts,
           budgets,
           new Date(),
-          categoryRules
+          categoryRules,
+          goals
         ),
         null,
         2
@@ -106,6 +109,7 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
     restoreImportedAccounts(pendingRestore.accounts);
     setShowDemoAccounts(pendingRestore.settings.showDemoAccounts);
     setBudgets(pendingRestore.settings.budgets);
+    setGoals(pendingRestore.settings.goals);
     setCategoryRules(pendingRestore.settings.categoryRules);
     handleClose();
   };

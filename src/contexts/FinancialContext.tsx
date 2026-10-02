@@ -17,6 +17,7 @@ import {
 import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
 import { Budgets, cleanBudgets } from '../utils/budgets';
+import { Goal, cleanGoals } from '../utils/goals';
 import {
   CategoryRules,
   cleanCategoryRules,
@@ -49,6 +50,7 @@ import {
 
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
 const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
+const GOALS_STORAGE_KEY = 'financeapp.goals';
 const CATEGORY_RULES_STORAGE_KEY = 'financeapp.categoryRules';
 
 const loadCategoryRules = (): CategoryRules => {
@@ -70,6 +72,16 @@ const loadBudgets = (): Budgets => {
     );
   } catch {
     return {};
+  }
+};
+
+const loadGoals = (): Goal[] => {
+  try {
+    return cleanGoals(
+      JSON.parse(window.localStorage.getItem(GOALS_STORAGE_KEY) || '[]')
+    );
+  } catch {
+    return [];
   }
 };
 
@@ -339,6 +351,9 @@ interface FinancialContextType {
   // Monthly spending limits by category.
   budgets: Budgets;
   setBudgets: (budgets: Budgets) => void;
+  // Savings goals, in the order you added them.
+  goals: Goal[];
+  setGoals: (goals: Goal[]) => void;
 }
 
 const FinancialContext = createContext<FinancialContextType | null>(null);
@@ -453,6 +468,18 @@ export const FinancialProvider: React.FC<{
       window.localStorage.setItem(BUDGETS_STORAGE_KEY, JSON.stringify(cleaned));
     } catch {
       // The budgets still apply for this session.
+    }
+  };
+
+  const [goals, setGoalsState] = useState<Goal[]>(loadGoals);
+
+  const setGoals = (next: Goal[]) => {
+    const cleaned = cleanGoals(next);
+    setGoalsState(cleaned);
+    try {
+      window.localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(cleaned));
+    } catch {
+      // The goals still apply for this session.
     }
   };
 
@@ -681,6 +708,8 @@ export const FinancialProvider: React.FC<{
     setShowDemoAccounts,
     budgets,
     setBudgets,
+    goals,
+    setGoals,
   };
 
   return (

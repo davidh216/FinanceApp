@@ -167,6 +167,21 @@ describe('Auto-saving to a file', () => {
     await waitFor(() =>
       expect(saved(file).settings.showDemoAccounts).toBe(true)
     );
+
+    // So does a new savings goal.
+    await click(user, screen.getByRole('button', { name: 'Add a goal' }));
+    const goalName = screen.getByLabelText('Name');
+    const goalTarget = screen.getByLabelText('Target');
+    await act(async () => {
+      await user.type(goalName, 'Emergency fund');
+      await user.type(goalTarget, '10000');
+    });
+    await click(user, screen.getByTestId('save-goal'));
+    await waitFor(() =>
+      expect(saved(file).settings.goals).toEqual([
+        expect.objectContaining({ name: 'Emergency fund', target: 10000 }),
+      ])
+    );
     expect(
       JSON.parse(window.localStorage.getItem(FILE_SYNC_STORAGE_KEY) || '')
     ).toEqual({ lastSyncedAt: saved(file).exportedAt, pending: false });

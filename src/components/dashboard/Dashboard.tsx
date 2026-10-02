@@ -13,6 +13,7 @@ import { AddAccountModal } from '../accounts/AddAccountModal';
 import { DataExportModal } from '../import/DataExportModal';
 import { BudgetModal } from '../budgets/BudgetModal';
 import { BudgetsCard } from '../budgets/BudgetsCard';
+import { GoalsCard } from '../goals/GoalsCard';
 import { RecurringCard } from '../recurring/RecurringCard';
 import { findRecurringPayments } from '../../utils/recurring';
 import { SpendingReportModal } from '../reports/SpendingReportModal';
@@ -416,6 +417,8 @@ export const Dashboard: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            <GoalsCard />
 
             <BudgetsCard
               spending={monthSpending}

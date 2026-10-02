@@ -93,6 +93,8 @@ export const FileSyncProvider: React.FC<{
     setShowDemoAccounts,
     budgets,
     setBudgets,
+    goals,
+    setGoals,
     categoryRules,
     setCategoryRules,
     restoreImportedAccounts,
@@ -119,7 +121,8 @@ export const FileSyncProvider: React.FC<{
       showDemoAccounts,
       budgets,
       new Date(),
-      categoryRules
+      categoryRules,
+      goals
     );
   const latestBackup = useRef(backupNow);
   latestBackup.current = backupNow;
@@ -133,10 +136,11 @@ export const FileSyncProvider: React.FC<{
           showDemoAccounts,
           budgets,
           new Date(0),
-          categoryRules
+          categoryRules,
+          goals
         )
       ),
-    [state.accounts, showDemoAccounts, budgets, categoryRules]
+    [state.accounts, showDemoAccounts, budgets, categoryRules, goals]
   );
   const lastSnapshot = useRef(snapshot);
 
@@ -192,6 +196,7 @@ export const FileSyncProvider: React.FC<{
     restoreImportedAccounts(backup.accounts);
     setShowDemoAccounts(backup.settings.showDemoAccounts);
     setBudgets(backup.settings.budgets);
+    setGoals(backup.settings.goals);
     setCategoryRules(backup.settings.categoryRules);
   };
 
