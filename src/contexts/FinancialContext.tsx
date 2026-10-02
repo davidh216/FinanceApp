@@ -13,6 +13,7 @@ import {
   Account,
   TimePeriod,
   Transaction,
+  TransactionSplit,
 } from '../types/financial';
 import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
@@ -27,6 +28,12 @@ import {
   merchantKey,
 } from '../utils/categoryRules';
 import { isCashflow } from '../utils/cashflow';
+import {
+  hasCategory,
+  isSplit,
+  replaceCategory,
+  withSplits,
+} from '../utils/splits';
 import {
   CustomCategory,
   categoryNameError,
@@ -218,7 +225,8 @@ const financialReducer = (
       const recategorize = (txn: Transaction): Transaction =>
         txn.id === action.payload.transactionId
           ? {
-              ...txn,
+              // Choosing one category undoes a split.
+              ...withSplits(txn, null),
               category: action.payload.category,
               cleanMerchant: {
                 ...txn.cleanMerchant,
@@ -233,6 +241,35 @@ const financialReducer = (
           transactions: account.transactions?.map(recategorize),
         })),
         transactions: state.transactions.map(recategorize),
+      };
+    }
+    case 'SPLIT_TRANSACTION': {
+      const { transactionId, splits } = action.payload;
+      const now = new Date().toISOString();
+      const split = (txn: Transaction): Transaction =>
+        txn.id === transactionId
+          ? { ...withSplits(txn, splits), updatedAt: now }
+          : txn;
+      return {
+        ...state,
+        accounts: state.accounts.map((account) => ({
+          ...account,
+          transactions: account.transactions?.map(split),
+        })),
+        transactions: state.transactions.map(split),
+      };
+    }
+    case 'REPLACE_CATEGORY': {
+      const { from, to } = action.payload;
+      const replace = (txn: Transaction): Transaction =>
+        replaceCategory(txn, from, to);
+      return {
+        ...state,
+        accounts: state.accounts.map((account) => ({
+          ...account,
+          transactions: account.transactions?.map(replace),
+        })),
+        transactions: state.transactions.map(replace),
       };
     }
     case 'RECATEGORIZE': {
@@ -262,6 +299,7 @@ const financialReducer = (
       const { category } = action.payload;
       const recategorize = (txn: Transaction): Transaction =>
         isCashflow(txn) &&
+        !isSplit(txn) &&
         merchantKey(txn.cleanMerchant) === action.payload.merchantKey
           ? {
               ...txn,
@@ -365,6 +403,11 @@ interface FinancialContextType {
   // The transactions a keyword rule would recategorise now.
   keywordMatches: (keyword: string, category: string) => Transaction[];
   setCategoryRules: (rules: CategoryRules) => void;
+  // Divides a transaction between categories; null puts it back in one.
+  splitTransaction: (
+    transactionId: string,
+    splits: TransactionSplit[] | null
+  ) => void;
   // Categories you added, alongside the built-in ones.
   customCategories: CustomCategory[];
   // Returns why it couldn't be added (a clashing name), or null.
@@ -668,6 +711,7 @@ export const FinancialProvider: React.FC<{
     return fullState.transactions.filter(
       (txn) =>
         isCashflow(txn) &&
+        !isSplit(txn) &&
         txn.category !== category &&
         categoryRules[merchantKey(txn.cleanMerchant)] === undefined &&
         matchesKeyword(txn, keywordOf(key))
@@ -693,6 +737,13 @@ export const FinancialProvider: React.FC<{
     setCategoryRules({ ...categoryRules, [key]: category });
   };
 
+  const splitTransaction = (
+    transactionId: string,
+    splits: TransactionSplit[] | null
+  ) => {
+    dispatch({ type: 'SPLIT_TRANSACTION', payload: { transactionId, splits } });
+  };
+
   const forgetCategoryRule = (key: string) => {
     const { [key]: _forgotten, ...rest } = categoryRules;
     setCategoryRules(rest);
@@ -707,13 +758,10 @@ export const FinancialProvider: React.FC<{
 
   const removeCustomCategory = (name: string) => {
     if (!customRef.current.some((c) => c.name === name)) return;
-    const ids = fullState.transactions
-      .filter((txn) => txn.category === name)
-      .map((txn) => txn.id);
-    if (ids.length > 0) {
+    if (fullState.transactions.some((txn) => hasCategory(txn, name))) {
       dispatch({
-        type: 'RECATEGORIZE',
-        payload: { transactionIds: ids, category: 'Other' },
+        type: 'REPLACE_CATEGORY',
+        payload: { from: name, to: 'Other' },
       });
     }
     if (budgets[name] !== undefined) {
@@ -865,6 +913,7 @@ export const FinancialProvider: React.FC<{
     addKeywordRule,
     keywordMatches,
     setCategoryRules,
+    splitTransaction,
     customCategories,
     addCustomCategory,
     removeCustomCategory,

@@ -82,9 +82,18 @@ export interface Transaction {
   // entered and the one before. Neither income nor spending.
   adjustment?: boolean;
   notes?: string;
+  // One purchase divided between categories (groceries and household goods
+  // from one shop). Two or more parts, signed like the amount, adding up to
+  // it exactly; `category` is then the largest part's.
+  splits?: TransactionSplit[];
   receiptUrl?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TransactionSplit {
+  category: string;
+  amount: number;
 }
 
 export interface MerchantInfo {
@@ -198,6 +207,16 @@ export type FinancialAction =
   | {
       type: 'RECATEGORIZE';
       payload: { transactionIds: string[]; category: string };
+    }
+  // Splits a transaction between categories, or back to one with null.
+  | {
+      type: 'SPLIT_TRANSACTION';
+      payload: { transactionId: string; splits: TransactionSplit[] | null };
+    }
+  // Moves money in one category to another, in splits too.
+  | {
+      type: 'REPLACE_CATEGORY';
+      payload: { from: string; to: string };
     }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
   | { type: 'REMOVE_ACCOUNT'; payload: string }

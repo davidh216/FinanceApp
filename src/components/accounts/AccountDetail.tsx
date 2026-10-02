@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { hasCategory } from '../../utils/splits';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { DashboardHeader } from '../dashboard/DashboardHeader';
 import { Button } from '../ui/Button';
@@ -81,7 +82,7 @@ export const AccountDetail: React.FC<AccountDetailProps> = ({ accountId }) => {
 
       const matchesCategory =
         !selectedCategory ||
-        txn.category === selectedCategory ||
+        hasCategory(txn, selectedCategory) ||
         txn.tags.includes(selectedCategory);
 
       return matchesSearch && matchesCategory;

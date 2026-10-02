@@ -1,6 +1,7 @@
 // src/utils/budgets.ts
 import { Transaction } from '../types/financial';
 import { isCashflow } from './cashflow';
+import { categoryParts } from './splits';
 
 // Monthly spending limits by category, in dollars.
 export type Budgets = Record<string, number>;
@@ -27,7 +28,9 @@ export const spendingByCategory = (
     if (txn.amount >= 0 || !isCashflow(txn) || !txn.date.startsWith(month)) {
       continue;
     }
-    totals[txn.category] = (totals[txn.category] || 0) - txn.amount;
+    for (const part of categoryParts(txn)) {
+      totals[part.category] = (totals[part.category] || 0) - part.amount;
+    }
   }
   for (const category of Object.keys(totals)) {
     totals[category] = Math.round(totals[category] * 100) / 100;
