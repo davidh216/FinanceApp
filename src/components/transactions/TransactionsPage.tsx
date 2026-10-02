@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, ListChecks, Search } from 'lucide-react';
+import { CategoryRulesModal } from './CategoryRulesModal';
 import { Account } from '../../types/financial';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { TAG_CATEGORIES } from '../../constants/financial';
@@ -32,6 +33,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const { changeScreen, addTag, removeTag, isPrivacyMode } = useFinancial();
   const [filters, setFilters] = useState<TransactionFilters>(NO_FILTERS);
   const [shown, setShown] = useState(PAGE_SIZE);
+  const [isRulesOpen, setIsRulesOpen] = useState(false);
 
   const all = useMemo(
     () =>
@@ -69,8 +71,24 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">All transactions</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            All transactions
+          </h1>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto whitespace-nowrap"
+            leftIcon={<ListChecks className="w-4 h-4" />}
+            onClick={() => setIsRulesOpen(true)}
+            aria-label="Category rules"
+          >
+            <span className="sm:hidden">Rules</span>
+            <span className="hidden sm:inline">Category rules</span>
+          </Button>
         </div>
+        {isRulesOpen && (
+          <CategoryRulesModal onClose={() => setIsRulesOpen(false)} />
+        )}
 
         <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">

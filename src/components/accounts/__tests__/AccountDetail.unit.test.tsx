@@ -22,6 +22,8 @@ const mockContextValue = {
   setCategory: jest.fn(),
   categoryRules: {},
   forgetCategoryRule: jest.fn(),
+  addKeywordRule: jest.fn(),
+  keywordMatches: jest.fn(() => []),
   deleteTransaction: jest.fn(),
   editTransaction: jest.fn(),
   updateAccountBalance: jest.fn(),

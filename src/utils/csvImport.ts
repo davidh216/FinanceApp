@@ -10,7 +10,7 @@ import {
   LOAN_MERCHANT_PATTERNS,
   MERCHANT_PATTERNS,
 } from '../constants/financial';
-import { CategoryRules, merchantKey } from './categoryRules';
+import { CategoryRules, ruleCategory } from './categoryRules';
 
 export const IMPORTED_ACCOUNT_PREFIX = 'acc_import_';
 
@@ -317,7 +317,7 @@ export const buildTransactions = (
     if (flipSigns) amount = -amount;
 
     const cleanMerchant = categorizeMerchant(description, amount);
-    const rule = rules[merchantKey(cleanMerchant)];
+    const rule = ruleCategory({ description, cleanMerchant }, rules);
     if (rule) cleanMerchant.suggestedCategory = rule;
     const bankId =
       mapping.bankId !== undefined && mapping.bankId >= 0

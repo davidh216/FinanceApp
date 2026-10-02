@@ -188,6 +188,10 @@ export type FinancialAction =
       type: 'SET_MERCHANT_CATEGORY';
       payload: { merchantKey: string; category: string };
     }
+  | {
+      type: 'RECATEGORIZE';
+      payload: { transactionIds: string[]; category: string };
+    }
   | { type: 'CONNECT_ACCOUNT'; payload: Account }
   | { type: 'REMOVE_ACCOUNT'; payload: string }
   | { type: 'REPLACE_ACCOUNT'; payload: Account }

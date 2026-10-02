@@ -1,7 +1,7 @@
 // src/utils/manualTransactions.ts
 import { Account, Transaction } from '../types/financial';
 import { categorizeMerchant, parseAmount } from './csvImport';
-import { CategoryRules, merchantKey } from './categoryRules';
+import { CategoryRules, ruleCategory } from './categoryRules';
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
@@ -20,7 +20,12 @@ export const suggestCategory = (
   rules: CategoryRules
 ): string => {
   const merchant = categorizeMerchant(description.trim(), amount);
-  return rules[merchantKey(merchant)] ?? merchant.suggestedCategory;
+  return (
+    ruleCategory(
+      { description: description.trim(), cleanMerchant: merchant },
+      rules
+    ) ?? merchant.suggestedCategory
+  );
 };
 
 let sequence = 0;

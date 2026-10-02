@@ -21,6 +21,9 @@ import { Goal, cleanGoals } from '../utils/goals';
 import {
   CategoryRules,
   cleanCategoryRules,
+  keywordOf,
+  keywordRuleKey,
+  matchesKeyword,
   merchantKey,
 } from '../utils/categoryRules';
 import { isCashflow } from '../utils/cashflow';
@@ -201,6 +204,29 @@ const financialReducer = (
         transactions: state.transactions.map(recategorize),
       };
     }
+    case 'RECATEGORIZE': {
+      const ids = new Set(action.payload.transactionIds);
+      const { category } = action.payload;
+      const recategorize = (txn: Transaction): Transaction =>
+        ids.has(txn.id)
+          ? {
+              ...txn,
+              category,
+              cleanMerchant: {
+                ...txn.cleanMerchant,
+                suggestedCategory: category,
+              },
+            }
+          : txn;
+      return {
+        ...state,
+        accounts: state.accounts.map((account) => ({
+          ...account,
+          transactions: account.transactions?.map(recategorize),
+        })),
+        transactions: state.transactions.map(recategorize),
+      };
+    }
     case 'SET_MERCHANT_CATEGORY': {
       const { category } = action.payload;
       const recategorize = (txn: Transaction): Transaction =>
@@ -299,6 +325,14 @@ interface FinancialContextType {
   ) => void;
   categoryRules: CategoryRules;
   forgetCategoryRule: (merchantKey: string) => void;
+  // "Description contains …" rules, for this and future imports.
+  addKeywordRule: (
+    keyword: string,
+    category: string,
+    applyToExisting: boolean
+  ) => void;
+  // The transactions a keyword rule would recategorise now.
+  keywordMatches: (keyword: string, category: string) => Transaction[];
   setCategoryRules: (rules: CategoryRules) => void;
   // Undoes a wrongly matched transfer, on both sides.
   unlinkTransfer: (transactionId: string) => void;
@@ -546,6 +580,38 @@ export const FinancialProvider: React.FC<{
     setCategoryRules({ ...categoryRules, [key]: category });
   };
 
+  // Transactions a new keyword rule would change: spending and income, not
+  // already that category, and not covered by a merchant rule.
+  const keywordMatches = (keyword: string, category: string) => {
+    const key = keywordRuleKey(keyword);
+    return fullState.transactions.filter(
+      (txn) =>
+        isCashflow(txn) &&
+        txn.category !== category &&
+        categoryRules[merchantKey(txn.cleanMerchant)] === undefined &&
+        matchesKeyword(txn, keywordOf(key))
+    );
+  };
+
+  const addKeywordRule = (
+    keyword: string,
+    category: string,
+    applyToExisting: boolean
+  ) => {
+    const key = keywordRuleKey(keyword);
+    if (keywordOf(key) === '') return;
+    if (applyToExisting) {
+      dispatch({
+        type: 'RECATEGORIZE',
+        payload: {
+          transactionIds: keywordMatches(keyword, category).map((t) => t.id),
+          category,
+        },
+      });
+    }
+    setCategoryRules({ ...categoryRules, [key]: category });
+  };
+
   const forgetCategoryRule = (key: string) => {
     const { [key]: _forgotten, ...rest } = categoryRules;
     setCategoryRules(rest);
@@ -682,6 +748,8 @@ export const FinancialProvider: React.FC<{
     setCategory,
     categoryRules,
     forgetCategoryRule,
+    addKeywordRule,
+    keywordMatches,
     setCategoryRules,
     unlinkTransfer,
     markAsTransfer,
