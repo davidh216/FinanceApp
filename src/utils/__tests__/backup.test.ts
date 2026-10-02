@@ -91,6 +91,7 @@ describe('backups', () => {
       budgetRollover: [],
       customCategories: [],
       notRecurring: [],
+      accountOrder: [],
     });
   });
 
