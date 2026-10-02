@@ -27,6 +27,8 @@ export interface ColumnMapping {
   amount: number;
   debit: number;
   credit: number;
+  // The bank's ID for each transaction, when the file has one (OFX).
+  bankId?: number;
 }
 
 export interface ParsedCsv {
@@ -317,6 +319,10 @@ export const buildTransactions = (
     const cleanMerchant = categorizeMerchant(description, amount);
     const rule = rules[merchantKey(cleanMerchant)];
     if (rule) cleanMerchant.suggestedCategory = rule;
+    const bankId =
+      mapping.bankId !== undefined && mapping.bankId >= 0
+        ? (row[mapping.bankId] || '').trim()
+        : '';
     transactions.push({
       id: `txn_${idPrefix}_${index}`,
       accountId,
@@ -327,6 +333,7 @@ export const buildTransactions = (
       tags: [],
       pending: false,
       cleanMerchant,
+      ...(bankId ? { bankId } : {}),
       createdAt: now,
       updatedAt: now,
     });
@@ -382,26 +389,44 @@ const transactionKey = (txn: Transaction): string =>
   ].join('|');
 
 // Splits incoming transactions into ones the account doesn't have yet and
-// ones it already does. Matching counts occurrences, so two identical $5
-// coffees on the same day both survive a first import, and re-importing an
-// overlapping export only adds what's new.
+// ones it already does. One with the bank's own ID (from OFX) matches that
+// ID, or else a transaction imported without one (from an earlier CSV).
+// Otherwise matching is by date, amount and description, counting
+// occurrences, so two identical $5 coffees on the same day both survive a
+// first import, and re-importing an overlapping export only adds what's
+// new.
 export const splitDuplicates = (
   incoming: Transaction[],
   existing: Transaction[]
 ): DuplicateSplit => {
-  const remaining = new Map<string, number>();
-  existing.forEach((txn) => {
-    const key = transactionKey(txn);
-    remaining.set(key, (remaining.get(key) || 0) + 1);
-  });
+  const bankIds = new Set(
+    existing.flatMap((txn) => (txn.bankId ? [txn.bankId] : []))
+  );
+  const count = (txns: Transaction[]) => {
+    const counts = new Map<string, number>();
+    txns.forEach((txn) => {
+      const key = transactionKey(txn);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  };
+  // Without a bank ID, anything the same counts; with one, only
+  // transactions that had none (two with different IDs are different).
+  const anyExisting = count(existing);
+  const withoutIds = count(existing.filter((txn) => !txn.bankId));
 
   const fresh: Transaction[] = [];
   const duplicates: Transaction[] = [];
   incoming.forEach((txn) => {
+    if (txn.bankId && bankIds.has(txn.bankId)) {
+      duplicates.push(txn);
+      return;
+    }
+    const remaining = txn.bankId ? withoutIds : anyExisting;
     const key = transactionKey(txn);
-    const count = remaining.get(key) || 0;
-    if (count > 0) {
-      remaining.set(key, count - 1);
+    const left = remaining.get(key) || 0;
+    if (left > 0) {
+      remaining.set(key, left - 1);
       duplicates.push(txn);
     } else {
       fresh.push(txn);

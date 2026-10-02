@@ -27,7 +27,7 @@ describe('Dashboard actions', () => {
 
   it.each([
     ['Add Transaction', 'Add a transaction'],
-    ['Import CSV', 'Import transactions from CSV'],
+    ['Import CSV', 'Choose a CSV or OFX file'],
     ['Set Budget', 'Monthly budgets'],
     ['Generate Report', 'Spending by category'],
     ['Export Data', 'Export and back up'],
@@ -64,7 +64,7 @@ describe('Dashboard actions', () => {
       await user.click(screen.getByTestId('add-account-csv'));
     });
     expect(screen.getByRole('dialog')).toHaveTextContent(
-      'Import transactions from CSV'
+      'Choose a CSV or OFX file'
     );
   });
 

@@ -115,6 +115,7 @@ const readTransaction = (
     ...(raw.notTransfer === true ? { notTransfer: true } : {}),
     ...(raw.manual === true ? { manual: true } : {}),
     ...(raw.adjustment === true ? { adjustment: true } : {}),
+    ...(isString(raw.bankId) ? { bankId: raw.bankId } : {}),
     ...(isString(raw.notes) ? { notes: raw.notes } : {}),
     createdAt: timestamp,
     updatedAt: isString(raw.updatedAt) ? raw.updatedAt : timestamp,

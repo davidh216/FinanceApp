@@ -195,7 +195,10 @@ describe('accounts entered by hand', () => {
     const home = account({
       id: 'acc_import_manual_home',
       manual: true,
-      transactions: [txn({ id: 'adj', adjustment: true, manual: true })],
+      transactions: [
+        txn({ id: 'adj', adjustment: true, manual: true }),
+        txn({ id: 'ofx', bankId: 'FIT-1' }),
+      ],
     });
     const [restored] = parseBackup(
       JSON.stringify(createBackup([home], false))
@@ -205,6 +208,8 @@ describe('accounts entered by hand', () => {
       adjustment: true,
       manual: true,
     });
+    // And an OFX import's bank IDs.
+    expect(restored.transactions![1].bankId).toBe('FIT-1');
   });
 });
 

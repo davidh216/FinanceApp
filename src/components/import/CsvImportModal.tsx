@@ -21,6 +21,7 @@ import {
 import { findTransferMatches, linkTransfers } from '../../utils/transfers';
 import { formatMoney } from '../../utils/format';
 import { readFileAsText } from '../../utils/files';
+import { OfxError, isOfx, ofxToParsed, parseOfx } from '../../utils/ofx';
 
 interface CsvImportModalProps {
   isOpen: boolean;
@@ -59,6 +60,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
   const [accountType, setAccountType] = useState<AccountType>('CHECKING');
   const [balanceInput, setBalanceInput] = useState('');
   const [flipSigns, setFlipSigns] = useState(false);
+  // OFX statements have their columns and signs set by the bank.
+  const [isOfxFile, setIsOfxFile] = useState(false);
   const [targetAccountId, setTargetAccountId] = useState(NEW_ACCOUNT);
 
   // Only imported accounts are offered: the built-in demo accounts are
@@ -79,7 +82,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       parsed,
       mapping,
       'preview',
-      flipSigns,
+      isOfxFile ? false : flipSigns,
       undefined,
       categoryRules
     );
@@ -120,6 +123,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     parsed,
     mapping,
     flipSigns,
+    isOfxFile,
     targetAccount,
     state.accounts,
     categoryRules,
@@ -144,6 +148,14 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     setFlipSigns(account?.importSettings?.flipSigns ?? false);
   };
 
+  // What's remembered for the account's next import: an OFX file's signs
+  // say nothing about its CSVs.
+  const rememberedFlip = isOfxFile
+    ? targetAccount?.importSettings?.flipSigns ?? false
+    : flipSigns;
+  // OFX amounts are already the effect on the account.
+  const appliedFlip = isOfxFile ? false : flipSigns;
+
   const reset = () => {
     setParsed(null);
     setMapping(null);
@@ -153,6 +165,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     setAccountType('CHECKING');
     setBalanceInput('');
     setFlipSigns(false);
+    setIsOfxFile(false);
     setTargetAccountId(NEW_ACCOUNT);
   };
 
@@ -165,22 +178,51 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      const result = parseCsv(await readFileAsText(file));
+      const text = await readFileAsText(file);
+      const ofx = isOfx(text);
+      const statement = ofx ? parseOfx(text) : null;
+      const result = statement ? ofxToParsed(statement) : parseCsv(text);
       if (result.rows.length === 0) {
         setFileError('No transactions found in this file.');
         return;
       }
       setFileError(null);
       setParsed(result);
-      setMapping(detectColumnMapping(result.headers, result.rows));
-      setAccountName(file.name.replace(/\.csv$/i, ''));
+      setIsOfxFile(ofx);
+      setMapping(
+        statement
+          ? {
+              date: 0,
+              description: 1,
+              amount: 2,
+              debit: -1,
+              credit: -1,
+              bankId: 3,
+            }
+          : detectColumnMapping(result.headers, result.rows)
+      );
+      setAccountName(file.name.replace(/\.(csv|ofx|qfx)$/i, ''));
       selectTarget(
         importableAccounts.some((acc) => acc.id === defaultAccountId)
           ? (defaultAccountId as string)
           : NEW_ACCOUNT
       );
-    } catch {
-      setFileError('Could not read this file. Is it a CSV export?');
+      if (statement?.accountType) setAccountType(statement.accountType);
+      if (statement && statement.balance !== null) {
+        // What's owed is entered as a positive amount.
+        setBalanceInput(
+          (statement.accountType === 'CREDIT'
+            ? Math.abs(statement.balance)
+            : statement.balance
+          ).toFixed(2)
+        );
+      }
+    } catch (error) {
+      setFileError(
+        error instanceof OfxError
+          ? error.message
+          : 'Could not read this file. Is it a CSV or OFX export?'
+      );
     }
   };
 
@@ -198,7 +240,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         parsed,
         mapping,
         targetAccount.id,
-        flipSigns,
+        appliedFlip,
         `${targetAccount.id}_${batch}`,
         categoryRules
       );
@@ -218,7 +260,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           targetAccount,
           linked.transactions,
           balance,
-          flipSigns
+          rememberedFlip
         )
       );
     } else {
@@ -227,7 +269,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         parsed,
         mapping,
         id,
-        flipSigns,
+        appliedFlip,
         undefined,
         categoryRules
       );
@@ -246,7 +288,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           bankName,
           balance,
           transactions: linked.transactions,
-          flipSigns,
+          flipSigns: rememberedFlip,
         })
       );
     }
@@ -291,7 +333,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             id="csv-import-title"
             className="text-lg font-semibold text-gray-900"
           >
-            Import transactions from CSV
+            Import transactions
           </h3>
           <button
             onClick={handleClose}
@@ -306,18 +348,18 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           {!parsed ? (
             <div>
               <p className="text-sm text-gray-600 mb-4">
-                Download a CSV of transactions from your bank's website, then
-                choose it here. The file is read in your browser and never
-                uploaded.
+                Download a CSV or OFX/QFX file of transactions from your bank's
+                website, then choose it here. The file is read in your browser
+                and never uploaded.
               </p>
               <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-8 cursor-pointer hover:border-blue-400">
                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
                 <span className="text-sm font-medium text-gray-700">
-                  Choose a CSV file
+                  Choose a CSV or OFX file
                 </span>
                 <input
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,.ofx,.qfx,text/csv,application/x-ofx"
                   className="sr-only"
                   onChange={handleFile}
                   data-testid="csv-file-input"
@@ -433,39 +475,47 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 </div>
               </section>
 
-              <section>
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                  Columns
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {columnSelect('date', 'Date')}
-                  {columnSelect('description', 'Description')}
-                  {columnSelect(
-                    'amount',
-                    'Amount',
-                    'Separate debit/credit columns'
-                  )}
-                  {mapping && mapping.amount < 0 && (
-                    <>
-                      {columnSelect('debit', 'Debit (money out)')}
-                      {columnSelect('credit', 'Credit (money in)')}
-                    </>
-                  )}
-                </div>
-                <label className="flex items-start mt-4 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 mr-2"
-                    checked={flipSigns}
-                    onChange={(e) => setFlipSigns(e.target.checked)}
-                    data-testid="flip-signs"
-                  />
-                  <span>
-                    Flip signs. Use this if purchases show as positive amounts,
-                    which is common in credit card exports.
-                  </span>
-                </label>
-              </section>
+              {isOfxFile ? (
+                <p className="text-sm text-gray-600" data-testid="ofx-note">
+                  An OFX statement: the columns and signs come from your bank,
+                  and each transaction's bank ID means re-importing an
+                  overlapping statement adds only what's new.
+                </p>
+              ) : (
+                <section>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                    Columns
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {columnSelect('date', 'Date')}
+                    {columnSelect('description', 'Description')}
+                    {columnSelect(
+                      'amount',
+                      'Amount',
+                      'Separate debit/credit columns'
+                    )}
+                    {mapping && mapping.amount < 0 && (
+                      <>
+                        {columnSelect('debit', 'Debit (money out)')}
+                        {columnSelect('credit', 'Credit (money in)')}
+                      </>
+                    )}
+                  </div>
+                  <label className="flex items-start mt-4 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 mr-2"
+                      checked={flipSigns}
+                      onChange={(e) => setFlipSigns(e.target.checked)}
+                      data-testid="flip-signs"
+                    />
+                    <span>
+                      Flip signs. Use this if purchases show as positive
+                      amounts, which is common in credit card exports.
+                    </span>
+                  </label>
+                </section>
+              )}
 
               {preview && (
                 <section>
