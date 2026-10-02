@@ -4,7 +4,8 @@ import { Account } from '../../types/financial';
 import { AccountCard } from '../ui/AccountCard';
 import { Button } from '../ui/Button';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
+import { moveAccount, orderAccounts } from '../../utils/accountOrder';
 import { formatMoney, formatSignedMoney } from '../../utils/format';
 import { totalBalanceAsOf } from '../../utils/balances';
 
@@ -25,7 +26,7 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   comparisonDate,
   onAddAccount,
 }) => {
-  const { isPrivacyMode } = useFinancial();
+  const { isPrivacyMode, accountOrder, setAccountOrder } = useFinancial();
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
@@ -65,8 +66,9 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
     );
   };
 
+  const ordered = orderAccounts(accounts, accountOrder);
   // Filter accounts based on accountFilter
-  const typeFiltered = accounts.filter((account) => {
+  const typeFiltered = ordered.filter((account) => {
     if (accountFilter === 'both') return true;
     if (accountFilter === 'personal') return !account.type.includes('BUSINESS');
     if (accountFilter === 'business') return account.type.includes('BUSINESS');
@@ -100,6 +102,52 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
 
     return acc;
   }, {} as Record<string, { Assets: Account[]; Liabilities: Account[] }>);
+
+  // A group's accounts, each with buttons to move it up or down the group.
+  const renderAccounts = (group: Account[]) => (
+    <div className="divide-y divide-gray-100">
+      {group.map((account, i) => (
+        <div key={account.id} className="relative group">
+          <AccountCard
+            account={account}
+            onClick={onAccountSelect}
+            showTransactionCount={true}
+            className="hover:bg-blue-50 transition-colors"
+          />
+          {group.length > 1 && (
+            <div className="absolute left-1 top-1/2 -translate-y-1/2 flex flex-col sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+              {(
+                [
+                  [-1, 'up', ChevronUp],
+                  [1, 'down', ChevronDown],
+                ] as const
+              ).map(([direction, word, Icon]) => (
+                <button
+                  key={word}
+                  onClick={() =>
+                    setAccountOrder(
+                      moveAccount(
+                        accounts,
+                        accountOrder,
+                        group,
+                        account.id,
+                        direction
+                      )
+                    )
+                  }
+                  disabled={direction === -1 ? i === 0 : i === group.length - 1}
+                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:invisible"
+                  aria-label={`Move ${account.name} ${word}`}
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
   const toggleSection = (sectionName: string) => {
     setExpandedSections((prev) => ({
@@ -243,20 +291,8 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                           </div>
                         </div>
                       </div>
-                      {expandedSubsections[`${mainGroup}-Assets`] && (
-                        <div className="divide-y divide-gray-100">
-                          {subsections.Assets.map((account) => (
-                            <div key={account.id} className="relative group">
-                              <AccountCard
-                                account={account}
-                                onClick={onAccountSelect}
-                                showTransactionCount={true}
-                                className="hover:bg-blue-50 transition-colors"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {expandedSubsections[`${mainGroup}-Assets`] &&
+                        renderAccounts(subsections.Assets)}
                     </div>
                   )}
 
@@ -303,20 +339,8 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
                           </div>
                         </div>
                       </div>
-                      {expandedSubsections[`${mainGroup}-Liabilities`] && (
-                        <div className="divide-y divide-gray-100">
-                          {subsections.Liabilities.map((account) => (
-                            <div key={account.id} className="relative group">
-                              <AccountCard
-                                account={account}
-                                onClick={onAccountSelect}
-                                showTransactionCount={true}
-                                className="hover:bg-blue-50 transition-colors"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {expandedSubsections[`${mainGroup}-Liabilities`] &&
+                        renderAccounts(subsections.Liabilities)}
                     </div>
                   )}
                 </>

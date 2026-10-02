@@ -34,6 +34,8 @@ export interface BackupSettings {
   customCategories: CustomCategory[];
   // Merchants you said aren't recurring, by merchantKey.
   notRecurring: string[];
+  // Account ids in the order you put them.
+  accountOrder: string[];
 }
 
 export const DEFAULT_SETTINGS: BackupSettings = {
@@ -44,6 +46,7 @@ export const DEFAULT_SETTINGS: BackupSettings = {
   budgetRollover: [],
   customCategories: [],
   notRecurring: [],
+  accountOrder: [],
 };
 
 export interface Backup {
@@ -186,8 +189,8 @@ const readAccount = (raw: unknown, index: number): Account => {
   };
 };
 
-// Merchant keys: non-empty strings, once each.
-export const cleanNotRecurring = (value: unknown): string[] =>
+// Merchant keys or account ids: non-empty strings, once each.
+export const cleanIdList = (value: unknown): string[] =>
   Array.isArray(value)
     ? Array.from(
         new Set(
@@ -241,7 +244,8 @@ export const parseBackup = (text: string): Backup => {
       goals: cleanGoals(data.settings?.goals),
       budgetRollover: cleanRollover(data.settings?.budgetRollover),
       customCategories,
-      notRecurring: cleanNotRecurring(data.settings?.notRecurring),
+      notRecurring: cleanIdList(data.settings?.notRecurring),
+      accountOrder: cleanIdList(data.settings?.accountOrder),
     },
   };
 };

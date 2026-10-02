@@ -28,7 +28,7 @@ import {
   merchantKey,
 } from '../utils/categoryRules';
 import { isCashflow } from '../utils/cashflow';
-import { BackupSettings, cleanNotRecurring } from '../utils/backup';
+import { BackupSettings, cleanIdList } from '../utils/backup';
 import {
   hasCategory,
   isSplit,
@@ -72,12 +72,11 @@ const ROLLOVER_STORAGE_KEY = 'financeapp.budgetRollover';
 const CATEGORY_RULES_STORAGE_KEY = 'financeapp.categoryRules';
 const CUSTOM_CATEGORIES_STORAGE_KEY = 'financeapp.customCategories';
 const NOT_RECURRING_STORAGE_KEY = 'financeapp.notRecurring';
+const ACCOUNT_ORDER_STORAGE_KEY = 'financeapp.accountOrder';
 
-const loadNotRecurring = (): string[] => {
+const loadIdList = (key: string): string[] => {
   try {
-    return cleanNotRecurring(
-      JSON.parse(window.localStorage.getItem(NOT_RECURRING_STORAGE_KEY) || '[]')
-    );
+    return cleanIdList(JSON.parse(window.localStorage.getItem(key) || '[]'));
   } catch {
     return [];
   }
@@ -431,6 +430,9 @@ interface FinancialContextType {
   // recurring payments and the forecast.
   notRecurring: string[];
   setNotRecurring: (keys: string[]) => void;
+  // Account ids in the order you put them; others follow.
+  accountOrder: string[];
+  setAccountOrder: (ids: string[]) => void;
   // Every setting a backup keeps, and putting a backup's back.
   settings: BackupSettings;
   restoreSettings: (settings: BackupSettings) => void;
@@ -768,11 +770,12 @@ export const FinancialProvider: React.FC<{
     setCategoryRules(rest);
   };
 
-  const [notRecurring, setNotRecurringState] =
-    useState<string[]>(loadNotRecurring);
+  const [notRecurring, setNotRecurringState] = useState<string[]>(() =>
+    loadIdList(NOT_RECURRING_STORAGE_KEY)
+  );
 
   const setNotRecurring = (keys: string[]) => {
-    const cleaned = cleanNotRecurring(keys);
+    const cleaned = cleanIdList(keys);
     setNotRecurringState(cleaned);
     try {
       window.localStorage.setItem(
@@ -781,6 +784,23 @@ export const FinancialProvider: React.FC<{
       );
     } catch {
       // The choice still applies for this session.
+    }
+  };
+
+  const [accountOrder, setAccountOrderState] = useState<string[]>(() =>
+    loadIdList(ACCOUNT_ORDER_STORAGE_KEY)
+  );
+
+  const setAccountOrder = (ids: string[]) => {
+    const cleaned = cleanIdList(ids);
+    setAccountOrderState(cleaned);
+    try {
+      window.localStorage.setItem(
+        ACCOUNT_ORDER_STORAGE_KEY,
+        JSON.stringify(cleaned)
+      );
+    } catch {
+      // The order still applies for this session.
     }
   };
 
@@ -793,6 +813,7 @@ export const FinancialProvider: React.FC<{
       budgetRollover,
       customCategories,
       notRecurring,
+      accountOrder,
     }),
     [
       showDemoAccounts,
@@ -802,6 +823,7 @@ export const FinancialProvider: React.FC<{
       budgetRollover,
       customCategories,
       notRecurring,
+      accountOrder,
     ]
   );
 
@@ -814,6 +836,7 @@ export const FinancialProvider: React.FC<{
     setCustomCategories(next.customCategories);
     setCategoryRules(next.categoryRules);
     setNotRecurring(next.notRecurring);
+    setAccountOrder(next.accountOrder);
   };
 
   const addCustomCategory = (name: string, icon: string) => {
@@ -987,6 +1010,8 @@ export const FinancialProvider: React.FC<{
     setCustomCategories,
     notRecurring,
     setNotRecurring,
+    accountOrder,
+    setAccountOrder,
     settings,
     restoreSettings,
     unlinkTransfer,
