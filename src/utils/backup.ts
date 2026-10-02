@@ -7,7 +7,7 @@ import {
 } from '../types/financial';
 import { IMPORTED_ACCOUNT_PREFIX, isImportedAccount } from './csvImport';
 import { EXTERNAL_ACCOUNT_ID } from './transfers';
-import { Budgets, cleanBudgets } from './budgets';
+import { Budgets, cleanBudgets, cleanRollover } from './budgets';
 import { CategoryRules, cleanCategoryRules } from './categoryRules';
 import { Goal, cleanGoals } from './goals';
 
@@ -26,6 +26,8 @@ export interface Backup {
     budgets: Budgets;
     categoryRules: CategoryRules;
     goals: Goal[];
+    // Budgets whose leftover rolls into the next month.
+    budgetRollover: string[];
   };
 }
 
@@ -35,13 +37,14 @@ export const createBackup = (
   budgets: Budgets = {},
   now: Date = new Date(),
   categoryRules: CategoryRules = {},
-  goals: Goal[] = []
+  goals: Goal[] = [],
+  budgetRollover: string[] = []
 ): Backup => ({
   app: BACKUP_APP,
   version: BACKUP_VERSION,
   exportedAt: now.toISOString(),
   accounts: accounts.filter(isImportedAccount),
-  settings: { showDemoAccounts, budgets, categoryRules, goals },
+  settings: { showDemoAccounts, budgets, categoryRules, goals, budgetRollover },
 });
 
 const ACCOUNT_TYPES: AccountType[] = [
@@ -193,6 +196,7 @@ export const parseBackup = (text: string): Backup => {
       budgets: cleanBudgets(data.settings?.budgets),
       categoryRules: cleanCategoryRules(data.settings?.categoryRules),
       goals: cleanGoals(data.settings?.goals),
+      budgetRollover: cleanRollover(data.settings?.budgetRollover),
     },
   };
 };

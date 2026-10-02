@@ -34,7 +34,8 @@ import {
 import { DateRangePicker } from '../ui/DateRangePicker';
 import { AddTransactionModal } from '../transactions/AddTransactionModal';
 import { TransactionsPage } from '../transactions/TransactionsPage';
-import { monthOf, spendingByCategory } from '../../utils/budgets';
+import { budgetHistory, budgetProgress, monthOf } from '../../utils/budgets';
+import { formatMoney } from '../../utils/format';
 import {
   Building,
   Plus,
@@ -55,6 +56,9 @@ export const Dashboard: React.FC = () => {
     changePeriod,
     setCustomDateRange,
     changeScreen,
+    budgets,
+    budgetRollover,
+    isPrivacyMode,
   } = useFinancial();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -91,13 +95,24 @@ export const Dashboard: React.FC = () => {
       label: today.toLocaleString('en-US', { month: 'long' }),
     };
   }, []);
-  const monthSpending = useMemo(
+  const budgetMonths = useMemo(
     () =>
-      spendingByCategory(
+      budgetHistory(
         filteredAccounts.flatMap((acc) => acc.transactions || []),
         budgetMonth.key
       ),
     [filteredAccounts, budgetMonth]
+  );
+  const monthSpending = budgetMonths.spending[budgetMonths.spending.length - 1];
+  // Budgets already over this month, for the alert above the cards.
+  const overBudget = useMemo(
+    () =>
+      budgetProgress(budgets, monthSpending, {
+        previousSpending:
+          budgetMonths.spending[budgetMonths.spending.length - 2],
+        rollover: budgetRollover,
+      }).filter((row) => row.status === 'over'),
+    [budgets, budgetRollover, monthSpending, budgetMonths]
   );
 
   const filteredTransactions = useMemo(
@@ -295,6 +310,36 @@ export const Dashboard: React.FC = () => {
       <DashboardHeader />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {overBudget.length > 0 && (
+          <div
+            className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 text-left"
+            role="status"
+            data-testid="over-budget-alert"
+          >
+            <span>
+              Over budget in {budgetMonth.label}:{' '}
+              {overBudget
+                .map(
+                  (row) =>
+                    `${row.category}${
+                      isPrivacyMode ? '' : ` by ${formatMoney(-row.remaining)}`
+                    }`
+                )
+                .join(', ')}
+            </span>
+            <button
+              onClick={() =>
+                document
+                  .querySelector('[data-testid="budgets-card"]')
+                  ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+              }
+              className="font-medium underline hover:text-red-900"
+            >
+              See budgets
+            </button>
+          </div>
+        )}
+
         {/* Period Selector - Centered above KPI Section */}
         <div className="flex justify-center mb-6">
           <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
@@ -455,7 +500,7 @@ export const Dashboard: React.FC = () => {
             <GoalsCard />
 
             <BudgetsCard
-              spending={monthSpending}
+              history={budgetMonths}
               monthLabel={budgetMonth.label}
               onEdit={() => setIsBudgetOpen(true)}
             />

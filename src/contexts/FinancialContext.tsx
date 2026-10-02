@@ -16,7 +16,7 @@ import {
 } from '../types/financial';
 import { MOCK_ACCOUNTS } from '../constants/financial';
 import { isImportedAccount } from '../utils/csvImport';
-import { Budgets, cleanBudgets } from '../utils/budgets';
+import { Budgets, cleanBudgets, cleanRollover } from '../utils/budgets';
 import { Goal, cleanGoals } from '../utils/goals';
 import {
   CategoryRules,
@@ -51,6 +51,7 @@ import {
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
 const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
 const GOALS_STORAGE_KEY = 'financeapp.goals';
+const ROLLOVER_STORAGE_KEY = 'financeapp.budgetRollover';
 const CATEGORY_RULES_STORAGE_KEY = 'financeapp.categoryRules';
 
 const loadCategoryRules = (): CategoryRules => {
@@ -72,6 +73,16 @@ const loadBudgets = (): Budgets => {
     );
   } catch {
     return {};
+  }
+};
+
+const loadRollover = (): string[] => {
+  try {
+    return cleanRollover(
+      JSON.parse(window.localStorage.getItem(ROLLOVER_STORAGE_KEY) || '[]')
+    );
+  } catch {
+    return [];
   }
 };
 
@@ -351,6 +362,9 @@ interface FinancialContextType {
   // Monthly spending limits by category.
   budgets: Budgets;
   setBudgets: (budgets: Budgets) => void;
+  // Budgets whose leftover (or overspend) rolls into the next month.
+  budgetRollover: string[];
+  setBudgetRollover: (categories: string[]) => void;
   // Savings goals, in the order you added them.
   goals: Goal[];
   setGoals: (goals: Goal[]) => void;
@@ -468,6 +482,22 @@ export const FinancialProvider: React.FC<{
       window.localStorage.setItem(BUDGETS_STORAGE_KEY, JSON.stringify(cleaned));
     } catch {
       // The budgets still apply for this session.
+    }
+  };
+
+  const [budgetRollover, setBudgetRolloverState] =
+    useState<string[]>(loadRollover);
+
+  const setBudgetRollover = (next: string[]) => {
+    const cleaned = cleanRollover(next);
+    setBudgetRolloverState(cleaned);
+    try {
+      window.localStorage.setItem(
+        ROLLOVER_STORAGE_KEY,
+        JSON.stringify(cleaned)
+      );
+    } catch {
+      // The choice still applies for this session.
     }
   };
 
@@ -710,6 +740,8 @@ export const FinancialProvider: React.FC<{
     setBudgets,
     goals,
     setGoals,
+    budgetRollover,
+    setBudgetRollover,
   };
 
   return (

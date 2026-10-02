@@ -188,3 +188,51 @@ describe('Monthly budgets', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe('Budget rollover and history', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("carries last month's overspend and warns on the dashboard", async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    await importChecking(user);
+    await openBudgets(user);
+    await setLimit(user, 'Shopping', '500');
+    await act(async () => {
+      await user.click(screen.getByLabelText('Roll over Shopping'));
+    });
+    await save(user);
+
+    // May went $499 over, so June's $500 has $1 left, and $80 is spent.
+    const row = screen.getByTestId('budget-Shopping');
+    expect(row).toHaveTextContent('$80.00 of $1.00');
+    expect(screen.getByTestId('carried-Shopping')).toHaveTextContent(
+      '$499.00 over last month'
+    );
+    expect(screen.getByTestId('over-budget-alert')).toHaveTextContent(
+      'Over budget in June: Shopping by $79.00'
+    );
+    expect(
+      JSON.parse(
+        window.localStorage.getItem('financeapp.budgetRollover') || '[]'
+      )
+    ).toEqual(['Shopping']);
+    expect(screen.getByTestId('history-Shopping')).toHaveAttribute(
+      'aria-label',
+      'Shopping, last six months: Jan $0.00, Feb $0.00, Mar $0.00, Apr $0.00, May $999.00, Jun $80.00'
+    );
+
+    // Without rollover, June is back to its own $500.
+    await openBudgets(user);
+    await act(async () => {
+      await user.click(screen.getByLabelText('Roll over Shopping'));
+    });
+    await save(user);
+    expect(screen.getByTestId('budget-Shopping')).toHaveTextContent(
+      '$80.00 of $500.00'
+    );
+    expect(screen.queryByTestId('over-budget-alert')).not.toBeInTheDocument();
+  });
+});
