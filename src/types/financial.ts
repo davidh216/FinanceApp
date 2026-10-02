@@ -69,6 +69,8 @@ export interface Transaction {
   notTransfer?: boolean;
   // Entered by hand rather than imported; these can be deleted.
   manual?: boolean;
+  // The bank's own ID for it (an OFX FITID), when the import had one.
+  bankId?: string;
   // Records a balance update: the difference between the balance you
   // entered and the one before. Neither income nor spending.
   adjustment?: boolean;
