@@ -1,4 +1,7 @@
 import {
+  applySavedColumns,
+  cleanSavedColumns,
+  columnsToSave,
   buildTransactions,
   categorizeMerchant,
   createImportedAccount,
@@ -333,5 +336,38 @@ describe('mergeImportedTransactions', () => {
     expect(
       mergeImportedTransactions(account, [], null, true).importSettings
     ).toEqual({ flipSigns: true });
+  });
+});
+
+describe('remembered columns', () => {
+  const headers = ['Posted On', 'Memo', 'Payee', 'Value'];
+  const mapping = { date: 0, description: 1, amount: 3, debit: -1, credit: -1 };
+
+  it('saves the chosen columns by name and finds them again', () => {
+    const saved = columnsToSave(headers, mapping);
+    expect(saved).toEqual({
+      date: 'Posted On',
+      description: 'Memo',
+      amount: 'Value',
+    });
+    // Another export from the same bank, columns reordered and recased.
+    expect(
+      applySavedColumns(['value', 'Payee', 'posted on', 'MEMO'], saved)
+    ).toEqual({ date: 2, description: 3, amount: 0, debit: -1, credit: -1 });
+  });
+
+  it("doesn't apply when the bank's format has changed", () => {
+    const saved = columnsToSave(headers, mapping);
+    expect(applySavedColumns(['Date', 'Memo', 'Value'], saved)).toBeNull();
+    expect(applySavedColumns(headers, undefined)).toBeNull();
+    expect(applySavedColumns(headers, {})).toBeNull();
+  });
+
+  it('cleans saved columns read from a backup', () => {
+    expect(cleanSavedColumns({ date: 'Date', amount: 5, x: 'y' })).toEqual({
+      date: 'Date',
+    });
+    expect(cleanSavedColumns({ date: ' ' })).toBeUndefined();
+    expect(cleanSavedColumns('nope')).toBeUndefined();
   });
 });

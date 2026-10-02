@@ -190,6 +190,21 @@ describe('backups', () => {
   });
 });
 
+describe('import settings', () => {
+  it('keep the remembered columns', () => {
+    const checking = account({
+      importSettings: {
+        flipSigns: true,
+        columns: { date: 'Posted On', description: 'Memo', amount: 'Value' },
+      },
+    });
+    const [restored] = parseBackup(
+      JSON.stringify(createBackup([checking], false))
+    ).accounts;
+    expect(restored.importSettings).toEqual(checking.importSettings);
+  });
+});
+
 describe('accounts entered by hand', () => {
   it('keep being manual, with their balance updates, through a backup', () => {
     const home = account({

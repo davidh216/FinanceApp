@@ -5,7 +5,11 @@ import {
   MerchantInfo,
   Transaction,
 } from '../types/financial';
-import { IMPORTED_ACCOUNT_PREFIX, isImportedAccount } from './csvImport';
+import {
+  IMPORTED_ACCOUNT_PREFIX,
+  cleanSavedColumns,
+  isImportedAccount,
+} from './csvImport';
 import { EXTERNAL_ACCOUNT_ID } from './transfers';
 import { Budgets, cleanBudgets } from './budgets';
 import { CategoryRules, cleanCategoryRules } from './categoryRules';
@@ -153,6 +157,9 @@ const readAccount = (raw: unknown, index: number): Account => {
     ),
     importSettings: {
       flipSigns: raw.importSettings?.flipSigns === true,
+      ...(cleanSavedColumns(raw.importSettings?.columns)
+        ? { columns: cleanSavedColumns(raw.importSettings?.columns) }
+        : {}),
     },
     ...(raw.manual === true ? { manual: true } : {}),
   };
