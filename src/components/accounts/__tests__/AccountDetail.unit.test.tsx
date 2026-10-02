@@ -34,6 +34,7 @@ const mockContextValue = {
   deleteTransaction: jest.fn(),
   editTransaction: jest.fn(),
   updateAccountBalance: jest.fn(),
+  updateAccountSettings: jest.fn(),
 };
 
 jest.mock('../../../contexts/FinancialContext', () => ({

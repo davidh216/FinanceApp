@@ -3,6 +3,7 @@ import { Upload, X } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { AccountType } from '../../types/financial';
 import { Button } from '../ui/Button';
+import { ACCOUNT_TYPE_OPTIONS, isClosed } from '../../utils/accountSettings';
 import {
   ColumnMapping,
   IMPORTED_ACCOUNT_PREFIX,
@@ -29,17 +30,6 @@ interface CsvImportModalProps {
 }
 
 const NEW_ACCOUNT = 'new';
-
-const ACCOUNT_TYPE_OPTIONS: { value: AccountType; label: string }[] = [
-  { value: 'CHECKING', label: 'Checking' },
-  { value: 'SAVINGS', label: 'Savings' },
-  { value: 'CREDIT', label: 'Credit card' },
-  { value: 'INVESTMENT', label: 'Investment' },
-  { value: 'LOAN', label: 'Loan' },
-  { value: 'BUSINESS_CHECKING', label: 'Business checking' },
-  { value: 'BUSINESS_SAVINGS', label: 'Business savings' },
-  { value: 'BUSINESS_CREDIT', label: 'Business credit card' },
-];
 
 const PREVIEW_ROWS = 5;
 
@@ -358,11 +348,17 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                         data-testid="import-target"
                       >
                         <option value={NEW_ACCOUNT}>New account</option>
-                        {importableAccounts.map((acc) => (
-                          <option key={acc.id} value={acc.id}>
-                            {acc.name}
-                          </option>
-                        ))}
+                        {importableAccounts
+                          .filter(
+                            (acc) =>
+                              acc.id === targetAccountId ||
+                              (!acc.manual && !isClosed(acc))
+                          )
+                          .map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name}
+                            </option>
+                          ))}
                       </select>
                     </label>
                   )}

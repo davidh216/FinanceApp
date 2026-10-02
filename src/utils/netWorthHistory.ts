@@ -47,7 +47,11 @@ export const netWorthHistory = (
         id: account.id,
         name: account.name,
         balance: balanceAsOf(account, date),
+        closed: account.isActive === false,
       }))
+      // A closed account with nothing in it that day isn't worth listing.
+      .filter((a) => !(a.closed && a.balance === 0))
+      .map(({ closed, ...rest }) => rest)
       .sort((a, b) => b.balance - a.balance);
     const assets = round(
       balances.reduce((sum, a) => sum + Math.max(0, a.balance), 0)

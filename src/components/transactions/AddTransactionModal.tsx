@@ -4,6 +4,7 @@ import { useFinancial } from '../../contexts/FinancialContext';
 import { TAG_CATEGORIES } from '../../constants/financial';
 import { Button } from '../ui/Button';
 import { isImportedAccount } from '../../utils/csvImport';
+import { isClosed } from '../../utils/accountSettings';
 import { toLocalDateString } from '../../utils/date';
 import {
   createManualTransaction,
@@ -29,7 +30,11 @@ const AddTransactionForm: React.FC<
   const { state, addManualTransaction, categoryRules } = useFinancial();
   // Only imported accounts: the demo is regenerated on every load, so a
   // transaction added to it would be lost.
-  const accounts = state.accounts.filter(isImportedAccount);
+  // Closed accounts are left out, unless it's the one you're looking at.
+  const accounts = state.accounts.filter(
+    (acc) =>
+      isImportedAccount(acc) && (!isClosed(acc) || acc.id === defaultAccountId)
+  );
   const [accountId, setAccountId] = useState(
     accounts.some((acc) => acc.id === defaultAccountId)
       ? (defaultAccountId as string)

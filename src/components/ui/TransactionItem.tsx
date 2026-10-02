@@ -5,6 +5,7 @@ import { useFinancial } from '../../contexts/FinancialContext';
 import { formatMoney } from '../../utils/format';
 import { isAdjustment, isCashflow, isTransfer } from '../../utils/cashflow';
 import { isImportedAccount } from '../../utils/csvImport';
+import { isClosed } from '../../utils/accountSettings';
 import { EXTERNAL_ACCOUNT_ID } from '../../utils/transfers';
 import { isSameMerchant, merchantKey } from '../../utils/categoryRules';
 import { EditTransactionModal } from '../transactions/EditTransactionModal';
@@ -52,7 +53,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   // regenerated on every load.
   const canFixTransfers = !!account && isImportedAccount(account);
   const transferTargets = state.accounts.filter(
-    (acc) => isImportedAccount(acc) && acc.id !== transaction.accountId
+    (acc) =>
+      isImportedAccount(acc) &&
+      acc.id !== transaction.accountId &&
+      !isClosed(acc)
   );
   const transferName =
     transaction.transferAccountId === EXTERNAL_ACCOUNT_ID

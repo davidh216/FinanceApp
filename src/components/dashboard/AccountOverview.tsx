@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isClosed } from '../../utils/accountSettings';
 import { Account } from '../../types/financial';
 import { AccountCard } from '../ui/AccountCard';
 import { Button } from '../ui/Button';
@@ -65,12 +66,18 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
   };
 
   // Filter accounts based on accountFilter
-  const filteredAccounts = accounts.filter((account) => {
+  const typeFiltered = accounts.filter((account) => {
     if (accountFilter === 'both') return true;
     if (accountFilter === 'personal') return !account.type.includes('BUSINESS');
     if (accountFilter === 'business') return account.type.includes('BUSINESS');
     return true;
   });
+  // Closed accounts are listed only on request.
+  const [showClosed, setShowClosed] = useState(false);
+  const closedCount = typeFiltered.filter(isClosed).length;
+  const filteredAccounts = showClosed
+    ? typeFiltered
+    : typeFiltered.filter((account) => !isClosed(account));
 
   // Account grouping by Personal/Business with Assets/Liabilities subsections
   const accountGroups = filteredAccounts.reduce((acc, account) => {
@@ -317,6 +324,19 @@ export const AccountOverview: React.FC<AccountOverviewProps> = ({
             </div>
           ))}
         </div>
+        {closedCount > 0 && (
+          <button
+            onClick={() => setShowClosed(!showClosed)}
+            className="w-full px-6 py-3 text-left text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-t"
+            data-testid="toggle-closed-accounts"
+          >
+            {showClosed
+              ? 'Hide closed accounts'
+              : `Show ${closedCount} closed account${
+                  closedCount === 1 ? '' : 's'
+                }`}
+          </button>
+        )}
       </div>
     </div>
   );

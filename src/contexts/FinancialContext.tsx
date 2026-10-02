@@ -45,6 +45,10 @@ import {
   loadLegacyAccounts,
 } from '../utils/accountStore';
 import { updateBalance } from '../utils/manualAccounts';
+import {
+  AccountSettings,
+  applyAccountSettings,
+} from '../utils/accountSettings';
 
 const SHOW_DEMO_ACCOUNTS_STORAGE_KEY = 'financeapp.showDemoAccounts';
 const BUDGETS_STORAGE_KEY = 'financeapp.budgets';
@@ -308,6 +312,9 @@ interface FinancialContextType {
     balance: number,
     date: string
   ) => void;
+  // Renames an imported or hand-entered account, changes its type or marks
+  // it closed.
+  updateAccountSettings: (accountId: string, settings: AccountSettings) => void;
   viewAccountDetail: (account: Account) => void;
   importAccount: (account: Account) => void;
   updateImportedAccount: (account: Account) => void;
@@ -727,6 +734,18 @@ export const FinancialProvider: React.FC<{
     });
   };
 
+  const updateAccountSettings = (
+    accountId: string,
+    settings: AccountSettings
+  ) => {
+    const account = fullState.accounts.find((acc) => acc.id === accountId);
+    if (!account || !isImportedAccount(account)) return;
+    dispatch({
+      type: 'REPLACE_ACCOUNT',
+      payload: applyAccountSettings(account, settings),
+    });
+  };
+
   const editTransaction = (transactionId: string, edit: TransactionEdit) => {
     const account = fullState.accounts.find((acc) =>
       acc.transactions?.some((txn) => txn.id === transactionId)
@@ -803,6 +822,7 @@ export const FinancialProvider: React.FC<{
     deleteTransaction,
     editTransaction,
     updateAccountBalance,
+    updateAccountSettings,
     viewAccountDetail,
     importAccount,
     updateImportedAccount,
