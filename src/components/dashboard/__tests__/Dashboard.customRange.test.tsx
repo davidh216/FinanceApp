@@ -138,7 +138,7 @@ describe('Custom date range', () => {
     renderDashboard();
     await importChecking(user);
     await pickMay1To10(user);
-    await click(user, 'M');
+    await click(user, 'This month');
 
     expect(screen.getByRole('button', { name: 'Custom' })).toBeInTheDocument();
     expect(screen.getByTestId('kpi-income')).toHaveTextContent(

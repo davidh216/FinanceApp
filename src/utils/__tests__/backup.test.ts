@@ -75,8 +75,7 @@ describe('backups', () => {
   it('holds only imported accounts, and restores them exactly', () => {
     const backup = createBackup(
       [demo, checking],
-      true,
-      { Groceries: 400 },
+      { showDemoAccounts: true, budgets: { Groceries: 400 } },
       new Date('2025-06-15T16:00:00.000Z')
     );
     expect(backup.accounts.map((a) => a.id)).toEqual(['acc_import_1']);
@@ -91,20 +90,17 @@ describe('backups', () => {
       goals: [],
       budgetRollover: [],
       customCategories: [],
+      notRecurring: [],
     });
   });
 
   it('keeps your own categories, and the rules that use them', () => {
-    const backup = createBackup(
-      [checking],
-      false,
-      { Pets: 100 },
-      new Date(),
-      { chewy: 'Pets', petco: 'Gone' },
-      [],
-      ['Pets'],
-      [{ name: 'Pets', icon: '🐶' }]
-    );
+    const backup = createBackup([checking], {
+      budgets: { Pets: 100 },
+      categoryRules: { chewy: 'Pets', petco: 'Gone' },
+      budgetRollover: ['Pets'],
+      customCategories: [{ name: 'Pets', icon: '🐶' }],
+    });
     const restored = parseBackup(JSON.stringify(backup)).settings;
     expect(restored.customCategories).toEqual([{ name: 'Pets', icon: '🐶' }]);
     expect(restored.categoryRules).toEqual({ chewy: 'Pets' });
@@ -113,7 +109,7 @@ describe('backups', () => {
   });
 
   it('reads backups made before custom categories', () => {
-    const backup = JSON.parse(JSON.stringify(createBackup([checking], false)));
+    const backup = JSON.parse(JSON.stringify(createBackup([checking])));
     delete backup.settings.customCategories;
     expect(
       parseBackup(JSON.stringify(backup)).settings.customCategories
@@ -121,8 +117,8 @@ describe('backups', () => {
   });
 
   it('keeps the categories you chose for merchants', () => {
-    const backup = createBackup([checking], false, {}, new Date(), {
-      starbucks: 'Entertainment',
+    const backup = createBackup([checking], {
+      categoryRules: { starbucks: 'Entertainment' },
     });
     expect(parseBackup(JSON.stringify(backup)).settings.categoryRules).toEqual({
       starbucks: 'Entertainment',
@@ -131,7 +127,7 @@ describe('backups', () => {
 
   it('keeps transactions marked as added by hand', () => {
     const cash = account({ transactions: [txn({ manual: true })] });
-    const restored = parseBackup(JSON.stringify(createBackup([cash], false)));
+    const restored = parseBackup(JSON.stringify(createBackup([cash])));
     expect(restored.accounts[0].transactions![0].manual).toBe(true);
   });
 
@@ -139,7 +135,7 @@ describe('backups', () => {
     const linked = account({
       transactions: [txn({ transferAccountId: 'acc_import_2' })],
     });
-    const restored = parseBackup(JSON.stringify(createBackup([linked], false)));
+    const restored = parseBackup(JSON.stringify(createBackup([linked])));
     expect(restored.accounts[0].transactions![0].transferAccountId).toBe(
       'acc_import_2'
     );
@@ -149,9 +145,7 @@ describe('backups', () => {
     const unlinked = account({
       transactions: [txn({ notTransfer: true })],
     });
-    const restored = parseBackup(
-      JSON.stringify(createBackup([unlinked], false))
-    );
+    const restored = parseBackup(JSON.stringify(createBackup([unlinked])));
     expect(restored.accounts[0].transactions![0].notTransfer).toBe(true);
   });
 
@@ -227,7 +221,7 @@ describe('import settings', () => {
       },
     });
     const [restored] = parseBackup(
-      JSON.stringify(createBackup([checking], false))
+      JSON.stringify(createBackup([checking]))
     ).accounts;
     expect(restored.importSettings).toEqual(checking.importSettings);
   });
@@ -244,7 +238,7 @@ describe('accounts entered by hand', () => {
       ],
     });
     const [restored] = parseBackup(
-      JSON.stringify(createBackup([home], false))
+      JSON.stringify(createBackup([home]))
     ).accounts;
     expect(restored.manual).toBe(true);
     expect(restored.transactions![0]).toMatchObject({
@@ -327,5 +321,24 @@ describe('transactionsToCsv', () => {
     });
     const [, row] = transactionsToCsv([noted]).split('\n');
     expect(row).toMatch(/-5\.75,,,"Lunch with Sam, split 50\/50"$/);
+  });
+});
+
+describe('payments marked not recurring', () => {
+  it('go through a backup, cleaned', () => {
+    const backup = JSON.parse(
+      JSON.stringify(createBackup([], { notRecurring: ['netflix'] }))
+    );
+    expect(parseBackup(JSON.stringify(backup)).settings.notRecurring).toEqual([
+      'netflix',
+    ]);
+    backup.settings.notRecurring = ['netflix', 'netflix', '', 4];
+    expect(parseBackup(JSON.stringify(backup)).settings.notRecurring).toEqual([
+      'netflix',
+    ]);
+    delete backup.settings.notRecurring;
+    expect(parseBackup(JSON.stringify(backup)).settings.notRecurring).toEqual(
+      []
+    );
   });
 });

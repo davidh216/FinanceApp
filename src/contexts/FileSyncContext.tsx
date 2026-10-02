@@ -87,22 +87,8 @@ export const FileSyncProvider: React.FC<{
   children: React.ReactNode;
   fileAccess?: FileAccess;
 }> = ({ children, fileAccess = browserFileAccess }) => {
-  const {
-    state,
-    showDemoAccounts,
-    setShowDemoAccounts,
-    budgets,
-    setBudgets,
-    goals,
-    setGoals,
-    budgetRollover,
-    setBudgetRollover,
-    categoryRules,
-    setCategoryRules,
-    customCategories,
-    setCustomCategories,
-    restoreImportedAccounts,
-  } = useFinancial();
+  const { state, settings, restoreSettings, restoreImportedAccounts } =
+    useFinancial();
 
   const [status, setStatus] = useState<FileSyncStatus>(
     fileAccess.supported ? 'off' : 'unsupported'
@@ -119,44 +105,14 @@ export const FileSyncProvider: React.FC<{
   // Saves run one at a time, in order.
   const queueRef = useRef<Promise<void>>(Promise.resolve());
 
-  const backupNow = () =>
-    createBackup(
-      state.accounts,
-      showDemoAccounts,
-      budgets,
-      new Date(),
-      categoryRules,
-      goals,
-      budgetRollover,
-      customCategories
-    );
+  const backupNow = () => createBackup(state.accounts, settings);
   const latestBackup = useRef(backupNow);
   latestBackup.current = backupNow;
 
   // Everything a save writes, apart from the time.
   const snapshot = useMemo(
-    () =>
-      JSON.stringify(
-        createBackup(
-          state.accounts,
-          showDemoAccounts,
-          budgets,
-          new Date(0),
-          categoryRules,
-          goals,
-          budgetRollover,
-          customCategories
-        )
-      ),
-    [
-      state.accounts,
-      showDemoAccounts,
-      budgets,
-      categoryRules,
-      goals,
-      budgetRollover,
-      customCategories,
-    ]
+    () => JSON.stringify(createBackup(state.accounts, settings, new Date(0))),
+    [state.accounts, settings]
   );
   const lastSnapshot = useRef(snapshot);
 
@@ -210,13 +166,7 @@ export const FileSyncProvider: React.FC<{
 
   const applyBackup = (backup: Backup) => {
     restoreImportedAccounts(backup.accounts);
-    setShowDemoAccounts(backup.settings.showDemoAccounts);
-    setBudgets(backup.settings.budgets);
-    setGoals(backup.settings.goals);
-    setBudgetRollover(backup.settings.budgetRollover);
-    // Before the rules, which may use them.
-    setCustomCategories(backup.settings.customCategories);
-    setCategoryRules(backup.settings.categoryRules);
+    restoreSettings(backup.settings);
   };
 
   const connected = (backup: Backup) => {

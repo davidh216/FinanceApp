@@ -214,9 +214,7 @@ describe('split transactions elsewhere', () => {
       updatedAt: '',
       transactions: [split],
     } as Account;
-    const restored = parseBackup(
-      JSON.stringify(createBackup([account], false))
-    );
+    const restored = parseBackup(JSON.stringify(createBackup([account])));
     expect(restored.accounts[0].transactions![0].splits).toEqual(parts);
     expect(transactionsToCsv([account])).toContain(
       'Split: Groceries 70.00, Shopping 30.00'

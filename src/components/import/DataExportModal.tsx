@@ -32,22 +32,8 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const {
-    state,
-    showDemoAccounts,
-    setShowDemoAccounts,
-    restoreImportedAccounts,
-    budgets,
-    setBudgets,
-    goals,
-    setGoals,
-    budgetRollover,
-    setBudgetRollover,
-    categoryRules,
-    setCategoryRules,
-    customCategories,
-    setCustomCategories,
-  } = useFinancial();
+  const { state, settings, restoreSettings, restoreImportedAccounts } =
+    useFinancial();
   const [pendingRestore, setPendingRestore] = useState<Backup | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
@@ -65,20 +51,7 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
   const handleBackup = () => {
     downloadFile(
       `financeapp-backup-${today}.json`,
-      JSON.stringify(
-        createBackup(
-          state.accounts,
-          showDemoAccounts,
-          budgets,
-          new Date(),
-          categoryRules,
-          goals,
-          budgetRollover,
-          customCategories
-        ),
-        null,
-        2
-      ),
+      JSON.stringify(createBackup(state.accounts, settings), null, 2),
       'application/json'
     );
   };
@@ -113,13 +86,7 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
   const handleRestore = () => {
     if (!pendingRestore) return;
     restoreImportedAccounts(pendingRestore.accounts);
-    setShowDemoAccounts(pendingRestore.settings.showDemoAccounts);
-    setBudgets(pendingRestore.settings.budgets);
-    setGoals(pendingRestore.settings.goals);
-    setBudgetRollover(pendingRestore.settings.budgetRollover);
-    // Before the rules, which may use them.
-    setCustomCategories(pendingRestore.settings.customCategories);
-    setCategoryRules(pendingRestore.settings.categoryRules);
+    restoreSettings(pendingRestore.settings);
     handleClose();
   };
 
@@ -174,9 +141,9 @@ export const DataExportModal: React.FC<DataExportModalProps> = ({
                     countTransactions(importedAccounts),
                     'transaction'
                   )}, with their tags and transfer links${
-                    Object.keys(budgets).length > 0
+                    Object.keys(settings.budgets).length > 0
                       ? `, and your ${plural(
-                          Object.keys(budgets).length,
+                          Object.keys(settings.budgets).length,
                           'budget'
                         )}`
                       : ''
