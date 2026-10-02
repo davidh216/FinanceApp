@@ -90,7 +90,34 @@ describe('backups', () => {
       categoryRules: {},
       goals: [],
       budgetRollover: [],
+      customCategories: [],
     });
+  });
+
+  it('keeps your own categories, and the rules that use them', () => {
+    const backup = createBackup(
+      [checking],
+      false,
+      { Pets: 100 },
+      new Date(),
+      { chewy: 'Pets', petco: 'Gone' },
+      [],
+      ['Pets'],
+      [{ name: 'Pets', icon: '🐶' }]
+    );
+    const restored = parseBackup(JSON.stringify(backup)).settings;
+    expect(restored.customCategories).toEqual([{ name: 'Pets', icon: '🐶' }]);
+    expect(restored.categoryRules).toEqual({ chewy: 'Pets' });
+    expect(restored.budgets).toEqual({ Pets: 100 });
+    expect(restored.budgetRollover).toEqual(['Pets']);
+  });
+
+  it('reads backups made before custom categories', () => {
+    const backup = JSON.parse(JSON.stringify(createBackup([checking], false)));
+    delete backup.settings.customCategories;
+    expect(
+      parseBackup(JSON.stringify(backup)).settings.customCategories
+    ).toEqual([]);
   });
 
   it('keeps the categories you chose for merchants', () => {

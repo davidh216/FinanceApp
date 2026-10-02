@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
+import { useCategories } from '../../hooks/useCategories';
 import { Button } from '../ui/Button';
 import { Budgets, isBudgetCategory } from '../../utils/budgets';
 import { formatMoney } from '../../utils/format';
@@ -12,8 +12,6 @@ interface BudgetModalProps {
   // This month's spending by category, to help pick a limit.
   spending: Record<string, number>;
 }
-
-const CATEGORIES = Object.keys(TAG_CATEGORIES).filter(isBudgetCategory);
 
 // "" means no budget; anything else must be a positive amount.
 const parseLimit = (value: string): number | null | 'invalid' => {
@@ -34,6 +32,8 @@ const BudgetForm: React.FC<Omit<BudgetModalProps, 'isOpen'>> = ({
     setBudgetRollover,
     isPrivacyMode,
   } = useFinancial();
+  const categories = useCategories();
+  const CATEGORIES = categories.names.filter(isBudgetCategory);
   const [rollover, setRollover] = useState<string[]>(budgetRollover);
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -98,7 +98,7 @@ const BudgetForm: React.FC<Omit<BudgetModalProps, 'isOpen'>> = ({
                   className="flex items-center gap-3 flex-wrap sm:flex-nowrap"
                 >
                   <span className="text-lg w-6 text-center">
-                    {TAG_CATEGORIES[category].icon}
+                    {categories.icon(category)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900">

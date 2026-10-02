@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
+import { useCategories } from '../../hooks/useCategories';
 import { Transaction } from '../../types/financial';
 import { DateRange, spendingReport } from '../../utils/spendingReport';
 import { formatMoney, formatSignedMoney } from '../../utils/format';
@@ -28,6 +28,7 @@ export const SpendingReportModal: React.FC<SpendingReportModalProps> = ({
   previous,
 }) => {
   const { isPrivacyMode } = useFinancial();
+  const categories = useCategories();
   const report = useMemo(
     () => spendingReport(transactions, period, previous),
     [transactions, period, previous]
@@ -103,7 +104,7 @@ export const SpendingReportModal: React.FC<SpendingReportModalProps> = ({
                     >
                       <span className="text-sm text-gray-700 truncate">
                         <span className="mr-1">
-                          {TAG_CATEGORIES[c.category]?.icon}
+                          {categories.icon(c.category)}
                         </span>
                         {c.category}
                       </span>

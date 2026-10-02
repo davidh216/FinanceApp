@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
+import { useCategories } from '../../hooks/useCategories';
 import { BudgetStatus, budgetProgress } from '../../utils/budgets';
 import { formatMoney } from '../../utils/format';
 
@@ -36,6 +36,7 @@ export const BudgetsCard: React.FC<BudgetsCardProps> = ({
   onEdit,
 }) => {
   const { budgets, budgetRollover, isPrivacyMode } = useFinancial();
+  const categories = useCategories();
   const last = history.spending.length - 1;
   const spending = history.spending[last] ?? {};
   const rows = budgetProgress(budgets, spending, {
@@ -83,9 +84,7 @@ export const BudgetsCard: React.FC<BudgetsCardProps> = ({
           >
             <div className="flex items-center justify-between text-sm mb-1">
               <span className="font-medium text-gray-900">
-                <span className="mr-1">
-                  {TAG_CATEGORIES[row.category]?.icon}
-                </span>
+                <span className="mr-1">{categories.icon(row.category)}</span>
                 {row.category}
               </span>
               <span className="text-gray-600">

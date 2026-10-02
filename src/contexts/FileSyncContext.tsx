@@ -99,6 +99,8 @@ export const FileSyncProvider: React.FC<{
     setBudgetRollover,
     categoryRules,
     setCategoryRules,
+    customCategories,
+    setCustomCategories,
     restoreImportedAccounts,
   } = useFinancial();
 
@@ -125,7 +127,8 @@ export const FileSyncProvider: React.FC<{
       new Date(),
       categoryRules,
       goals,
-      budgetRollover
+      budgetRollover,
+      customCategories
     );
   const latestBackup = useRef(backupNow);
   latestBackup.current = backupNow;
@@ -141,7 +144,8 @@ export const FileSyncProvider: React.FC<{
           new Date(0),
           categoryRules,
           goals,
-          budgetRollover
+          budgetRollover,
+          customCategories
         )
       ),
     [
@@ -151,6 +155,7 @@ export const FileSyncProvider: React.FC<{
       categoryRules,
       goals,
       budgetRollover,
+      customCategories,
     ]
   );
   const lastSnapshot = useRef(snapshot);
@@ -209,6 +214,8 @@ export const FileSyncProvider: React.FC<{
     setBudgets(backup.settings.budgets);
     setGoals(backup.settings.goals);
     setBudgetRollover(backup.settings.budgetRollover);
+    // Before the rules, which may use them.
+    setCustomCategories(backup.settings.customCategories);
     setCategoryRules(backup.settings.categoryRules);
   };
 

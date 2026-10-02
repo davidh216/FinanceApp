@@ -3,7 +3,7 @@ import { ArrowLeft, ListChecks, Search } from 'lucide-react';
 import { CategoryRulesModal } from './CategoryRulesModal';
 import { Account } from '../../types/financial';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
+import { useCategories } from '../../hooks/useCategories';
 import { DashboardHeader } from '../dashboard/DashboardHeader';
 import { TransactionItem } from '../ui/TransactionItem';
 import { Button } from '../ui/Button';
@@ -31,6 +31,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   accounts,
 }) => {
   const { changeScreen, addTag, removeTag, isPrivacyMode } = useFinancial();
+  const categories = useCategories();
   const [filters, setFilters] = useState<TransactionFilters>(NO_FILTERS);
   const [shown, setShown] = useState(PAGE_SIZE);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -80,10 +81,10 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             className="ml-auto whitespace-nowrap"
             leftIcon={<ListChecks className="w-4 h-4" />}
             onClick={() => setIsRulesOpen(true)}
-            aria-label="Category rules"
+            aria-label="Categories and rules"
           >
-            <span className="sm:hidden">Rules</span>
-            <span className="hidden sm:inline">Category rules</span>
+            <span className="sm:hidden">Categories</span>
+            <span className="hidden sm:inline">Categories and rules</span>
           </Button>
         </div>
         {isRulesOpen && (
@@ -123,7 +124,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
               className={fieldClasses}
             >
               <option value="">All categories</option>
-              {Object.keys(TAG_CATEGORIES).map((category) => (
+              {categories.names.map((category) => (
                 <option key={category} value={category}>
                   {category}
                 </option>

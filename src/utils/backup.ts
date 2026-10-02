@@ -14,6 +14,7 @@ import { EXTERNAL_ACCOUNT_ID } from './transfers';
 import { Budgets, cleanBudgets, cleanRollover } from './budgets';
 import { CategoryRules, cleanCategoryRules } from './categoryRules';
 import { Goal, cleanGoals } from './goals';
+import { CustomCategory, cleanCustomCategories } from './categories';
 
 // Backups hold the imported accounts only: demo accounts are regenerated on
 // every load.
@@ -32,6 +33,8 @@ export interface Backup {
     goals: Goal[];
     // Budgets whose leftover rolls into the next month.
     budgetRollover: string[];
+    // Categories you added. Older backups don't have them.
+    customCategories: CustomCategory[];
   };
 }
 
@@ -42,13 +45,21 @@ export const createBackup = (
   now: Date = new Date(),
   categoryRules: CategoryRules = {},
   goals: Goal[] = [],
-  budgetRollover: string[] = []
+  budgetRollover: string[] = [],
+  customCategories: CustomCategory[] = []
 ): Backup => ({
   app: BACKUP_APP,
   version: BACKUP_VERSION,
   exportedAt: now.toISOString(),
   accounts: accounts.filter(isImportedAccount),
-  settings: { showDemoAccounts, budgets, categoryRules, goals, budgetRollover },
+  settings: {
+    showDemoAccounts,
+    budgets,
+    categoryRules,
+    goals,
+    budgetRollover,
+    customCategories,
+  },
 });
 
 const ACCOUNT_TYPES: AccountType[] = [
@@ -193,6 +204,9 @@ export const parseBackup = (text: string): Backup => {
   if (new Set(accounts.map((account) => account.id)).size !== accounts.length) {
     throw new BackupError('This backup lists the same account twice.');
   }
+  const customCategories = cleanCustomCategories(
+    data.settings?.customCategories
+  );
   return {
     app: BACKUP_APP,
     version: BACKUP_VERSION,
@@ -201,9 +215,13 @@ export const parseBackup = (text: string): Backup => {
     settings: {
       showDemoAccounts: data.settings?.showDemoAccounts === true,
       budgets: cleanBudgets(data.settings?.budgets),
-      categoryRules: cleanCategoryRules(data.settings?.categoryRules),
+      categoryRules: cleanCategoryRules(
+        data.settings?.categoryRules,
+        customCategories.map((c) => c.name)
+      ),
       goals: cleanGoals(data.settings?.goals),
       budgetRollover: cleanRollover(data.settings?.budgetRollover),
+      customCategories,
     },
   };
 };

@@ -9,8 +9,7 @@ import { isClosed } from '../../utils/accountSettings';
 import { EXTERNAL_ACCOUNT_ID } from '../../utils/transfers';
 import { isSameMerchant, merchantKey } from '../../utils/categoryRules';
 import { EditTransactionModal } from '../transactions/EditTransactionModal';
-
-const CATEGORY_OPTIONS = Object.keys(TAG_CATEGORIES);
+import { useCategories } from '../../hooks/useCategories';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -42,6 +41,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     forgetCategoryRule,
     deleteTransaction,
   } = useFinancial();
+  const categories = useCategories();
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -146,9 +146,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-100"
         data-testid="category-button"
       >
-        <span className="mr-1">
-          {TAG_CATEGORIES[transaction.category]?.icon || '📝'}
-        </span>
+        <span className="mr-1">{categories.icon(transaction.category)}</span>
         {transaction.category} ▾
       </button>
       {showCategoryMenu && (
@@ -192,14 +190,14 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               </button>
             </div>
           )}
-          {CATEGORY_OPTIONS.map((category) => (
+          {categories.names.map((category) => (
             <button
               key={category}
               role="menuitem"
               onClick={() => chooseCategory(category)}
               className={categoryMenuItem}
             >
-              <span className="mr-2">{TAG_CATEGORIES[category].icon}</span>
+              <span className="mr-2">{categories.icon(category)}</span>
               {category}
               {category === transaction.category && (
                 <span className="ml-auto text-gray-400">✓</span>

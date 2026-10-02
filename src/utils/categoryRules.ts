@@ -76,9 +76,12 @@ export const applyCategoryRule = (
   };
 };
 
-// Keeps rules that name a known category. Used for saved rules and
-// backups, which may be hand-edited.
-export const cleanCategoryRules = (value: unknown): CategoryRules => {
+// Keeps rules that name a known category: a built-in one or one of
+// `customNames`. Used for saved rules and backups, which may be hand-edited.
+export const cleanCategoryRules = (
+  value: unknown,
+  customNames: string[] = []
+): CategoryRules => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return {};
   }
@@ -87,7 +90,8 @@ export const cleanCategoryRules = (value: unknown): CategoryRules => {
     if (
       key.trim() !== '' &&
       typeof category === 'string' &&
-      Object.prototype.hasOwnProperty.call(TAG_CATEGORIES, category)
+      (Object.prototype.hasOwnProperty.call(TAG_CATEGORIES, category) ||
+        customNames.includes(category))
     ) {
       rules[key] = category;
     }

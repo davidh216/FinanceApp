@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
+import { useCategories } from '../../hooks/useCategories';
 import { RecurringPayment } from '../../utils/recurring';
 import { formatDateRange } from '../../utils/date';
 import { formatMoney } from '../../utils/format';
@@ -25,6 +25,7 @@ const formatDay = (date: string) => formatDateRange(date, date);
 
 export const RecurringCard: React.FC<RecurringCardProps> = ({ payments }) => {
   const { isPrivacyMode } = useFinancial();
+  const categories = useCategories();
   const [expanded, setExpanded] = useState(false);
   if (payments.length === 0) return null;
 
@@ -65,7 +66,7 @@ export const RecurringCard: React.FC<RecurringCardProps> = ({ payments }) => {
           >
             <div className="min-w-0">
               <div className="text-sm font-medium text-gray-900 truncate">
-                <span className="mr-1">{TAG_CATEGORIES[p.category]?.icon}</span>
+                <span className="mr-1">{categories.icon(p.category)}</span>
                 {p.merchant}
               </div>
               <div className="text-xs text-gray-500">

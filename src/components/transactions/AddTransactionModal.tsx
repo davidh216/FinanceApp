@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
+import { useCategories } from '../../hooks/useCategories';
 import { Button } from '../ui/Button';
 import { isImportedAccount } from '../../utils/csvImport';
 import { isClosed } from '../../utils/accountSettings';
@@ -19,8 +19,6 @@ interface AddTransactionModalProps {
   defaultAccountId?: string;
 }
 
-const CATEGORIES = Object.keys(TAG_CATEGORIES);
-
 const fieldClasses =
   'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
@@ -28,6 +26,7 @@ const AddTransactionForm: React.FC<
   Omit<AddTransactionModalProps, 'isOpen'>
 > = ({ onClose, defaultAccountId }) => {
   const { state, addManualTransaction, categoryRules } = useFinancial();
+  const categories = useCategories();
   // Only imported accounts: the demo is regenerated on every load, so a
   // transaction added to it would be lost.
   // Closed accounts are left out, unless it's the one you're looking at.
@@ -232,9 +231,9 @@ const AddTransactionForm: React.FC<
                 onChange={(event) => setChosenCategory(event.target.value)}
                 className={fieldClasses}
               >
-                {CATEGORIES.map((name) => (
+                {categories.names.map((name) => (
                   <option key={name} value={name}>
-                    {TAG_CATEGORIES[name].icon} {name}
+                    {categories.label(name)}
                   </option>
                 ))}
               </select>

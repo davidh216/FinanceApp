@@ -21,6 +21,7 @@ const mockContextValue = {
   viewAccountDetail: jest.fn(),
   setCategory: jest.fn(),
   categoryRules: {},
+  customCategories: [],
   forgetCategoryRule: jest.fn(),
   addKeywordRule: jest.fn(),
   keywordMatches: jest.fn(() => []),

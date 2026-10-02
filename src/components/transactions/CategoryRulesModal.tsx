@@ -1,29 +1,39 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { TAG_CATEGORIES } from '../../constants/financial';
 import { Button } from '../ui/Button';
 import { isKeywordRule, keywordRules } from '../../utils/categoryRules';
+import {
+  CUSTOM_CATEGORY_ICONS,
+  categoryNameError,
+} from '../../utils/categories';
+import { useCategories } from '../../hooks/useCategories';
 
 interface CategoryRulesModalProps {
   onClose: () => void;
 }
 
-const CATEGORIES = Object.keys(TAG_CATEGORIES);
-
 const fieldClasses =
   'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
-const label = (category: string) =>
-  `${TAG_CATEGORIES[category]?.icon ?? ''} ${category}`.trim();
-
-// Your category rules: keyword rules you add here, and the merchant rules
-// you made from a transaction's category menu.
+// Your own categories, and your category rules: keyword rules you add
+// here, and the merchant rules you made from a transaction's category menu.
 export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
   onClose,
 }) => {
-  const { categoryRules, addKeywordRule, keywordMatches, forgetCategoryRule } =
-    useFinancial();
+  const {
+    state,
+    categoryRules,
+    addKeywordRule,
+    keywordMatches,
+    forgetCategoryRule,
+    customCategories,
+    addCustomCategory,
+    removeCustomCategory,
+  } = useFinancial();
+  const categories = useCategories();
+  const [newName, setNewName] = useState('');
+  const [newIcon, setNewIcon] = useState(CUSTOM_CATEGORY_ICONS[0]);
   const [keyword, setKeyword] = useState('');
   const [category, setCategory] = useState('Shopping');
   const [applyToExisting, setApplyToExisting] = useState(true);
@@ -34,6 +44,34 @@ export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
   const merchants = Object.entries(categoryRules)
     .filter(([key]) => !isKeywordRule(key))
     .sort(([a], [b]) => a.localeCompare(b));
+
+  // Shown as you type, once there's a name.
+  const nameError =
+    newName.trim() === '' ? null : categoryNameError(newName, customCategories);
+
+  const handleAddCategory = () => {
+    if (newName.trim() === '' || nameError) return;
+    if (addCustomCategory(newName, newIcon) === null) setNewName('');
+  };
+
+  const handleRemoveCategory = (name: string) => {
+    const count = state.transactions.filter(
+      (txn) => txn.category === name
+    ).length;
+    const moved =
+      count === 0
+        ? ''
+        : ` Its ${
+            count === 1 ? 'transaction' : `${count} transactions`
+          } will become Other.`;
+    if (
+      window.confirm(
+        `Remove the ${name} category?${moved} Its budget and rules go too.`
+      )
+    ) {
+      removeCustomCategory(name);
+    }
+  };
 
   const handleAdd = () => {
     if (trimmed.length < 2) return;
@@ -51,7 +89,7 @@ export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-full overflow-y-auto text-left">
         <div className="flex items-center justify-between p-6 border-b">
           <h3 id="rules-title" className="text-lg font-semibold text-gray-900">
-            Category rules
+            Categories and rules
           </h3>
           <button
             onClick={onClose}
@@ -63,6 +101,94 @@ export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
         </div>
 
         <div className="p-6 space-y-6">
+          <section>
+            <h4 className="text-sm font-semibold text-gray-900 mb-1">
+              Your categories
+            </h4>
+            <p className="text-sm text-gray-600 mb-3">
+              Add categories of your own, like Pets or Kids. They work like the
+              built-in ones, with budgets and rules.
+            </p>
+            {customCategories.length > 0 && (
+              <ul
+                className="divide-y divide-gray-100 text-sm mb-3"
+                data-testid="custom-categories"
+              >
+                {customCategories.map((c) => (
+                  <li
+                    key={c.name}
+                    className="flex items-center justify-between gap-3 py-2"
+                  >
+                    <span className="min-w-0 truncate text-gray-700">
+                      {c.icon} {c.name}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveCategory(c.name)}
+                      className="text-blue-600 hover:text-blue-700 shrink-0"
+                      aria-label={`Remove the ${c.name} category`}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form
+              className="flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleAddCategory();
+              }}
+            >
+              <label className="shrink-0">
+                <span className="sr-only">Icon</span>
+                <select
+                  value={newIcon}
+                  onChange={(event) => setNewIcon(event.target.value)}
+                  className="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {CUSTOM_CATEGORY_ICONS.map((icon) => (
+                    <option key={icon} value={icon}>
+                      {icon}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex-1 min-w-0">
+                <span className="sr-only">New category name</span>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(event) => setNewName(event.target.value)}
+                  placeholder="New category"
+                  maxLength={40}
+                  aria-invalid={nameError !== null}
+                  aria-describedby={
+                    nameError ? 'category-name-error' : undefined
+                  }
+                  className={fieldClasses}
+                />
+              </label>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={newName.trim() === '' || nameError !== null}
+                data-testid="add-category"
+              >
+                Add
+              </Button>
+            </form>
+            {nameError && (
+              <p
+                id="category-name-error"
+                className="mt-1 text-sm text-red-600"
+                role="alert"
+              >
+                {nameError}
+              </p>
+            )}
+          </section>
+
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -99,9 +225,9 @@ export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
                   onChange={(event) => setCategory(event.target.value)}
                   className={fieldClasses}
                 >
-                  {CATEGORIES.map((name) => (
+                  {categories.names.map((name) => (
                     <option key={name} value={name}>
-                      {label(name)}
+                      {categories.label(name)}
                     </option>
                   ))}
                 </select>
@@ -154,7 +280,8 @@ export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
                     className="flex items-center justify-between gap-3 py-2"
                   >
                     <span className="min-w-0 truncate text-gray-700">
-                      Contains "{rule.keyword}" → {label(rule.category)}
+                      Contains "{rule.keyword}" →{' '}
+                      {categories.label(rule.category)}
                     </span>
                     <button
                       onClick={() => forgetCategoryRule(rule.key)}
@@ -171,7 +298,7 @@ export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
                     className="flex items-center justify-between gap-3 py-2"
                   >
                     <span className="min-w-0 truncate text-gray-700">
-                      Merchant "{key}" → {label(cat)}
+                      Merchant "{key}" → {categories.label(cat)}
                     </span>
                     <button
                       onClick={() => forgetCategoryRule(key)}

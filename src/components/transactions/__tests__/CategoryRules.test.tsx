@@ -49,7 +49,10 @@ describe('Keyword category rules', () => {
       user,
       screen.getByRole('button', { name: 'All Transactions', exact: true })
     );
-    await click(user, screen.getByRole('button', { name: /Category rules/ }));
+    await click(
+      user,
+      screen.getByRole('button', { name: /Categories and rules/ })
+    );
 
     await act(async () => {
       await user.type(screen.getByLabelText('Description contains'), 'amzn');
