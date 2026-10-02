@@ -1,6 +1,7 @@
 // src/utils/spendingReport.ts
 import { Transaction } from '../types/financial';
 import { isCashflow } from './cashflow';
+import { categoryParts } from './splits';
 
 // Inclusive "YYYY-MM-DD" bounds.
 export interface DateRange {
@@ -43,7 +44,9 @@ const totalsFor = (
     ) {
       continue;
     }
-    totals[txn.category] = (totals[txn.category] || 0) - txn.amount;
+    for (const part of categoryParts(txn)) {
+      totals[part.category] = (totals[part.category] || 0) - part.amount;
+    }
   }
   return totals;
 };

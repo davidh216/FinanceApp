@@ -89,6 +89,8 @@ const asTransfer = (txn: Transaction, otherAccountId: string): Transaction => ({
   ...txn,
   notTransfer: undefined,
   transferAccountId: otherAccountId,
+  // A transfer is neither income nor spending, so it has no parts.
+  splits: undefined,
   category: 'Transfer',
   cleanMerchant: { ...txn.cleanMerchant, suggestedCategory: 'Transfer' },
 });

@@ -2,6 +2,7 @@
 import { MerchantInfo, Transaction } from '../types/financial';
 import { TAG_CATEGORIES } from '../constants/financial';
 import { isCashflow } from './cashflow';
+import { isSplit } from './splits';
 
 // The category you chose for a merchant, keyed by merchantKey, and keyword
 // rules ("description contains AMZN"), keyed KEYWORD_PREFIX + the keyword
@@ -68,7 +69,15 @@ export const applyCategoryRule = (
   rules: CategoryRules
 ): Transaction => {
   const category = ruleCategory(txn, rules);
-  if (!category || !isCashflow(txn) || category === txn.category) return txn;
+  // A split is a choice you made for that one transaction.
+  if (
+    !category ||
+    !isCashflow(txn) ||
+    isSplit(txn) ||
+    category === txn.category
+  ) {
+    return txn;
+  }
   return {
     ...txn,
     category,

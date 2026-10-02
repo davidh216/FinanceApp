@@ -15,6 +15,7 @@ import { Budgets, cleanBudgets, cleanRollover } from './budgets';
 import { CategoryRules, cleanCategoryRules } from './categoryRules';
 import { Goal, cleanGoals } from './goals';
 import { CustomCategory, cleanCustomCategories } from './categories';
+import { cleanSplits, describeSplits, isSplit } from './splits';
 
 // Backups hold the imported accounts only: demo accounts are regenerated on
 // every load.
@@ -135,6 +136,9 @@ const readTransaction = (
     ...(raw.adjustment === true ? { adjustment: true } : {}),
     ...(isString(raw.bankId) ? { bankId: raw.bankId } : {}),
     ...(isString(raw.notes) ? { notes: raw.notes } : {}),
+    ...(cleanSplits(raw.splits, raw.amount)
+      ? { splits: cleanSplits(raw.splits, raw.amount) }
+      : {}),
     createdAt: timestamp,
     updatedAt: isString(raw.updatedAt) ? raw.updatedAt : timestamp,
   };
@@ -266,7 +270,7 @@ export const transactionsToCsv = (accounts: Account[]): string => {
         csvCell(account.name),
         csvCell(txn.description),
         csvCell(txn.cleanMerchant?.cleanName ?? ''),
-        csvCell(txn.category),
+        csvCell(isSplit(txn) ? `Split: ${describeSplits(txn)}` : txn.category),
         txn.amount.toFixed(2),
         csvCell(
           txn.transferAccountId === EXTERNAL_ACCOUNT_ID

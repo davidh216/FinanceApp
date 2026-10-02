@@ -8,6 +8,7 @@ import {
   categoryNameError,
 } from '../../utils/categories';
 import { useCategories } from '../../hooks/useCategories';
+import { hasCategory } from '../../utils/splits';
 
 interface CategoryRulesModalProps {
   onClose: () => void;
@@ -55,8 +56,8 @@ export const CategoryRulesModal: React.FC<CategoryRulesModalProps> = ({
   };
 
   const handleRemoveCategory = (name: string) => {
-    const count = state.transactions.filter(
-      (txn) => txn.category === name
+    const count = state.transactions.filter((txn) =>
+      hasCategory(txn, name)
     ).length;
     const moved =
       count === 0

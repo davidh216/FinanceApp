@@ -9,6 +9,8 @@ import { isClosed } from '../../utils/accountSettings';
 import { EXTERNAL_ACCOUNT_ID } from '../../utils/transfers';
 import { isSameMerchant, merchantKey } from '../../utils/categoryRules';
 import { EditTransactionModal } from '../transactions/EditTransactionModal';
+import { SplitTransactionModal } from '../transactions/SplitTransactionModal';
+import { describeSplits, isSplit } from '../../utils/splits';
 import { useCategories } from '../../hooks/useCategories';
 
 interface TransactionItemProps {
@@ -45,6 +47,8 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSplitting, setIsSplitting] = useState(false);
+  const split = isSplit(transaction);
 
   const account = state.accounts.find(
     (acc) => acc.id === transaction.accountId
@@ -145,9 +149,21 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         onClick={openCategoryMenu}
         className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-100"
         data-testid="category-button"
+        title={split ? `Split: ${describeSplits(transaction)}` : undefined}
       >
-        <span className="mr-1">{categories.icon(transaction.category)}</span>
-        {transaction.category} ▾
+        {split ? (
+          <>
+            <span className="mr-1">✂️</span>
+            Split ▾
+          </>
+        ) : (
+          <>
+            <span className="mr-1">
+              {categories.icon(transaction.category)}
+            </span>
+            {transaction.category} ▾
+          </>
+        )}
       </button>
       {showCategoryMenu && (
         <div
@@ -190,6 +206,17 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               </button>
             </div>
           )}
+          <button
+            role="menuitem"
+            onClick={() => {
+              setShowCategoryMenu(false);
+              setIsSplitting(true);
+            }}
+            className={`${categoryMenuItem} mb-1 border-b pb-2`}
+          >
+            <span className="mr-2">✂️</span>
+            {split ? 'Change the split…' : 'Split between categories…'}
+          </button>
           {categories.names.map((category) => (
             <button
               key={category}
@@ -199,7 +226,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             >
               <span className="mr-2">{categories.icon(category)}</span>
               {category}
-              {category === transaction.category && (
+              {!split && category === transaction.category && (
                 <span className="ml-auto text-gray-400">✓</span>
               )}
             </button>
@@ -431,6 +458,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           </div>
         </div>
       </div>
+      {isSplitting && (
+        <SplitTransactionModal
+          transaction={transaction}
+          onClose={() => setIsSplitting(false)}
+        />
+      )}
       {isEditing && (
         <EditTransactionModal
           transaction={transaction}

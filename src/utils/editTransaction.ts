@@ -43,7 +43,8 @@ export const editTransaction = (
     categorizeMerchant(description, amount).cleanName;
   const notes = edit.notes.trim();
 
-  const { notes: _oldNotes, ...rest } = txn;
+  // A new amount no longer matches the parts it was split into.
+  const { notes: _oldNotes, splits, ...rest } = txn;
   const edited = {
     ...rest,
     date,
@@ -55,6 +56,7 @@ export const editTransaction = (
       ...(manual ? { original: description } : {}),
     },
     ...(notes ? { notes } : {}),
+    ...(splits && amount === txn.amount ? { splits } : {}),
     updatedAt: now.toISOString(),
   };
 
