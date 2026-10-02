@@ -1,0 +1,21 @@
+{
+  "short_name": "FinanceApp",
+  "name": "FinanceApp",
+  "description": "Your accounts, budgets and spending, kept on your own computer.",
+  "icons": [
+    { "src": "favicon.ico", "sizes": "48x48 32x32 16x16", "type": "image/x-icon" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "logo192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "logo512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "maskable512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#2563eb",
+  "background_color": "#f9fafb"
+}
