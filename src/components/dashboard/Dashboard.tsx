@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useFinancial } from '../../contexts/FinancialContext';
-import { Account, Transaction } from '../../types/financial';
+import { Account } from '../../types/financial';
 import { DashboardHeader } from './DashboardHeader';
 import { KPISection } from './KPISection';
 import { AccountOverview } from './AccountOverview';
@@ -37,18 +37,12 @@ import {
   Upload,
   Download,
 } from 'lucide-react';
-import {
-  formatDateRange,
-  parseLocalDate,
-  toLocalDateString,
-} from '../../utils/date';
-import { totalBalanceAsOf } from '../../utils/balances';
-import { incomeOf, isCashflow, spendingOf } from '../../utils/cashflow';
+import { formatDateRange, toLocalDateString } from '../../utils/date';
+import { periodSummary, trendData } from '../../utils/dashboardSummary';
 
 export const Dashboard: React.FC = () => {
   const {
     state,
-    totalBalance,
     viewAccountDetail,
     accountFilter,
     changePeriod,
@@ -122,196 +116,16 @@ export const Dashboard: React.FC = () => {
     [filteredAccounts]
   );
 
-  // Calculate filtered total balance
-  const filteredTotalBalance = useMemo(() => {
-    return filteredAccounts.reduce(
-      (sum: number, account: Account) => sum + account.balance,
-      0
-    );
-  }, [filteredAccounts]);
-
-  // Calculate filtered summary
-  const filteredSummary = useMemo(() => {
-    const filteredTransactions = filteredAccounts.flatMap(
-      (acc: Account) => acc.transactions || []
-    );
-    // const totalBalance = filteredTotalBalance;
-
-    const today = new Date();
-    let startDate: Date;
-    let periodLabel: string;
-
-    // Calculate period boundaries based on selectedPeriod
-    switch (state.selectedPeriod) {
-      case 'day':
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
-        periodLabel = 'daily';
-        break;
-      case 'week':
-        const dayOfWeek = today.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - daysToSubtract
-        );
-        periodLabel = 'weekly';
-        break;
-      case 'month':
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        periodLabel = 'monthly';
-        break;
-      case 'quarter':
-        const currentQuarter = Math.floor(today.getMonth() / 3);
-        startDate = new Date(today.getFullYear(), currentQuarter * 3, 1);
-        periodLabel = 'quarterly';
-        break;
-      case 'year':
-        startDate = new Date(today.getFullYear(), 0, 1);
-        periodLabel = 'yearly';
-        break;
-      case '5year':
-        startDate = new Date(today.getFullYear() - 5, 0, 1);
-        periodLabel = '5-year';
-        break;
-      case 'custom':
-        if (state.customDateRange) {
-          startDate = parseLocalDate(state.customDateRange.startDate);
-          periodLabel = 'custom';
-        } else {
-          startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-          periodLabel = 'monthly';
-        }
-        break;
-      default:
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        periodLabel = 'monthly';
-    }
-
-    // A custom range ends on its own last day; every other period runs to
-    // today.
-    const endDate =
-      state.selectedPeriod === 'custom' && state.customDateRange
-        ? parseLocalDate(state.customDateRange.endDate)
-        : new Date();
-
-    // Filter transactions for the selected period
-    const periodTransactions = filteredTransactions.filter(
-      (txn: Transaction) => {
-        const txnDate = parseLocalDate(txn.date);
-        return txnDate >= startDate && txnDate <= endDate;
-      }
-    );
-
-    const periodIncome = incomeOf(periodTransactions);
-
-    const periodExpenses = spendingOf(periodTransactions);
-
-    const savingsRate =
-      periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
-
-    // Calculate previous period for comparison
-    let prevStartDate: Date;
-    switch (state.selectedPeriod) {
-      case 'day':
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - 1
-        );
-        break;
-      case 'week':
-        prevStartDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - 7
-        );
-        break;
-      case 'month':
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        break;
-      case 'quarter':
-        const prevQuarter = Math.floor(today.getMonth() / 3) - 1;
-        prevStartDate =
-          prevQuarter >= 0
-            ? new Date(today.getFullYear(), prevQuarter * 3, 1)
-            : new Date(today.getFullYear() - 1, 9, 1);
-        break;
-      case 'year':
-        prevStartDate = new Date(today.getFullYear() - 1, 0, 1);
-        break;
-      case '5year':
-        prevStartDate = new Date(today.getFullYear() - 10, 0, 1);
-        break;
-      case 'custom':
-        // The same number of days, straight before the range starts.
-        if (state.customDateRange) {
-          const days =
-            Math.round(
-              (parseLocalDate(state.customDateRange.endDate).getTime() -
-                startDate.getTime()) /
-                86400000
-            ) + 1;
-          prevStartDate = new Date(
-            startDate.getFullYear(),
-            startDate.getMonth(),
-            startDate.getDate() - days
-          );
-        } else {
-          prevStartDate = new Date(
-            today.getFullYear(),
-            today.getMonth() - 1,
-            1
-          );
-        }
-        break;
-      default:
-        prevStartDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    }
-
-    const prevEndDate = new Date(startDate.getTime() - 1);
-    const prevPeriodTransactions = filteredTransactions.filter(
-      (txn: Transaction) => {
-        const txnDate = parseLocalDate(txn.date);
-        return txnDate >= prevStartDate && txnDate <= prevEndDate;
-      }
-    );
-
-    const prevPeriodIncome = incomeOf(prevPeriodTransactions);
-
-    const prevPeriodExpenses = spendingOf(prevPeriodTransactions);
-
-    const previousPeriodEndDate = toLocalDateString(prevEndDate);
-
-    return {
-      totalBalance,
-      monthlyIncome: Math.round(periodIncome * 100) / 100,
-      monthlyExpenses: Math.round(periodExpenses * 100) / 100,
-      netWorth: totalBalance,
-      debtToIncomeRatio: periodIncome > 0 ? periodExpenses / periodIncome : 0,
-      savingsRate: Math.max(0, savingsRate),
-      previousPeriodIncome: prevPeriodIncome,
-      previousPeriodExpenses: prevPeriodExpenses,
-      previousPeriodBalance: totalBalanceAsOf(
+  // The KPI cards' figures, and the period the report covers.
+  const filteredSummary = useMemo(
+    () =>
+      periodSummary(
         filteredAccounts,
-        previousPeriodEndDate
+        state.selectedPeriod,
+        state.customDateRange
       ),
-      previousPeriodEndDate,
-      periodStartDate: toLocalDateString(startDate),
-      periodEndDate: toLocalDateString(endDate),
-      previousPeriodStartDate: toLocalDateString(prevStartDate),
-      periodLabel,
-    };
-  }, [
-    filteredAccounts,
-    state.selectedPeriod,
-    state.customDateRange,
-    totalBalance,
-  ]);
+    [filteredAccounts, state.selectedPeriod, state.customDateRange]
+  );
 
   // The report covers the same period, and the same comparison, as the
   // KPI cards.
@@ -333,162 +147,10 @@ export const Dashboard: React.FC = () => {
     ]
   );
 
-  // Generate actual trend data based on selected period
-  const generateTrendData = useMemo(() => {
-    const filteredTransactions = filteredAccounts.flatMap(
-      (acc: Account) => acc.transactions || []
-    );
-    const today = new Date();
-    // Each date is parsed once: the trend loops below compare every
-    // transaction against every point, which is slow with years of data.
-    const txnTimes = new Map(
-      filteredTransactions.map((txn) => [
-        txn,
-        parseLocalDate(txn.date).getTime(),
-      ])
-    );
-
-    // Determine number of data points based on period
-    let dataPoints: number;
-    let intervalDays: number;
-
-    switch (state.selectedPeriod) {
-      case 'day':
-        dataPoints = 24; // Hourly data for the day
-        intervalDays = 1 / 24;
-        break;
-      case 'week':
-        dataPoints = 7; // Daily data for the week
-        intervalDays = 1;
-        break;
-      case 'month':
-        dataPoints = 30; // Daily data for the month
-        intervalDays = 1;
-        break;
-      case 'quarter':
-        dataPoints = 13; // Weekly data for the quarter
-        intervalDays = 7;
-        break;
-      case 'year':
-        dataPoints = 12; // Monthly data for the year
-        intervalDays = 30;
-        break;
-      case '5year':
-        dataPoints = 60; // Monthly data for 5 years
-        intervalDays = 30;
-        break;
-      default:
-        dataPoints = 30;
-        intervalDays = 1;
-    }
-
-    // Generate trend data for balance over time
-    const balanceTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      // Today's balance with the transactions after this date undone.
-      const balanceAtDate = totalBalanceAsOf(
-        filteredAccounts,
-        toLocalDateString(targetDate)
-      );
-
-      balanceTrend.push(Math.max(0, balanceAtDate)); // Ensure non-negative for display
-    }
-
-    // Generate trend data for income over time
-    const incomeTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      const startDate = new Date(targetDate);
-      startDate.setDate(targetDate.getDate() - intervalDays);
-
-      const periodTransactions = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnTime = txnTimes.get(txn)!;
-          return (
-            txnTime >= startDate.getTime() &&
-            txnTime <= targetDate.getTime() &&
-            isCashflow(txn) &&
-            txn.amount > 0
-          );
-        }
-      );
-
-      const periodIncome = periodTransactions.reduce(
-        (sum: number, txn: Transaction) => sum + txn.amount,
-        0
-      );
-      incomeTrend.push(periodIncome);
-    }
-
-    // Generate trend data for expenses over time
-    const expenseTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      const startDate = new Date(targetDate);
-      startDate.setDate(targetDate.getDate() - intervalDays);
-
-      const periodTransactions = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnTime = txnTimes.get(txn)!;
-          return (
-            txnTime >= startDate.getTime() &&
-            txnTime <= targetDate.getTime() &&
-            isCashflow(txn) &&
-            txn.amount < 0
-          );
-        }
-      );
-
-      const periodExpenses = Math.abs(
-        periodTransactions.reduce(
-          (sum: number, txn: Transaction) => sum + txn.amount,
-          0
-        )
-      );
-      expenseTrend.push(periodExpenses);
-    }
-
-    // Generate trend data for savings rate over time
-    const savingsTrend = [];
-    for (let i = dataPoints - 1; i >= 0; i--) {
-      const targetDate = new Date(today);
-      targetDate.setDate(today.getDate() - i * intervalDays);
-
-      const startDate = new Date(targetDate);
-      startDate.setDate(targetDate.getDate() - intervalDays);
-
-      const periodTransactions = filteredTransactions.filter(
-        (txn: Transaction) => {
-          const txnTime = txnTimes.get(txn)!;
-          return (
-            txnTime >= startDate.getTime() && txnTime <= targetDate.getTime()
-          );
-        }
-      );
-
-      const periodIncome = incomeOf(periodTransactions);
-
-      const periodExpenses = spendingOf(periodTransactions);
-
-      const savingsRate =
-        periodIncome > 0 ? (periodIncome - periodExpenses) / periodIncome : 0;
-      savingsTrend.push(Math.max(0, savingsRate * 100)); // Convert to percentage
-    }
-
-    return {
-      balance: balanceTrend,
-      income: incomeTrend,
-      expenses: expenseTrend,
-      savings: savingsTrend,
-    };
-  }, [filteredAccounts, state.selectedPeriod]);
+  const generateTrendData = useMemo(
+    () => trendData(filteredAccounts, state.selectedPeriod),
+    [filteredAccounts, state.selectedPeriod]
+  );
 
   const importModal = (
     <>
@@ -646,7 +308,7 @@ export const Dashboard: React.FC = () => {
         <div className="mb-6">
           <KPISection
             summary={filteredSummary}
-            totalBalance={filteredTotalBalance}
+            totalBalance={filteredSummary.totalBalance}
             period={state.selectedPeriod}
             balanceTrend={generateTrendData.balance}
             incomeTrend={generateTrendData.income}
