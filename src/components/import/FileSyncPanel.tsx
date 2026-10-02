@@ -1,5 +1,10 @@
-import React from 'react';
-import { FilePlus, FolderOpen, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { FilePlus, FolderOpen, Lock, RefreshCw } from 'lucide-react';
+import { NewPasswordForm, UnlockForm } from './PasswordForms';
+import {
+  NO_ENCRYPTION_MESSAGE,
+  encryptionAvailable,
+} from '../../utils/encryption';
 import { useFileSync } from '../../contexts/FileSyncContext';
 import { Button } from '../ui/Button';
 
@@ -21,6 +26,7 @@ export const formatSavedTime = (iso: string, now: Date = new Date()) => {
 // The "Auto-save to a file" section of the export dialog.
 export const FileSyncPanel: React.FC = () => {
   const sync = useFileSync();
+  const [choosingPassword, setChoosingPassword] = useState(false);
   const name = <span className="font-medium">{sync.fileName}</span>;
 
   let body: React.ReactNode;
@@ -79,6 +85,21 @@ export const FileSyncPanel: React.FC = () => {
         </>
       );
       break;
+    case 'locked':
+      body = (
+        <>
+          <p className="text-sm text-gray-600 mb-3" data-testid="sync-locked">
+            <Lock className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
+            {name} is protected with a password. Enter it to keep auto-saving.
+          </p>
+          {encryptionAvailable() ? (
+            <UnlockForm label="File password" onUnlock={sync.unlock} />
+          ) : (
+            <p className="text-sm text-red-600">{NO_ENCRYPTION_MESSAGE}</p>
+          )}
+        </>
+      );
+      break;
     case 'conflict':
       body = (
         <>
@@ -120,6 +141,56 @@ export const FileSyncPanel: React.FC = () => {
 
   const connected = ['saving', 'saved', 'error'].includes(sync.status);
 
+  const protection = connected && encryptionAvailable() && (
+    <div className="mt-3 border-t pt-3" data-testid="sync-protection">
+      {choosingPassword ? (
+        <NewPasswordForm
+          submitLabel={sync.isProtected ? 'Change password' : 'Protect file'}
+          onSubmit={async (password) => {
+            await sync.protect(password);
+            setChoosingPassword(false);
+          }}
+          onCancel={() => setChoosingPassword(false)}
+        />
+      ) : sync.isProtected ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="text-gray-700">
+            <Lock className="inline w-4 h-4 mr-1 -mt-0.5" aria-hidden="true" />
+            Encrypted with your password
+          </span>
+          <button
+            onClick={() => setChoosingPassword(true)}
+            className="font-medium text-blue-600 hover:text-blue-700"
+          >
+            Change password
+          </button>
+          <button
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Save ${sync.fileName} without a password? Anyone who can open the file will be able to read it.`
+                )
+              ) {
+                sync.unprotect();
+              }
+            }}
+            className="font-medium text-gray-600 hover:text-gray-800"
+          >
+            Remove password
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setChoosingPassword(true)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          data-testid="sync-protect"
+        >
+          Protect the file with a password
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <section>
       <h4 className="text-sm font-semibold text-gray-900 mb-1">
@@ -131,7 +202,10 @@ export const FileSyncPanel: React.FC = () => {
           {sync.error}
         </p>
       )}
-      {(connected || sync.status === 'reconnect') && (
+      {protection}
+      {(connected ||
+        sync.status === 'reconnect' ||
+        sync.status === 'locked') && (
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {sync.status === 'error' && (
             <button

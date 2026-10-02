@@ -15,6 +15,13 @@ import {
   parseBackup,
 } from '../utils/backup';
 import {
+  Sealer,
+  WrongPasswordError,
+  createSealer,
+  isEncrypted,
+  openSealed,
+} from '../utils/encryption';
+import {
   FileAccess,
   SyncFile,
   browserFileAccess,
@@ -32,6 +39,8 @@ export type FileSyncStatus =
   | 'reconnect'
   // The file and this browser both changed: you pick one.
   | 'conflict'
+  // The file is password-protected and needs the password.
+  | 'locked'
   | 'saving'
   | 'saved'
   | 'error';
@@ -42,6 +51,8 @@ export interface FileSyncValue {
   // When this browser last wrote or read the file (ISO time).
   lastSavedAt: string | null;
   error: string | null;
+  // The file is saved encrypted with a password you set.
+  isProtected: boolean;
   createFile: () => Promise<void>;
   openFile: () => Promise<void>;
   reconnect: () => Promise<void>;
@@ -50,6 +61,12 @@ export interface FileSyncValue {
   keepBrowser: () => Promise<void>;
   saveNow: () => Promise<void>;
   disconnect: () => Promise<void>;
+  // Opens a locked file; false for a wrong password.
+  unlock: (password: string) => Promise<boolean>;
+  // Saves the file encrypted with this password from now on.
+  protect: (password: string) => Promise<void>;
+  // Saves it as plain JSON again.
+  unprotect: () => Promise<void>;
 }
 
 const noop = async () => {};
@@ -59,6 +76,7 @@ const UNSUPPORTED: FileSyncValue = {
   fileName: null,
   lastSavedAt: null,
   error: null,
+  isProtected: false,
   createFile: noop,
   openFile: noop,
   reconnect: noop,
@@ -66,6 +84,9 @@ const UNSUPPORTED: FileSyncValue = {
   keepBrowser: noop,
   saveNow: noop,
   disconnect: noop,
+  unlock: async () => false,
+  protect: noop,
+  unprotect: noop,
 };
 
 const FileSyncContext = createContext<FileSyncValue>(UNSUPPORTED);
@@ -96,6 +117,7 @@ export const FileSyncProvider: React.FC<{
   const [fileName, setFileName] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isProtected, setIsProtected] = useState(false);
 
   const fileRef = useRef<SyncFile | null>(null);
   // Whether changes go straight to the file.
@@ -104,6 +126,15 @@ export const FileSyncProvider: React.FC<{
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
   // Saves run one at a time, in order.
   const queueRef = useRef<Promise<void>>(Promise.resolve());
+  // A protected file's password, for this visit only, and the key it gives.
+  const passwordRef = useRef<string | null>(null);
+  const sealerRef = useRef<Sealer | null>(null);
+  // A protected file waiting for its password, and what to do once open.
+  const lockedRef = useRef<{
+    file: SyncFile;
+    text: string;
+    then: 'sync' | 'open';
+  } | null>(null);
 
   const backupNow = () => createBackup(state.accounts, settings);
   const latestBackup = useRef(backupNow);
@@ -122,7 +153,10 @@ export const FileSyncProvider: React.FC<{
     const backup = latestBackup.current();
     setStatus('saving');
     try {
-      await file.write(JSON.stringify(backup, null, 2));
+      const json = JSON.stringify(backup, null, 2);
+      await file.write(
+        sealerRef.current ? await sealerRef.current.seal(json) : json
+      );
       saveSyncMeta({ lastSyncedAt: backup.exportedAt, pending: false });
       setLastSavedAt(backup.exportedAt);
       setError(null);
@@ -187,11 +221,57 @@ export const FileSyncProvider: React.FC<{
     }
   };
 
+  // A file's text as plain JSON. A protected one is opened with the
+  // password you gave on this visit; without one (or with a wrong one), it
+  // waits for it and this returns null.
+  const unseal = async (
+    file: SyncFile,
+    text: string,
+    then: 'sync' | 'open'
+  ): Promise<string | null> => {
+    if (!isEncrypted(text)) {
+      passwordRef.current = null;
+      sealerRef.current = null;
+      setIsProtected(false);
+      return text;
+    }
+    if (passwordRef.current) {
+      try {
+        const opened = await openSealed(text, passwordRef.current);
+        sealerRef.current = opened.sealer;
+        setIsProtected(true);
+        return opened.text;
+      } catch (err) {
+        if (!(err instanceof WrongPasswordError)) throw err;
+      }
+    }
+    connectedRef.current = false;
+    lockedRef.current = { file, text, then };
+    fileRef.current = file;
+    setFileName(file.name);
+    setError(null);
+    setStatus('locked');
+    return null;
+  };
+
   // Brings the file and this browser back in step after a reload.
   const sync = async (file: SyncFile) => {
+    let text: string | null;
+    try {
+      text = await unseal(file, await file.read(), 'sync');
+    } catch (err) {
+      connectedRef.current = false;
+      setError(readError(err, file.name));
+      setStatus('error');
+      return;
+    }
+    if (text !== null) await syncWith(text, file);
+  };
+
+  const syncWith = async (text: string, file: SyncFile) => {
     let backup: Backup;
     try {
-      backup = parseBackup(await file.read());
+      backup = parseBackup(text);
     } catch (err) {
       connectedRef.current = false;
       setError(readError(err, file.name));
@@ -256,11 +336,22 @@ export const FileSyncProvider: React.FC<{
 
   const openFile = async () => {
     let file: SyncFile | null;
-    let backup: Backup;
+    let text: string | null;
     try {
       file = await fileAccess.pickExistingFile();
       if (!file) return;
-      backup = parseBackup(await file.read());
+      text = await unseal(file, await file.read(), 'open');
+    } catch {
+      setError("Couldn't open the file.");
+      return;
+    }
+    if (text !== null) await openWith(text, file);
+  };
+
+  const openWith = async (text: string, file: SyncFile) => {
+    let backup: Backup;
+    try {
+      backup = parseBackup(text);
     } catch (err) {
       setError(
         err instanceof BackupError
@@ -279,11 +370,63 @@ export const FileSyncProvider: React.FC<{
         )} replace the ${plural(current, 'account')} in this browser.`
       )
     ) {
+      // A protected file you unlocked and then turned down isn't used.
+      if (fileRef.current === file && !connectedRef.current) {
+        fileRef.current = null;
+        passwordRef.current = null;
+        sealerRef.current = null;
+        setIsProtected(false);
+        setFileName(null);
+        setStatus('off');
+      }
       return;
     }
     await use(file);
     applyBackup(backup);
     connected(backup);
+  };
+
+  const unlock = async (password: string) => {
+    const locked = lockedRef.current;
+    if (!locked) return false;
+    let opened: { text: string; sealer: Sealer };
+    try {
+      opened = await openSealed(locked.text, password);
+    } catch (err) {
+      setError(
+        err instanceof WrongPasswordError
+          ? err.message
+          : `Couldn't read ${locked.file.name}.`
+      );
+      return false;
+    }
+    lockedRef.current = null;
+    passwordRef.current = password;
+    sealerRef.current = opened.sealer;
+    setIsProtected(true);
+    setError(null);
+    if (locked.then === 'sync') {
+      await syncWith(opened.text, locked.file);
+    } else {
+      await openWith(opened.text, locked.file);
+    }
+    return true;
+  };
+
+  const protect = async (password: string) => {
+    sealerRef.current = await createSealer(password);
+    passwordRef.current = password;
+    setIsProtected(true);
+    connectedRef.current = true;
+    await queueWrite();
+  };
+
+  const unprotect = async () => {
+    sealerRef.current = null;
+    passwordRef.current = null;
+    setIsProtected(false);
+    connectedRef.current = true;
+    await queueWrite();
   };
 
   const reconnect = async () => {
@@ -319,6 +462,10 @@ export const FileSyncProvider: React.FC<{
     clearTimeout(timerRef.current);
     connectedRef.current = false;
     conflictRef.current = null;
+    lockedRef.current = null;
+    passwordRef.current = null;
+    sealerRef.current = null;
+    setIsProtected(false);
     fileRef.current = null;
     saveSyncMeta(null);
     setFileName(null);
@@ -337,6 +484,7 @@ export const FileSyncProvider: React.FC<{
     fileName,
     lastSavedAt,
     error,
+    isProtected,
     createFile,
     openFile,
     reconnect,
@@ -344,6 +492,9 @@ export const FileSyncProvider: React.FC<{
     keepBrowser,
     saveNow,
     disconnect,
+    unlock,
+    protect,
+    unprotect,
   };
 
   return (

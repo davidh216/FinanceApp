@@ -1,9 +1,10 @@
 import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Dashboard } from '../../dashboard/Dashboard';
 import * as files from '../../../utils/files';
+import { isEncrypted } from '../../../utils/encryption';
 
 const STORAGE_KEY = 'financeapp.importedAccounts';
 
@@ -62,6 +63,12 @@ const chooseBackup = async (
     );
   });
 };
+
+// Deriving a key from a password is slow on purpose.
+jest.setTimeout(30000);
+// waitFor's default second isn't enough for it in a busy test run.
+const waitForSlow = (check: () => unknown) =>
+  waitFor(check, { timeout: 10000 });
 
 describe('Export and backup', () => {
   let download: jest.SpyInstance;
@@ -183,5 +190,71 @@ describe('Export and backup', () => {
       '2025-06-02,My Checking,PAYROLL DEPOSIT,Salary,Income,2500.00,,,',
       '2025-06-03,My Checking,STARBUCKS STORE 1234,Starbucks,Food & Dining,-5.75,,,',
     ]);
+  });
+
+  it('downloads a password-protected backup and restores it with the password', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderDashboard();
+    await importCsv(user, CHECKING_CSV, 'My Checking.csv');
+    await openExport(user);
+    await act(async () => {
+      await user.click(screen.getByTestId('protect-backup'));
+    });
+    expect(screen.getByTestId('download-backup')).toBeDisabled();
+    expect(screen.getByText(/If you forget the password/)).toBeInTheDocument();
+    await act(async () => {
+      await user.type(
+        screen.getByLabelText(/^Password \(at least 8/),
+        'correct horse'
+      );
+      await user.type(screen.getByLabelText('Password again'), 'correct hors');
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "The passwords don't match."
+    );
+    await act(async () => {
+      await user.type(screen.getByLabelText('Password again'), 'e');
+    });
+    await act(async () => {
+      await user.click(
+        screen.getByRole('button', { name: 'Download protected backup' })
+      );
+    });
+    await waitForSlow(() => expect(download).toHaveBeenCalledTimes(1));
+    const contents: string = download.mock.calls[0][1];
+    expect(isEncrypted(contents)).toBe(true);
+    expect(contents).not.toContain('My Checking');
+    unmount();
+
+    window.localStorage.clear();
+    renderDashboard();
+    await openExport(user);
+    await chooseBackup(user, contents);
+    const locked = within(screen.getByTestId('restore-locked'));
+    await act(async () => {
+      await user.type(locked.getByLabelText('Backup password'), 'wrong one');
+      await user.click(locked.getByRole('button', { name: 'Unlock' }));
+    });
+    await waitForSlow(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        "That password doesn't open this file."
+      )
+    );
+    await act(async () => {
+      await user.type(
+        locked.getByLabelText('Backup password'),
+        'correct horse'
+      );
+      await user.click(locked.getByRole('button', { name: 'Unlock' }));
+    });
+    await waitForSlow(() =>
+      expect(screen.getByTestId('restore-summary')).toHaveTextContent(
+        'This backup has 1 account and 2 transactions.'
+      )
+    );
+    await act(async () => {
+      await user.click(screen.getByTestId('confirm-restore'));
+    });
+    expect(screen.getByTestId('kpi-balance')).toHaveTextContent('$2,494.25');
   });
 });

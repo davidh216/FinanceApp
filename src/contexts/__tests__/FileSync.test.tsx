@@ -6,6 +6,7 @@ import { FileSyncProvider } from '../FileSyncContext';
 import { Dashboard } from '../../components/dashboard/Dashboard';
 import { Account } from '../../types/financial';
 import { createBackup } from '../../utils/backup';
+import { decryptText, encryptText, isEncrypted } from '../../utils/encryption';
 import {
   FILE_SYNC_STORAGE_KEY,
   FileAccess,
@@ -297,5 +298,120 @@ describe('Auto-saving to a file', () => {
     expect(window.localStorage.getItem(FILE_SYNC_STORAGE_KEY)).toBeNull();
     expect(screen.getByTestId('sync-create')).toBeInTheDocument();
     expect(screen.queryByTestId('sync-indicator')).not.toBeInTheDocument();
+  });
+});
+
+describe('A password-protected file', () => {
+  // Deriving a key from a password is slow on purpose.
+  jest.setTimeout(30000);
+  // waitFor's default second isn't enough for it in a busy test run.
+  const waitForSlow = (check: () => unknown) =>
+    waitFor(check, { timeout: 10000 });
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('is saved encrypted once you set a password, and plain once removed', async () => {
+    const user = userEvent.setup();
+    const file = fakeFile();
+    renderApp(fakeAccess({ picked: file }));
+    await importChecking(user);
+    await openData(user);
+    await click(user, screen.getByTestId('sync-create'));
+    expect(isEncrypted(file.contents)).toBe(false);
+
+    await click(user, screen.getByTestId('sync-protect'));
+    await act(async () => {
+      await user.type(
+        screen.getByLabelText(/^Password \(at least 8/),
+        'correct horse'
+      );
+      await user.type(screen.getByLabelText('Password again'), 'correct horse');
+    });
+    await click(user, screen.getByRole('button', { name: 'Protect file' }));
+    await waitForSlow(() => expect(isEncrypted(file.contents)).toBe(true));
+    expect(file.contents).not.toContain('Checking');
+    expect(
+      JSON.parse(await decryptText(file.contents, 'correct horse')).accounts[0]
+        .name
+    ).toBe('Checking');
+    expect(screen.getByTestId('sync-protection')).toHaveTextContent(
+      'Encrypted with your password'
+    );
+
+    // Later changes stay encrypted.
+    await click(user, screen.getByRole('button', { name: 'Close' }));
+    await click(user, screen.getByTestId('demo-toggle'));
+    await waitForSlow(async () =>
+      expect(
+        JSON.parse(await decryptText(file.contents, 'correct horse')).settings
+          .showDemoAccounts
+      ).toBe(true)
+    );
+
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    await openData(user);
+    await click(user, screen.getByRole('button', { name: 'Remove password' }));
+    confirm.mockRestore();
+    await waitForSlow(() => expect(isEncrypted(file.contents)).toBe(false));
+    expect(saved(file).accounts[0].name).toBe('Checking');
+  });
+
+  it('waits for the password after a restart, then carries on', async () => {
+    const user = userEvent.setup();
+    const file = fakeFile(
+      await encryptText(
+        savingsFile('2025-06-10T08:00:00.000Z'),
+        'correct horse'
+      )
+    );
+    // Saved from another browser since this one last synced.
+    setMeta('2025-06-01T08:00:00.000Z', false);
+    renderApp(fakeAccess({ remembered: file }));
+
+    await waitForSlow(() =>
+      expect(screen.getByTestId('sync-indicator')).toHaveTextContent(
+        'File locked'
+      )
+    );
+    await click(user, screen.getByTestId('sync-indicator'));
+    expect(screen.getByTestId('sync-locked')).toHaveTextContent(
+      'finance-data.json is protected with a password.'
+    );
+
+    await act(async () => {
+      await user.type(screen.getByLabelText('File password'), 'wrong one');
+    });
+    await click(user, screen.getByRole('button', { name: 'Unlock' }));
+    await waitForSlow(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        "That password doesn't open this file."
+      )
+    );
+    expect(browserAccounts()).toEqual([]);
+
+    await act(async () => {
+      await user.type(screen.getByLabelText('File password'), 'correct horse');
+    });
+    await click(user, screen.getByRole('button', { name: 'Unlock' }));
+    await waitForSlow(() =>
+      expect(screen.getByTestId('sync-summary')).toHaveTextContent(
+        'Every change is saved to finance-data.json'
+      )
+    );
+    await waitForSlow(() =>
+      expect(browserAccounts()).toEqual(['Vacation Savings'])
+    );
+
+    // It keeps saving with the same password.
+    await click(user, screen.getByRole('button', { name: 'Close' }));
+    await click(user, screen.getByTestId('demo-toggle'));
+    await waitForSlow(() => expect(file.writes).toBeGreaterThan(0));
+    expect(isEncrypted(file.contents)).toBe(true);
+    expect(
+      JSON.parse(await decryptText(file.contents, 'correct horse')).accounts[0]
+        .name
+    ).toBe('Vacation Savings');
   });
 });
