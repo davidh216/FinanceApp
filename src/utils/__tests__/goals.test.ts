@@ -172,7 +172,7 @@ describe('creating and keeping goals', () => {
 
   it('go into backups and come back out', () => {
     const goals = [goal({ saved: 250, by: '2026-01' })];
-    const backup = createBackup([], false, {}, new Date(), {}, goals);
+    const backup = createBackup([], { goals });
     expect(parseBackup(JSON.stringify(backup)).settings.goals).toEqual(goals);
   });
 });

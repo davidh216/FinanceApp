@@ -49,6 +49,17 @@ import {
 import { formatDateRange, toLocalDateString } from '../../utils/date';
 import { periodSummary, trendData } from '../../utils/dashboardSummary';
 
+// What the one-letter period buttons say to a screen reader. The custom
+// button's own text (its dates) already says what it is.
+const PERIOD_NAMES: Record<string, string | undefined> = {
+  day: 'Today',
+  week: 'This week',
+  month: 'This month',
+  quarter: 'This quarter',
+  year: 'This year',
+  '5year': 'Last 5 years',
+};
+
 export const Dashboard: React.FC = () => {
   const {
     state,
@@ -60,6 +71,7 @@ export const Dashboard: React.FC = () => {
     budgets,
     budgetRollover,
     isPrivacyMode,
+    notRecurring,
   } = useFinancial();
 
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -122,13 +134,22 @@ export const Dashboard: React.FC = () => {
     [filteredAccounts]
   );
 
-  const recurringPayments = useMemo(
+  const foundPayments = useMemo(
     () =>
       findRecurringPayments(
         filteredTransactions,
         toLocalDateString(new Date())
       ),
     [filteredTransactions]
+  );
+  // Ones you said aren't recurring stay out of the card and the forecast.
+  const recurringPayments = useMemo(
+    () => foundPayments.filter((p) => !notRecurring.includes(p.merchantKey)),
+    [foundPayments, notRecurring]
+  );
+  const hiddenPayments = useMemo(
+    () => foundPayments.filter((p) => notRecurring.includes(p.merchantKey)),
+    [foundPayments, notRecurring]
   );
   // Bills and paychecks expected in the next 30 days.
   const upcoming = useMemo(() => {
@@ -355,6 +376,8 @@ export const Dashboard: React.FC = () => {
                     changePeriod(period as any);
                   }
                 }}
+                aria-label={PERIOD_NAMES[period]}
+                aria-pressed={state.selectedPeriod === period}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                   state.selectedPeriod === period
                     ? 'bg-white shadow-sm text-blue-600'
@@ -514,7 +537,10 @@ export const Dashboard: React.FC = () => {
               accounts={filteredAccounts}
             />
 
-            <RecurringCard payments={recurringPayments} />
+            <RecurringCard
+              payments={recurringPayments}
+              hidden={hiddenPayments}
+            />
 
             {/* Recent Activity */}
             <RecentActivity accounts={filteredAccounts} limit={5} />

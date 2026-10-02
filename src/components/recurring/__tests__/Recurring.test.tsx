@@ -82,3 +82,47 @@ describe('Recurring payments', () => {
     expect(screen.queryByTestId('recurring-amazon')).not.toBeInTheDocument();
   });
 });
+
+describe('Marking a payment not recurring', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('takes it out of the card and the forecast, until you undo it', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    expect(screen.getByTestId('upcoming-card')).toHaveTextContent('Apple');
+
+    await act(async () => {
+      await user.click(
+        screen.getByRole('button', { name: "Apple isn't recurring" })
+      );
+    });
+    const card = screen.getByTestId('recurring-card');
+    expect(screen.queryByTestId('recurring-apple')).not.toBeInTheDocument();
+    expect(card).toHaveTextContent('4 found');
+    expect(screen.getByTestId('upcoming-card')).not.toHaveTextContent('Apple');
+    expect(
+      JSON.parse(window.localStorage.getItem('financeapp.notRecurring') || '')
+    ).toEqual(['apple']);
+
+    await act(async () => {
+      await user.click(
+        screen.getByRole('button', { name: /1 marked not recurring/ })
+      );
+    });
+    expect(screen.getByTestId('not-recurring-list')).toHaveTextContent('Apple');
+    await act(async () => {
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Show Apple as recurring again',
+        })
+      );
+    });
+    expect(screen.getByTestId('recurring-apple')).toBeInTheDocument();
+    expect(card).toHaveTextContent('5 found');
+    expect(
+      screen.queryByRole('button', { name: /marked not recurring/ })
+    ).not.toBeInTheDocument();
+  });
+});

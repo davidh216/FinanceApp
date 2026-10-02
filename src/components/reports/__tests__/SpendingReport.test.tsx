@@ -113,7 +113,7 @@ describe('Spending report', () => {
     renderDashboard();
     await importCsv(user, CHECKING_CSV, 'Checking');
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: 'Y' }));
+      await user.click(screen.getByRole('button', { name: 'This year' }));
     });
     await openReport(user);
 

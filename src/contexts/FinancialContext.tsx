@@ -28,6 +28,7 @@ import {
   merchantKey,
 } from '../utils/categoryRules';
 import { isCashflow } from '../utils/cashflow';
+import { BackupSettings, cleanNotRecurring } from '../utils/backup';
 import {
   hasCategory,
   isSplit,
@@ -70,6 +71,17 @@ const GOALS_STORAGE_KEY = 'financeapp.goals';
 const ROLLOVER_STORAGE_KEY = 'financeapp.budgetRollover';
 const CATEGORY_RULES_STORAGE_KEY = 'financeapp.categoryRules';
 const CUSTOM_CATEGORIES_STORAGE_KEY = 'financeapp.customCategories';
+const NOT_RECURRING_STORAGE_KEY = 'financeapp.notRecurring';
+
+const loadNotRecurring = (): string[] => {
+  try {
+    return cleanNotRecurring(
+      JSON.parse(window.localStorage.getItem(NOT_RECURRING_STORAGE_KEY) || '[]')
+    );
+  } catch {
+    return [];
+  }
+};
 
 const loadCustomCategories = (): CustomCategory[] => {
   try {
@@ -415,6 +427,13 @@ interface FinancialContextType {
   // Its transactions become "Other"; its budget and rules go.
   removeCustomCategory: (name: string) => void;
   setCustomCategories: (categories: CustomCategory[]) => void;
+  // Merchants you said aren't recurring (by merchantKey): left out of
+  // recurring payments and the forecast.
+  notRecurring: string[];
+  setNotRecurring: (keys: string[]) => void;
+  // Every setting a backup keeps, and putting a backup's back.
+  settings: BackupSettings;
+  restoreSettings: (settings: BackupSettings) => void;
   // Undoes a wrongly matched transfer, on both sides.
   unlinkTransfer: (transactionId: string) => void;
   // Records a missed transfer to or from another imported account, or
@@ -749,6 +768,54 @@ export const FinancialProvider: React.FC<{
     setCategoryRules(rest);
   };
 
+  const [notRecurring, setNotRecurringState] =
+    useState<string[]>(loadNotRecurring);
+
+  const setNotRecurring = (keys: string[]) => {
+    const cleaned = cleanNotRecurring(keys);
+    setNotRecurringState(cleaned);
+    try {
+      window.localStorage.setItem(
+        NOT_RECURRING_STORAGE_KEY,
+        JSON.stringify(cleaned)
+      );
+    } catch {
+      // The choice still applies for this session.
+    }
+  };
+
+  const settings = useMemo<BackupSettings>(
+    () => ({
+      showDemoAccounts,
+      budgets,
+      categoryRules,
+      goals,
+      budgetRollover,
+      customCategories,
+      notRecurring,
+    }),
+    [
+      showDemoAccounts,
+      budgets,
+      categoryRules,
+      goals,
+      budgetRollover,
+      customCategories,
+      notRecurring,
+    ]
+  );
+
+  const restoreSettings = (next: BackupSettings) => {
+    setShowDemoAccounts(next.showDemoAccounts);
+    setBudgets(next.budgets);
+    setGoals(next.goals);
+    setBudgetRollover(next.budgetRollover);
+    // Before the rules, which may use them.
+    setCustomCategories(next.customCategories);
+    setCategoryRules(next.categoryRules);
+    setNotRecurring(next.notRecurring);
+  };
+
   const addCustomCategory = (name: string, icon: string) => {
     const error = categoryNameError(name, customRef.current);
     if (error) return error;
@@ -918,6 +985,10 @@ export const FinancialProvider: React.FC<{
     addCustomCategory,
     removeCustomCategory,
     setCustomCategories,
+    notRecurring,
+    setNotRecurring,
+    settings,
+    restoreSettings,
     unlinkTransfer,
     markAsTransfer,
     addManualTransaction,

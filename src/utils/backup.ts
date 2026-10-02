@@ -22,45 +22,48 @@ import { cleanSplits, describeSplits, isSplit } from './splits';
 export const BACKUP_APP = 'FinanceApp';
 export const BACKUP_VERSION = 1;
 
+// Everything apart from the accounts that a backup keeps.
+export interface BackupSettings {
+  showDemoAccounts: boolean;
+  budgets: Budgets;
+  categoryRules: CategoryRules;
+  goals: Goal[];
+  // Budgets whose leftover rolls into the next month.
+  budgetRollover: string[];
+  // Categories you added. Older backups don't have them.
+  customCategories: CustomCategory[];
+  // Merchants you said aren't recurring, by merchantKey.
+  notRecurring: string[];
+}
+
+export const DEFAULT_SETTINGS: BackupSettings = {
+  showDemoAccounts: false,
+  budgets: {},
+  categoryRules: {},
+  goals: [],
+  budgetRollover: [],
+  customCategories: [],
+  notRecurring: [],
+};
+
 export interface Backup {
   app: typeof BACKUP_APP;
   version: number;
   exportedAt: string;
   accounts: Account[];
-  settings: {
-    showDemoAccounts: boolean;
-    budgets: Budgets;
-    categoryRules: CategoryRules;
-    goals: Goal[];
-    // Budgets whose leftover rolls into the next month.
-    budgetRollover: string[];
-    // Categories you added. Older backups don't have them.
-    customCategories: CustomCategory[];
-  };
+  settings: BackupSettings;
 }
 
 export const createBackup = (
   accounts: Account[],
-  showDemoAccounts: boolean,
-  budgets: Budgets = {},
-  now: Date = new Date(),
-  categoryRules: CategoryRules = {},
-  goals: Goal[] = [],
-  budgetRollover: string[] = [],
-  customCategories: CustomCategory[] = []
+  settings: Partial<BackupSettings> = {},
+  now: Date = new Date()
 ): Backup => ({
   app: BACKUP_APP,
   version: BACKUP_VERSION,
   exportedAt: now.toISOString(),
   accounts: accounts.filter(isImportedAccount),
-  settings: {
-    showDemoAccounts,
-    budgets,
-    categoryRules,
-    goals,
-    budgetRollover,
-    customCategories,
-  },
+  settings: { ...DEFAULT_SETTINGS, ...settings },
 });
 
 const ACCOUNT_TYPES: AccountType[] = [
@@ -183,6 +186,18 @@ const readAccount = (raw: unknown, index: number): Account => {
   };
 };
 
+// Merchant keys: non-empty strings, once each.
+export const cleanNotRecurring = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? Array.from(
+        new Set(
+          value.filter(
+            (key): key is string => typeof key === 'string' && key.trim() !== ''
+          )
+        )
+      )
+    : [];
+
 // Reads a backup file, checking every account and transaction. Throws a
 // BackupError explaining what's wrong rather than restoring part of a file.
 export const parseBackup = (text: string): Backup => {
@@ -226,6 +241,7 @@ export const parseBackup = (text: string): Backup => {
       goals: cleanGoals(data.settings?.goals),
       budgetRollover: cleanRollover(data.settings?.budgetRollover),
       customCategories,
+      notRecurring: cleanNotRecurring(data.settings?.notRecurring),
     },
   };
 };

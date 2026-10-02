@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import { useFinancial } from '../../contexts/FinancialContext';
 import { useCategories } from '../../hooks/useCategories';
 import { RecurringPayment } from '../../utils/recurring';
@@ -7,6 +8,8 @@ import { formatMoney } from '../../utils/format';
 
 interface RecurringCardProps {
   payments: RecurringPayment[];
+  // Found, but you said they aren't recurring.
+  hidden?: RecurringPayment[];
 }
 
 // Shows this many before "Show all".
@@ -23,11 +26,19 @@ const CADENCE_LABELS: Record<RecurringPayment['cadence'], string> = {
 // "Oct 3, 2026"
 const formatDay = (date: string) => formatDateRange(date, date);
 
-export const RecurringCard: React.FC<RecurringCardProps> = ({ payments }) => {
-  const { isPrivacyMode } = useFinancial();
+export const RecurringCard: React.FC<RecurringCardProps> = ({
+  payments,
+  hidden = [],
+}) => {
+  const { isPrivacyMode, notRecurring, setNotRecurring } = useFinancial();
   const categories = useCategories();
   const [expanded, setExpanded] = useState(false);
-  if (payments.length === 0) return null;
+  const [showHidden, setShowHidden] = useState(false);
+  if (payments.length === 0 && hidden.length === 0) return null;
+
+  const hide = (key: string) => setNotRecurring([...notRecurring, key]);
+  const restore = (key: string) =>
+    setNotRecurring(notRecurring.filter((k) => k !== key));
 
   const money = (amount: number) =>
     isPrivacyMode ? '••••' : formatMoney(amount);
@@ -74,7 +85,7 @@ export const RecurringCard: React.FC<RecurringCardProps> = ({ payments }) => {
                 {formatDay(p.nextDate)}
               </div>
             </div>
-            <div className="text-right shrink-0">
+            <div className="ml-auto text-right shrink-0">
               <div className="text-sm font-medium text-gray-900 tabular-nums">
                 {money(p.amount)}
               </div>
@@ -91,6 +102,14 @@ export const RecurringCard: React.FC<RecurringCardProps> = ({ payments }) => {
                 </div>
               )}
             </div>
+            <button
+              onClick={() => hide(p.merchantKey)}
+              className="shrink-0 p-1 text-gray-300 hover:text-gray-600"
+              aria-label={`${p.merchant} isn't recurring`}
+              title="Not recurring"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </li>
         ))}
       </ul>
@@ -101,6 +120,36 @@ export const RecurringCard: React.FC<RecurringCardProps> = ({ payments }) => {
         >
           {expanded ? 'Show fewer' : `Show all ${payments.length}`}
         </button>
+      )}
+      {hidden.length > 0 && (
+        <div className="mt-3 border-t pt-3 text-sm">
+          <button
+            onClick={() => setShowHidden(!showHidden)}
+            className="text-gray-500 hover:text-gray-700"
+            aria-expanded={showHidden}
+          >
+            {hidden.length} marked not recurring {showHidden ? '▴' : '▾'}
+          </button>
+          {showHidden && (
+            <ul className="mt-2 space-y-1" data-testid="not-recurring-list">
+              {hidden.map((p) => (
+                <li
+                  key={p.merchantKey}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span className="truncate text-gray-600">{p.merchant}</span>
+                  <button
+                    onClick={() => restore(p.merchantKey)}
+                    className="shrink-0 text-blue-600 hover:text-blue-700"
+                    aria-label={`Show ${p.merchant} as recurring again`}
+                  >
+                    Undo
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );

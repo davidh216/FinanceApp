@@ -37,7 +37,7 @@ const savings: Account = {
 // A backup holding only the savings account, "saved" at `exportedAt`.
 const savingsFile = (exportedAt: string) =>
   JSON.stringify({
-    ...createBackup([savings], false, { Groceries: 400 }),
+    ...createBackup([savings], { budgets: { Groceries: 400 } }),
     exportedAt,
   });
 
