@@ -2,8 +2,12 @@ import { Transaction } from '../../types/financial';
 import {
   applyCategoryRule,
   cleanCategoryRules,
+  keywordRuleKey,
+  keywordRules,
   merchantKey,
+  ruleCategory,
 } from '../categoryRules';
+import { suggestCategory } from '../manualTransactions';
 import { buildTransactions, parseCsv, detectColumnMapping } from '../csvImport';
 
 const txn = (overrides: Partial<Transaction> = {}): Transaction => ({
@@ -92,5 +96,66 @@ describe('buildTransactions with rules', () => {
       transactions.map((t) => [t.cleanMerchant.cleanName, t.category])
     );
     expect(byName).toEqual({ Starbucks: 'Entertainment', Amazon: 'Shopping' });
+  });
+});
+
+describe('keyword rules', () => {
+  const amazon = txn({
+    description: 'AMZN Mktp US*2K4',
+    cleanMerchant: {
+      cleanName: 'Amzn Mktp Us*2k4',
+      logo: '',
+      suggestedCategory: 'Other',
+      original: 'AMZN Mktp US*2K4',
+    },
+  });
+
+  it('match the description or merchant, ignoring case and spacing', () => {
+    expect(keywordRuleKey('  AMZN   Mktp ')).toBe('contains:amzn mktp');
+    const rules = { [keywordRuleKey('amzn')]: 'Shopping' };
+    expect(ruleCategory(amazon, rules)).toBe('Shopping');
+    expect(ruleCategory(txn(), rules)).toBeUndefined();
+  });
+
+  it('use the most specific keyword, after a merchant rule', () => {
+    const rules = {
+      [keywordRuleKey('amzn')]: 'Shopping',
+      [keywordRuleKey('amzn mktp')]: 'Entertainment',
+    };
+    expect(keywordRules(rules).map((r) => r.keyword)).toEqual([
+      'amzn mktp',
+      'amzn',
+    ]);
+    expect(ruleCategory(amazon, rules)).toBe('Entertainment');
+    expect(
+      ruleCategory(amazon, {
+        ...rules,
+        [merchantKey(amazon.cleanMerchant)]: 'Groceries',
+      })
+    ).toBe('Groceries');
+  });
+
+  it('apply to imports, hand-entered transactions and existing ones', () => {
+    const rules = { [keywordRuleKey('amzn')]: 'Shopping' };
+    const csv = parseCsv(
+      'Date,Description,Amount\n06/03/2025,AMZN Mktp US*9,-20\n'
+    );
+    const { transactions } = buildTransactions(
+      csv,
+      detectColumnMapping(csv.headers, csv.rows),
+      'acc_import_1',
+      false,
+      'b',
+      rules
+    );
+    expect(transactions[0].category).toBe('Shopping');
+    expect(suggestCategory('AMZN digital', -3, rules)).toBe('Shopping');
+    expect(applyCategoryRule(amazon, rules).category).toBe('Shopping');
+  });
+
+  it('survive cleaning, like merchant rules', () => {
+    expect(
+      cleanCategoryRules({ [keywordRuleKey('amzn')]: 'Shopping' })
+    ).toEqual({ 'contains:amzn': 'Shopping' });
   });
 });

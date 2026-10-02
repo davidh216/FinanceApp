@@ -3,8 +3,55 @@ import { MerchantInfo, Transaction } from '../types/financial';
 import { TAG_CATEGORIES } from '../constants/financial';
 import { isCashflow } from './cashflow';
 
-// The category you chose for a merchant, keyed by merchantKey.
+// The category you chose for a merchant, keyed by merchantKey, and keyword
+// rules ("description contains AMZN"), keyed KEYWORD_PREFIX + the keyword
+// in lower case. Both live in one map so they're stored and backed up
+// together.
 export type CategoryRules = Record<string, string>;
+
+export const KEYWORD_PREFIX = 'contains:';
+
+export const keywordRuleKey = (keyword: string): string =>
+  KEYWORD_PREFIX + keyword.trim().replace(/\s+/g, ' ').toLowerCase();
+
+export const isKeywordRule = (key: string): boolean =>
+  key.startsWith(KEYWORD_PREFIX);
+
+export const keywordOf = (key: string): string =>
+  key.slice(KEYWORD_PREFIX.length);
+
+// Keyword rules, longest keyword first: the most specific wins.
+export const keywordRules = (
+  rules: CategoryRules
+): { key: string; keyword: string; category: string }[] =>
+  Object.entries(rules)
+    .filter(([key]) => isKeywordRule(key))
+    .map(([key, category]) => ({ key, keyword: keywordOf(key), category }))
+    .filter((rule) => rule.keyword !== '')
+    .sort(
+      (a, b) =>
+        b.keyword.length - a.keyword.length ||
+        a.keyword.localeCompare(b.keyword)
+    );
+
+export const matchesKeyword = (
+  txn: { description: string; cleanMerchant: MerchantInfo },
+  keyword: string
+): boolean =>
+  `${txn.description} ${txn.cleanMerchant.cleanName}`
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .includes(keyword);
+
+// The category your rules give a transaction: a merchant's remembered
+// category first, then the most specific keyword it contains.
+export const ruleCategory = (
+  txn: { description: string; cleanMerchant: MerchantInfo },
+  rules: CategoryRules
+): string | undefined =>
+  rules[merchantKey(txn.cleanMerchant)] ??
+  keywordRules(rules).find((rule) => matchesKeyword(txn, rule.keyword))
+    ?.category;
 
 // Transactions from the same merchant share a clean name ("Starbucks" for
 // "STARBUCKS STORE 1234" and "STARBUCKS #88"), so rules key on that.
@@ -20,7 +67,7 @@ export const applyCategoryRule = (
   txn: Transaction,
   rules: CategoryRules
 ): Transaction => {
-  const category = rules[merchantKey(txn.cleanMerchant)];
+  const category = ruleCategory(txn, rules);
   if (!category || !isCashflow(txn) || category === txn.category) return txn;
   return {
     ...txn,
