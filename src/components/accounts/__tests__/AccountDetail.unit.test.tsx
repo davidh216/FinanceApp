@@ -30,6 +30,8 @@ const mockContextValue = {
   updateAccountSettings: jest.fn(),
   goals: [],
   setGoals: jest.fn(),
+  budgetRollover: [],
+  setBudgetRollover: jest.fn(),
 };
 
 jest.mock('../../../contexts/FinancialContext', () => ({

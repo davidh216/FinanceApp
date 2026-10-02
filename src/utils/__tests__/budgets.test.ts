@@ -1,5 +1,7 @@
 import { Transaction } from '../../types/financial';
 import {
+  budgetHistory,
+  cleanRollover,
   budgetProgress,
   cleanBudgets,
   monthOf,
@@ -71,6 +73,8 @@ describe('budgetProgress', () => {
       {
         category: 'Food & Dining',
         limit: 5,
+        baseLimit: 5,
+        carried: 0,
         spent: 5.75,
         remaining: -0.75,
         status: 'over',
@@ -78,6 +82,8 @@ describe('budgetProgress', () => {
       {
         category: 'Shopping',
         limit: 100,
+        baseLimit: 100,
+        carried: 0,
         spent: 80,
         remaining: 20,
         status: 'near',
@@ -85,6 +91,8 @@ describe('budgetProgress', () => {
       {
         category: 'Utilities',
         limit: 50,
+        baseLimit: 50,
+        carried: 0,
         spent: 39.99,
         remaining: 10.01,
         status: 'ok',
@@ -92,6 +100,8 @@ describe('budgetProgress', () => {
       {
         category: 'Travel',
         limit: 200,
+        baseLimit: 200,
+        carried: 0,
         spent: 0,
         remaining: 200,
         status: 'ok',
@@ -126,5 +136,101 @@ describe('cleanBudgets', () => {
     expect(cleanBudgets(null)).toEqual({});
     expect(cleanBudgets([100])).toEqual({});
     expect(cleanBudgets('Shopping')).toEqual({});
+  });
+});
+
+describe('budget rollover', () => {
+  it("adds last month's leftover, or takes off what went over", () => {
+    const [groceries, dining] = budgetProgress(
+      { Groceries: 400, 'Food & Dining': 200 },
+      { Groceries: 380, 'Food & Dining': 100 },
+      {
+        previousSpending: { Groceries: 300, 'Food & Dining': 260 },
+        rollover: ['Groceries', 'Food & Dining'],
+      }
+    );
+    expect(groceries).toMatchObject({
+      baseLimit: 400,
+      carried: 100,
+      limit: 500,
+      remaining: 120,
+      status: 'ok',
+    });
+    expect(dining).toMatchObject({
+      baseLimit: 200,
+      carried: -60,
+      limit: 140,
+      remaining: 40,
+      status: 'ok',
+    });
+  });
+
+  it('only rolls over the budgets you chose, and never below zero', () => {
+    const rows = budgetProgress(
+      { Groceries: 400, Shopping: 100 },
+      { Shopping: 10 },
+      {
+        previousSpending: { Groceries: 100, Shopping: 500 },
+        rollover: ['Shopping'],
+      }
+    );
+    const byCategory = Object.fromEntries(rows.map((r) => [r.category, r]));
+    expect(byCategory.Groceries).toMatchObject({ carried: 0, limit: 400 });
+    expect(byCategory.Shopping).toMatchObject({
+      carried: -400,
+      limit: 0,
+      status: 'over',
+    });
+    // A used-up budget sorts first.
+    expect(rows[0].category).toBe('Shopping');
+  });
+
+  it('cleans the saved choices', () => {
+    expect(
+      cleanRollover(['Shopping', 'Income', 'Shopping', 3, 'Groceries'])
+    ).toEqual(['Groceries', 'Shopping']);
+    expect(cleanRollover('nope')).toEqual([]);
+  });
+});
+
+describe('budgetHistory', () => {
+  it('gives each of the last six months, oldest first, across a new year', () => {
+    const spend = (date: string, amount: number, category = 'Groceries') => ({
+      id: date + amount,
+      accountId: 'a',
+      description: '',
+      amount,
+      date,
+      category,
+      tags: [],
+      pending: false,
+      cleanMerchant: {
+        cleanName: '',
+        logo: '',
+        suggestedCategory: '',
+        original: '',
+      },
+      createdAt: '',
+      updatedAt: '',
+    });
+    const history = budgetHistory(
+      [
+        spend('2024-11-03', -50),
+        spend('2025-02-10', -80),
+        spend('2025-02-11', -20),
+      ],
+      '2025-03'
+    );
+    expect(history.months).toEqual([
+      '2024-10',
+      '2024-11',
+      '2024-12',
+      '2025-01',
+      '2025-02',
+      '2025-03',
+    ]);
+    expect(history.spending.map((m) => m.Groceries ?? 0)).toEqual([
+      0, 50, 0, 0, 100, 0,
+    ]);
   });
 });

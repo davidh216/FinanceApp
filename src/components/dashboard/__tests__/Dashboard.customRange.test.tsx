@@ -7,6 +7,11 @@ import { formatDateRange } from '../../../utils/date';
 
 type User = ReturnType<typeof userEvent.setup>;
 
+// Each click through the date picker re-renders the whole dashboard with
+// the demo data, so these take about 4s each: over Jest's 5s default when
+// the full suite runs in parallel.
+jest.setTimeout(15000);
+
 // The test clock is 15 June 2025. The range picked below is 1–10 May, so
 // the period before it is the ten days 21–30 April.
 const CHECKING_CSV =

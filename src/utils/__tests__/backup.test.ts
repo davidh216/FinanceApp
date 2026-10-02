@@ -89,6 +89,7 @@ describe('backups', () => {
       budgets: { Groceries: 400 },
       categoryRules: {},
       goals: [],
+      budgetRollover: [],
     });
   });
 

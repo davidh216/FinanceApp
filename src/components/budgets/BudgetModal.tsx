@@ -27,7 +27,14 @@ const BudgetForm: React.FC<Omit<BudgetModalProps, 'isOpen'>> = ({
   onClose,
   spending,
 }) => {
-  const { budgets, setBudgets, isPrivacyMode } = useFinancial();
+  const {
+    budgets,
+    setBudgets,
+    budgetRollover,
+    setBudgetRollover,
+    isPrivacyMode,
+  } = useFinancial();
+  const [rollover, setRollover] = useState<string[]>(budgetRollover);
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       CATEGORIES.map((category) => [
@@ -48,6 +55,8 @@ const BudgetForm: React.FC<Omit<BudgetModalProps, 'isOpen'>> = ({
       if (typeof limit === 'number') next[category] = limit;
     }
     setBudgets(next);
+    // Only budgets that are set can roll over.
+    setBudgetRollover(rollover.filter((category) => category in next));
     onClose();
   };
 
@@ -76,14 +85,18 @@ const BudgetForm: React.FC<Omit<BudgetModalProps, 'isOpen'>> = ({
           <p className="text-sm text-gray-600 mb-4">
             Set a monthly limit for the categories you want to keep an eye on.
             Leave the rest blank. Transfers between your own accounts don't
-            count as spending.
+            count as spending. With Roll over, what's left of a month's budget
+            is added to the next month's, and going over takes it off.
           </p>
           <div className="space-y-3">
             {CATEGORIES.map((category) => {
               const invalid = parsed[category] === 'invalid';
               const spent = spending[category] || 0;
               return (
-                <div key={category} className="flex items-center gap-3">
+                <div
+                  key={category}
+                  className="flex items-center gap-3 flex-wrap sm:flex-nowrap"
+                >
                   <span className="text-lg w-6 text-center">
                     {TAG_CATEGORIES[category].icon}
                   </span>
@@ -96,6 +109,23 @@ const BudgetForm: React.FC<Omit<BudgetModalProps, 'isOpen'>> = ({
                         ? 'Spent this month: ••••'
                         : `Spent this month: ${formatMoney(spent)}`}
                     </div>
+                    {typeof parsed[category] === 'number' && (
+                      <label className="flex items-center gap-1 text-xs text-gray-600 mt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={rollover.includes(category)}
+                          onChange={(event) =>
+                            setRollover(
+                              event.target.checked
+                                ? [...rollover, category]
+                                : rollover.filter((c) => c !== category)
+                            )
+                          }
+                          aria-label={`Roll over ${category}`}
+                        />
+                        Roll over
+                      </label>
+                    )}
                   </div>
                   <div className="w-32">
                     <div className="relative">
