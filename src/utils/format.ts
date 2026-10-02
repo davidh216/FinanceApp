@@ -12,6 +12,11 @@ const moneyFormat = new Intl.NumberFormat('en-US', {
 export const formatMoney = (value: number): string =>
   `$${moneyFormat.format(Math.abs(value))}`;
 
+// "$1,234.56", or "-$1,234.56" below zero: a balance, which can be negative
+// but never needs a plus sign.
+export const formatBalance = (value: number): string =>
+  Math.round(value * 100) < 0 ? `-${formatMoney(value)}` : formatMoney(value);
+
 // "+$1,234.56" / "-$1,234.56" for changes. Values that round to zero get no
 // sign, so a tiny negative doesn't show as "-$0.00".
 export const formatSignedMoney = (value: number): string => {

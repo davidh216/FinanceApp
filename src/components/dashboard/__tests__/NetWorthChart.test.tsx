@@ -3,6 +3,7 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FinancialProvider } from '../../../contexts/FinancialContext';
 import { Dashboard } from '../Dashboard';
+import { NetWorthChart } from '../NetWorthChart';
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -80,5 +81,46 @@ describe('Net worth chart', () => {
     // An account's name opens it.
     await click(user, screen.getByRole('button', { name: 'Checking' }));
     expect(screen.getByTestId('account-name')).toHaveTextContent('Checking');
+  });
+});
+
+describe('Net worth below zero', () => {
+  it('shows the minus sign', () => {
+    const month = (m: string, net: number) => ({
+      month: m,
+      date: `${m}-28`,
+      assets: 1000,
+      debts: 1000 - net,
+      net,
+      accounts: [
+        { id: 'chk', name: 'Checking', balance: 1000 },
+        { id: 'loan', name: 'Student loan', balance: net - 1000 },
+      ],
+    });
+    render(
+      <FinancialProvider>
+        <NetWorthChart
+          months={[month('2025-05', -9000), month('2025-06', -8500.5)]}
+          onOpenAccount={() => {}}
+        />
+      </FinancialProvider>
+    );
+    expect(screen.getByTestId('net-worth-total')).toHaveTextContent(
+      '-$8,500.50'
+    );
+    expect(screen.getByTestId('net-worth-summary')).toHaveTextContent(
+      'Up $499.50 since the end of May 2025'
+    );
+    expect(screen.getByTestId('net-worth-detail')).toHaveTextContent(
+      'Net -$8,500.50'
+    );
+    expect(screen.getByTestId('net-worth-detail')).toHaveTextContent(
+      'Student loan-$9,500.50'
+    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Net worth at the end of May 2025: -$9,000.00',
+      })
+    ).toBeInTheDocument();
   });
 });
