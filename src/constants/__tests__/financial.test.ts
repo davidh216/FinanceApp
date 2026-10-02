@@ -185,3 +185,71 @@ describe('loan payments', () => {
     expect(Math.abs(total)).toBeLessThan(0.005);
   });
 });
+
+describe('regular payments in the demo', () => {
+  const today = new Date(2025, 5, 15); // 15 June 2025
+  const checking = generateHistoricalTransactions('acc_checking', 6, 20, today);
+  const card = generateHistoricalTransactions('acc_credit', 6, 25, today);
+
+  it('pays a paycheck every other Friday', () => {
+    const paydays = checking
+      .filter((t) => t.cleanMerchant.cleanName === 'Salary')
+      .map((t) => t.date)
+      .sort();
+    expect(paydays.length).toBeGreaterThanOrEqual(12);
+    const gaps = paydays
+      .slice(1)
+      .map(
+        (date, i) =>
+          (new Date(date).getTime() - new Date(paydays[i]).getTime()) / 86400000
+      );
+    expect(new Set(gaps)).toEqual(new Set([14]));
+    // A Friday.
+    const [y, m, d] = paydays[0].split('-').map(Number);
+    expect(new Date(y, m - 1, d).getDay()).toBe(5);
+  });
+
+  it('has the same bills on the same day each month', () => {
+    const netflix = card.filter((t) => t.cleanMerchant.cleanName === 'Netflix');
+    expect(netflix.map((t) => t.date.slice(8))).toEqual(
+      Array(netflix.length).fill('12')
+    );
+    expect(new Set(netflix.map((t) => t.amount))).toEqual(new Set([-15.49]));
+  });
+
+  it('never makes a purchase look like income', () => {
+    const income = [...checking, ...card].filter((t) => t.amount > 0);
+    expect(new Set(income.map((t) => t.cleanMerchant.cleanName))).toEqual(
+      new Set(['Salary'])
+    );
+  });
+
+  it("doesn't pile the month onto its first day", () => {
+    const onTheFirst = generateHistoricalTransactions(
+      'acc_checking',
+      1,
+      20,
+      new Date(2025, 5, 1)
+    );
+    expect(onTheFirst.length).toBeLessThan(5);
+  });
+
+  it('shows a transaction the same whichever day of the month you look', () => {
+    const upTo10 = (transactions: Transaction[]) =>
+      inMonth(transactions, '2025-06').filter((t) => t.date <= '2025-06-10');
+    const onThe12th = generateHistoricalTransactions(
+      'acc_checking',
+      1,
+      20,
+      new Date(2025, 5, 12)
+    );
+    const onThe28th = generateHistoricalTransactions(
+      'acc_checking',
+      1,
+      20,
+      new Date(2025, 5, 28)
+    );
+    expect(upTo10(onThe12th).length).toBeGreaterThan(0);
+    expect(upTo10(onThe28th)).toEqual(upTo10(onThe12th));
+  });
+});

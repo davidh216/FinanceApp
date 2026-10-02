@@ -24,45 +24,47 @@ describe('Dashboard totals (personal accounts, June 2025)', () => {
 
   it('compares balances with the end of May', () => {
     renderDashboard();
-    // Personal accounts on 31 May: $119,325.97 (today's balances with June's
-    // transactions undone). The balance is up $3,719.88, which is exactly
+    // Personal accounts on 31 May: $122,963.54 (today's balances with June's
+    // transactions undone). The balance is up $82.31, which is exactly
     // June's income minus spending: loan payments move money between the
     // user's own accounts.
     expect(screen.getByTestId('kpi-balance')).toHaveTextContent(
-      '+3.1%(+$3,719.88)'
+      '+0.1%(+$82.31)'
     );
-    // Assets were $438,213.03; $318,887.06 was owed, so debt went down.
+    // Assets were $441,058.18; $318,094.64 was owed, so debt went down.
     const [assets, liabilities] = screen.getAllByText(/^Total:/);
-    expect(assets).toHaveTextContent('+0.5% (+$2,080.64)');
-    expect(liabilities).toHaveTextContent('-0.5% (-$1,639.24)');
+    expect(assets).toHaveTextContent('-0.2% (-$764.51)');
+    expect(liabilities).toHaveTextContent('-0.3% (-$846.82)');
   });
 
   it('shows the savings rate as a percentage', () => {
     renderDashboard();
-    // June: (7,847.90 - 4,128.02) / 7,847.90 = 47.4%. May: 75.0%, so the
+    // June: (3,200.00 - 3,117.69) / 3,200.00 = 2.6%. May: 19.5%, so the
     // change is in percentage points, not dollars.
     expect(screen.getByTestId('kpi-savings-rate')).toHaveTextContent(
-      '47.4%-27.6 pts vs last month'
+      '2.6%-17.0 pts vs last month'
     );
   });
 
   it("shows this month's income and spending", () => {
     renderDashboard();
-    // 1–15 June across the personal accounts. Loan payments ($2,238.10)
-    // are transfers from checking, so they aren't spending.
-    expect(screen.getByTestId('kpi-income')).toHaveTextContent('$7,847.90');
-    expect(screen.getByTestId('kpi-spending')).toHaveTextContent('$4,128.02');
+    // 1–15 June across the personal accounts: one paycheck (6 June). Loan
+    // payments ($2,238.10) are transfers from checking, so they aren't
+    // spending.
+    expect(screen.getByTestId('kpi-income')).toHaveTextContent('$3,200.00');
+    expect(screen.getByTestId('kpi-spending')).toHaveTextContent('$3,117.69');
   });
 
   it('compares against the whole of May', () => {
     renderDashboard();
-    // May: income $13,355.22, spending $3,342.11. Spending includes two
-    // transactions dated 1 May, which a UTC date parse would drop into April.
+    // May: income $6,414.20 (two paychecks and savings interest), spending
+    // $5,160.66. Spending includes three transactions dated 1 May, which a
+    // UTC date parse would drop into April.
     expect(screen.getByTestId('kpi-income')).toHaveTextContent(
-      '-41.2%(-$5,507.32)'
+      '-50.1%(-$3,214.20)'
     );
     expect(screen.getByTestId('kpi-spending')).toHaveTextContent(
-      '+23.5%(+$785.91)'
+      '-39.6%(-$2,042.97)'
     );
   });
 

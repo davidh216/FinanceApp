@@ -30,12 +30,23 @@ describe('Recurring payments', () => {
     window.localStorage.clear();
   });
 
+  it("finds the demo's bills and subscriptions, and what's coming up", () => {
+    renderDashboard();
+    const card = screen.getByTestId('recurring-card');
+    for (const name of ['Comcast', 'Verizon', 'Netflix', 'Spotify', 'Apple']) {
+      expect(card).toHaveTextContent(name);
+    }
+    // Only the scheduled payments: the random purchases aren't regular.
+    expect(card).toHaveTextContent('5 found');
+    // Paid every other Friday; the next one is 20 June.
+    expect(screen.getByTestId('upcoming-card')).toHaveTextContent(
+      'SalaryJun 20, 2025 · Primary Checking+$3,200.00'
+    );
+  });
+
   it('lists subscriptions from imported transactions', async () => {
     const user = userEvent.setup();
     renderDashboard();
-    // The demo's purchases are random, so none look recurring.
-    expect(screen.queryByTestId('recurring-card')).not.toBeInTheDocument();
-
     await act(async () => {
       await user.click(screen.getByRole('button', { name: /Import CSV/ }));
     });

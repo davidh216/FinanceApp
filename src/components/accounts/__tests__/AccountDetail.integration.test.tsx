@@ -150,11 +150,11 @@ describe('AccountDetail Integration Tests', () => {
     // seeded mock data; see src/test/clock.ts).
     await waitFor(() => {
       expect(screen.getByTestId('stat-period')).toHaveTextContent(
-        '27 transactions'
+        '21 transactions'
       );
     });
-    expect(screen.getByTestId('stat-income')).toHaveTextContent('+$6,399.30');
-    expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,618.59');
-    expect(screen.getByTestId('stat-net')).toHaveTextContent('+$2,542.61');
+    expect(screen.getByTestId('stat-income')).toHaveTextContent('+$3,200.00');
+    expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,476.94');
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('-$515.04');
   });
 });

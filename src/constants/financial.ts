@@ -376,6 +376,47 @@ const monthSeed = (accountId: string, date: Date) =>
 
 const pendingRoll = (random: RandomFn) => random() < 0.1;
 
+// Bills, subscriptions and pay that come on the same day each month for
+// the same amount, so the demo has regular payments to find.
+interface ScheduledPayment {
+  merchant: string;
+  day: number;
+  amount: number;
+}
+
+const MONTHLY_SCHEDULES: Record<string, ScheduledPayment[]> = {
+  acc_checking: [
+    { merchant: 'COMCAST', day: 8, amount: -89.99 },
+    { merchant: 'VERIZON', day: 22, amount: -75.0 },
+  ],
+  acc_credit: [
+    { merchant: 'SPOTIFY', day: 3, amount: -10.99 },
+    { merchant: 'NETFLIX', day: 12, amount: -15.49 },
+    { merchant: 'APPLE', day: 19, amount: -2.99 },
+  ],
+  acc_savings: [{ merchant: 'INTEREST', day: 28, amount: 14.2 }],
+  // Client work paid into the business account.
+  acc_business: [{ merchant: 'FREELANCE', day: 5, amount: 4800.0 }],
+};
+
+// Paid every other Friday into checking, counted from this one.
+const PAYDAY_ANCHOR = new Date(2024, 0, 5);
+const PAYCHECK = 3200.0;
+
+const paydaysIn = (year: number, month: number): number[] => {
+  const days: number[] = [];
+  const first = new Date(year, month, 1).getTime();
+  const daysSince = Math.round((first - PAYDAY_ANCHOR.getTime()) / 86400000);
+  const offset = (((14 - (daysSince % 14)) % 14) + 14) % 14;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  for (let day = 1 + offset; day <= daysInMonth; day += 14) days.push(day);
+  return days;
+};
+
+// Random purchases come from these: income, bills and subscriptions are
+// scheduled instead.
+const SCHEDULED_CATEGORIES = ['Income', 'Subscriptions', 'Utilities'];
+
 export const generateHistoricalTransactions = (
   accountId: string,
   monthsBack: number = 12,
@@ -387,7 +428,10 @@ export const generateHistoricalTransactions = (
     return generateLoanTransactions(accountId, monthsBack, today);
   }
 
-  const merchants = Object.keys(MERCHANT_PATTERNS);
+  const merchants = Object.keys(MERCHANT_PATTERNS).filter(
+    (key) =>
+      !SCHEDULED_CATEGORIES.includes(MERCHANT_PATTERNS[key].suggestedCategory)
+  );
   const transactions: Transaction[] = [];
 
   // Generate transactions for each month going back
@@ -402,9 +446,48 @@ export const generateHistoricalTransactions = (
       targetDate.getMonth() + 1,
       0
     ).getDate();
-    // Don't create transactions later this month than today.
+    // The whole month is drawn, then days after today are left out: a
+    // transaction looks the same whichever day of the month you look.
     const lastDay = monthOffset === 0 ? today.getDate() : daysInMonth;
     const random = createRandom(monthSeed(accountId, targetDate));
+    const dated = (day: number) =>
+      new Date(targetDate.getFullYear(), targetDate.getMonth(), day);
+
+    const scheduled: (ScheduledPayment & { id: string })[] = [
+      ...(MONTHLY_SCHEDULES[accountId] || []).map((payment, n) => ({
+        ...payment,
+        day: Math.min(payment.day, daysInMonth),
+        id: `bill${n}`,
+      })),
+      ...(accountId === LOAN_PAYMENT_ACCOUNT_ID
+        ? paydaysIn(targetDate.getFullYear(), targetDate.getMonth()).map(
+            (day) => ({
+              merchant: 'PAYROLL',
+              day,
+              amount: PAYCHECK,
+              id: `pay${day}`,
+            })
+          )
+        : []),
+    ];
+    for (const payment of scheduled) {
+      if (payment.day > lastDay) continue;
+      const merchantInfo = MERCHANT_PATTERNS[payment.merchant];
+      const date = dated(payment.day);
+      transactions.push({
+        id: `txn_${monthSeed(accountId, targetDate)}_${payment.id}`,
+        accountId,
+        description: payment.merchant,
+        amount: payment.amount,
+        date: toLocalDateString(date),
+        category: merchantInfo.suggestedCategory,
+        tags: [merchantInfo.suggestedCategory],
+        pending: false,
+        cleanMerchant: { ...merchantInfo, original: payment.merchant },
+        createdAt: date.toISOString(),
+        updatedAt: date.toISOString(),
+      });
+    }
 
     // Generate seasonal spending patterns
     const seasonalMultiplier = getSeasonalMultiplier(targetDate.getMonth());
@@ -416,48 +499,36 @@ export const generateHistoricalTransactions = (
       const merchantKey = merchants[Math.floor(random() * merchants.length)];
       const merchantInfo = MERCHANT_PATTERNS[merchantKey];
 
-      // More realistic income/expense patterns
-      let amount: number;
-
-      if (merchantInfo.suggestedCategory === 'Income' || random() < 0.15) {
-        // Income transactions (salary, freelance, etc.)
-        if (merchantKey.includes('PAYROLL')) {
-          amount = 3500 + random() * 1500; // Salary: $3500-$5000
-        } else if (merchantKey.includes('FREELANCE')) {
-          amount = 500 + random() * 2000; // Freelance: $500-$2500
-        } else {
-          amount = 100 + random() * 500; // Other income: $100-$600
-        }
-      } else {
-        // Expense transactions with category-based amounts
-        amount = -getCategoryExpenseAmount(
-          merchantInfo.suggestedCategory,
-          random
-        );
-      }
-
-      // Random day in the month
-      const dayOfMonth = Math.floor(random() * lastDay) + 1;
+      const amount = -getCategoryExpenseAmount(
+        merchantInfo.suggestedCategory,
+        random
+      );
+      const dayOfMonth = Math.floor(random() * daysInMonth) + 1;
       const transactionDate = new Date(
         targetDate.getFullYear(),
         targetDate.getMonth(),
         dayOfMonth
       );
 
+      const tagged = random() > 0.3; // 70% tagged
+      const pending = pendingRoll(random) && monthOffset === 0;
+      const reference = Math.floor(random() * 1000);
+      const original = Math.floor(random() * 1000);
+      if (dayOfMonth > lastDay) continue;
+
       transactions.push({
         id: `txn_${monthSeed(accountId, targetDate)}_${i}`,
         accountId,
-        description: `${merchantKey} #${Math.floor(random() * 1000)}`,
+        description: `${merchantKey} #${reference}`,
         amount: Math.round(amount * 100) / 100,
         date: toLocalDateString(transactionDate),
         category: merchantInfo.suggestedCategory,
-        tags: random() > 0.3 ? [merchantInfo.suggestedCategory] : [], // 70% tagged
-        // Always draw, so a month's sequence doesn't change once it's no longer
-        // the current month.
-        pending: pendingRoll(random) && monthOffset === 0, // Only current month can be pending
+        tags: tagged ? [merchantInfo.suggestedCategory] : [],
+        // Only the current month can be pending.
+        pending,
         cleanMerchant: {
           ...merchantInfo,
-          original: `${merchantKey} #${Math.floor(random() * 1000)}`,
+          original: `${merchantKey} #${original}`,
         },
         createdAt: transactionDate.toISOString(),
         updatedAt: transactionDate.toISOString(),
@@ -503,11 +574,17 @@ const generateLoanTransactions = (
       1
     );
     const monthRandom = createRandom(monthSeed(accountId, targetDate));
-    // Payment is usually made between 1st and 15th of the month
-    const dayOfMonth = Math.min(
-      Math.floor(monthRandom() * 15) + 1,
-      monthOffset === 0 ? today.getDate() : 15
-    );
+    // Drawn but unused (the day used to be random), so the payment amounts
+    // below stay as they were.
+    monthRandom();
+    // Each loan is paid on the same day every month.
+    const dayOfMonth = accountId.includes('mortgage')
+      ? 1
+      : accountId.includes('student_loan_1')
+      ? 10
+      : 15;
+    // Not paid yet this month.
+    if (monthOffset === 0 && dayOfMonth > today.getDate()) continue;
     const transactionDate = new Date(
       targetDate.getFullYear(),
       targetDate.getMonth(),
@@ -530,7 +607,7 @@ const generateLoanTransactions = (
       tags: ['Loan Payment'],
       pending: pendingRoll(monthRandom) && monthOffset === 0, // Only current month can be pending
       cleanMerchant: {
-        cleanName: loanMerchant,
+        cleanName: LOAN_MERCHANT_PATTERNS[loanMerchant].cleanName,
         logo: accountId.includes('mortgage') ? '🏠' : '🎓',
         suggestedCategory: 'Loan Payment',
         original: `Monthly Payment #${Math.floor(monthRandom() * 1000)}`,

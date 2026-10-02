@@ -42,15 +42,15 @@ describe('AccountDetail Component', () => {
       </TestWrapper>
     );
 
-    // 1–15 June 2025 (tests run on a pinned date with seeded mock data). The 27
-    // transactions include 3 loan payments, which are transfers rather than
-    // expenses.
+    // 1–15 June 2025 (tests run on a pinned date with seeded mock data). The 21
+    // transactions include a paycheck on the 6th and 3 loan payments, which
+    // are transfers rather than expenses.
     expect(screen.getByTestId('stat-period')).toHaveTextContent(
-      '27 transactions'
+      '21 transactions'
     );
-    expect(screen.getByTestId('stat-income')).toHaveTextContent('+$6,399.30');
-    expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,618.59');
-    expect(screen.getByTestId('stat-net')).toHaveTextContent('+$2,542.61');
+    expect(screen.getByTestId('stat-income')).toHaveTextContent('+$3,200.00');
+    expect(screen.getByTestId('stat-expenses')).toHaveTextContent('-$1,476.94');
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('-$515.04');
   });
 
   it('shows loan payments from checking as transfers', () => {
@@ -60,12 +60,12 @@ describe('AccountDetail Component', () => {
       </TestWrapper>
     );
     // Three loan payments in June; not expenses, but they left the account.
-    // Net flow is the account's actual change: 6,399.30 - 1,618.59 -
+    // Net flow is the account's actual change: 3,200.00 - 1,476.94 -
     // 2,238.10.
     expect(screen.getByTestId('stat-transfers')).toHaveTextContent(
       '-$2,238.10'
     );
-    expect(screen.getByTestId('stat-net')).toHaveTextContent('+$2,542.61');
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('-$515.04');
   });
 
   it('shows the other side of the transfer on the loan', () => {
@@ -92,7 +92,7 @@ describe('AccountDetail Component', () => {
       </TestWrapper>
     );
     expect(screen.queryByTestId('stat-transfers')).not.toBeInTheDocument();
-    expect(screen.getByTestId('stat-net')).toHaveTextContent('-$461.97');
+    expect(screen.getByTestId('stat-net')).toHaveTextContent('-$249.47');
   });
 
   it('filters transactions by search term', async () => {
